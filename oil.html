@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>綜研滑油化驗報告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        /* --- CSS 變數定義 --- */
+        :root { 
+            --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #888; 
+            --border-color: #e0e0e0; --primary: #607d8b; --danger: #dc3545; 
+            --table-head-bg: #f8f9fa; --table-hover: #f1f3f5; --table-stripe: #fafafa;
+            --sticky-bg: #ffffff;
+        }
+        [data-theme="dark"] {
+            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaaaaa;
+            --border-color: #333333; --table-head-bg: #2c2c2c; --table-hover: #333; --table-stripe: #222;
+            --sticky-bg: #1e1e1e;
+        }
+
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
+        
+        .navbar { background: #333; padding: 10px 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .nav-link { color: #ccc; text-decoration: none; padding: 6px 12px; border-radius: 5px; transition: 0.2s; }
+        .nav-link:hover { background: #555; color: white; }
+        .nav-link.active { background: var(--primary); color: white; font-weight: bold; }
+
+        .container { max-width: 98%; margin: 0 auto; padding: 0 10px; }
+        
+        h2 { margin: 20px 0 15px 0; font-size: 1.3rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; align-items: center;}
+        .btn-theme { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+
+        .table-controls { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: var(--bg-card); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .table-controls label { font-weight: bold; font-size: 0.9rem; color: var(--text-main); }
+        select { padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.9rem; background: var(--bg-card); color: var(--text-main); }
+
+        .table-container { width: 100%; overflow-x: auto; background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 30px; max-height: 80vh; }
+        .overview-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem; white-space: nowrap; }
+        .overview-table th, .overview-table td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); text-align: center; vertical-align: middle; }
+        .overview-table thead th { background: var(--table-head-bg); color: var(--text-main); font-weight: bold; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border-color); }
+        .overview-table th:first-child, .overview-table td:first-child { position: sticky; left: 0; z-index: 11; background-color: var(--sticky-bg); border-right: 2px solid var(--border-color); font-weight: bold; min-width: 80px; }
+        .overview-table thead th:first-child { z-index: 12; background-color: var(--table-head-bg); }
+        .overview-table tbody tr:nth-child(even) td { background-color: var(--table-stripe); }
+        .overview-table tbody tr:nth-child(even) td:first-child { background-color: var(--sticky-bg); filter: brightness(0.97); } 
+        .overview-table tbody tr:hover td { background-color: var(--table-hover); cursor: pointer; }
+        
+        .val-limit { color: var(--danger); font-weight: 900; background-color: rgba(220, 53, 69, 0.1); }
+        .unit-small { font-size: 0.75rem; color: var(--text-sub); font-weight: normal; display: block; }
+        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+        .dot-ok { background-color: #28a745; } .dot-err { background-color: #dc3545; box-shadow: 0 0 5px #dc3545; }
+
+        .chart-section { background: var(--bg-card); padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 50px; }
+        .chart-controls { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; align-items: flex-start; }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group label { font-weight: bold; font-size: 0.9rem; color: var(--text-sub); }
+        
+        .checkbox-container { display: flex; flex-wrap: wrap; gap: 10px; max-height: 100px; overflow-y: auto; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; flex: 1; min-width: 300px; background: var(--bg-body); }
+        .checkbox-item { display: flex; align-items: center; font-size: 0.85rem; color: var(--text-main); cursor: pointer; background: var(--bg-card); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color); }
+        .checkbox-item input { margin-right: 5px; cursor: pointer; }
+        .checkbox-item:hover { background: var(--table-hover); }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        .modal-content { background-color: var(--bg-card); color: var(--text-main); margin: 2% auto; padding: 0; border-radius: 12px; width: 95%; max-width: 900px; max-height: 95vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .modal-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--table-head-bg); }
+        .close-btn { font-size: 1.8rem; cursor: pointer; color: var(--text-sub); line-height: 1; }
+        .modal-body { overflow-y: auto; padding: 10px 20px 20px 20px; }
+        
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .detail-table th { background: var(--table-head-bg); color: var(--text-sub); font-weight: bold; padding: 10px 5px; text-align: center; position: sticky; top: 0; z-index: 2; border-bottom: 2px solid var(--border-color); }
+        .detail-table td { padding: 6px 5px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-main); vertical-align: middle; }
+        .detail-table tr:hover { background-color: var(--table-hover); }
+        .col-item { text-align: left !important; width: 30%; font-weight: bold; color: var(--text-main); }
+        .col-unit { font-size: 0.75rem; color: var(--text-sub); font-weight: normal; margin-left: 4px; }
+        .col-limit { width: 15%; font-size: 0.8rem; color: var(--text-sub) !important; }
+        .col-data { width: 18%; font-family: 'Arial', sans-serif; }
+        .latest-col { background-color: rgba(0, 123, 255, 0.05); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html" class="nav-link">廢油水處理</a>
+    <a href="cems.html" class="nav-link">CEMS 監測</a>
+    <a href="urea.html" class="nav-link">尿素分析</a>
+    <a href="oil.html" class="nav-link active">滑油報告</a>
+</div>
+
+<div class="container">
+    <h2>
+        化驗結果總覽
+        <button class="btn-theme" onclick="toggleTheme()" style="float:right">🌓 切換模式</button>
+    </h2>
+    
+    <div class="table-controls">
+        <label>📅 篩選日期：</label>
+        <select id="tableYear" onchange="renderOverviewTable()">
+            <option value="latest">最新數據</option>
+        </select>
+        <select id="tableMonth" onchange="renderOverviewTable()">
+            <option value="all">全部月份</option>
+            <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+            <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+            <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+            <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+        </select>
+    </div>
+
+    <div id="loading" style="text-align:center; padding:20px;">資料載入中...</div>
+    
+    <div class="table-container">
+        <table class="overview-table" id="overviewTable"></table>
+    </div>
+
+    <div class="chart-section">
+        <h2 style="border-left:5px solid #607d8b; padding-left:10px;">歷史趨勢分析 (多機組比較)</h2>
+        <div class="chart-controls">
+            <div class="control-group" style="flex:2;">
+                <label>機組選擇 (可複選)：</label>
+                <div id="machineCheckboxes" class="checkbox-container"></div>
+            </div>
+            <div class="control-group">
+                <label>測項：</label>
+                <select id="chartParam" onchange="updateChart()"></select>
+            </div>
+            <div class="control-group">
+                <label>年度：</label>
+                <select id="chartYear" onchange="updateChart()">
+                    <option value="all">全部年份</option>
+                </select>
+            </div>
+        </div>
+        <div style="height: 450px;">
+            <canvas id="historyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle" style="margin:0;">機組詳情</h3>
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <table class="detail-table">
+                <thead><tr id="modalHeaderRow"></tr></thead>
+                <tbody id="detailTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwqP_rRkI8xyVYFvo8nWY9pq4i1OLlvrLfAMxmleSAh-XDbMQN3yGk3eF0j5OdDDVMYxw/exec";
+
+    let rawData = { headers: [], cnHeaders: [], upperLimits: [], lowerLimits: [], units: [], data: [] };
+    let chartInstance = null;
+    const LINE_COLORS = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'];
+
+    if(localStorage.getItem('oil_theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+    fetchData();
+
+    async function fetchData() {
+        try {
+            const res = await fetch(API_URL + "?mode=oil");
+            rawData = await res.json();
+            document.getElementById('loading').style.display = 'none';
+            initControls(); 
+            renderOverviewTable(); 
+        } catch (e) {
+            console.error("Error:", e);
+            document.getElementById('loading').innerText = "載入失敗";
+        }
+    }
+
+    function toggleTheme() {
+        const body = document.body;
+        const next = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        body.setAttribute('data-theme', next);
+        localStorage.setItem('oil_theme', next);
+        if(chartInstance) updateChart();
+    }
+
+    function checkStatus(val, lower, upper) {
+        if (val === "" || val === undefined) return true; 
+        let num = parseFloat(val);
+        if (isNaN(num)) return true; 
+        if (lower !== "" && num < parseFloat(lower)) return false; // 低於下限
+        if (upper !== "" && num > parseFloat(upper)) return false; // 高於上限
+        return true;
+    }
+
+    function initControls() {
+        const machines = [...new Set(rawData.data.map(r => r[1]))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+        const years = new Set();
+        rawData.data.forEach(r => { const y = r[0].substring(0, 4); if(y) years.add(y); });
+        const sortedYears = [...years].sort().reverse();
+
+        const tYearSelect = document.getElementById('tableYear');
+        sortedYears.forEach(y => tYearSelect.innerHTML += `<option value="${y}">${y}年</option>`);
+
+        const mBox = document.getElementById('machineCheckboxes');
+        mBox.innerHTML = "";
+        machines.forEach((m, idx) => {
+            const checked = (idx === 0) ? 'checked' : '';
+            mBox.innerHTML += `<label class="checkbox-item"><input type="checkbox" value="${m}" ${checked} onchange="updateChart()"> ${m}</label>`;
+        });
+
+        const cYearSelect = document.getElementById('chartYear');
+        sortedYears.forEach(y => cYearSelect.innerHTML += `<option value="${y}">${y}年</option>`);
+        
+        const pSelect = document.getElementById('chartParam');
+        for(let i=2; i<rawData.headers.length; i++) {
+            const name = rawData.cnHeaders[i] || rawData.headers[i];
+            pSelect.innerHTML += `<option value="${i}">${name}</option>`;
+        }
+        updateChart();
+    }
+
+    function renderOverviewTable() {
+        const table = document.getElementById('overviewTable');
+        table.innerHTML = "";
+        const selectedYear = document.getElementById('tableYear').value;
+        const selectedMonth = document.getElementById('tableMonth').value;
+
+        const machineGroups = {}; 
+        rawData.data.forEach(row => {
+            const mId = row[1]; 
+            if (!machineGroups[mId]) machineGroups[mId] = [];
+            machineGroups[mId].push(row);
+        });
+
+        const sortedKeys = Object.keys(machineGroups).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+
+        let thead = document.createElement('thead');
+        let trHead = document.createElement('tr');
+        trHead.innerHTML = `<th>機組</th><th>檢驗日期</th>`;
+        for (let i = 2; i < rawData.headers.length; i++) {
+            const cnName = rawData.cnHeaders[i] || rawData.headers[i];
+            const unit = rawData.units[i] ? `<span class="unit-small">(${rawData.units[i]})</span>` : '';
+            const th = document.createElement('th');
+            th.innerHTML = `${cnName} ${unit}`;
+            trHead.appendChild(th);
+        }
+        thead.appendChild(trHead);
+        table.appendChild(thead);
+
+        let tbody = document.createElement('tbody');
+        sortedKeys.forEach(key => {
+            const history = machineGroups[key].sort((a, b) => new Date(b[0]) - new Date(a[0]));
+            let targetRow = null;
+            if (selectedYear === 'latest') {
+                targetRow = history[0];
+            } else {
+                targetRow = history.find(row => {
+                    const d = new Date(row[0]);
+                    const y = d.getFullYear().toString();
+                    const m = (d.getMonth() + 1).toString();
+                    if (selectedMonth === 'all') return y === selectedYear;
+                    return y === selectedYear && m === selectedMonth;
+                });
+            }
+
+            if (!targetRow) {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td>${key}</td><td style="color:#ccc">無數據</td>`;
+                for(let k=2; k<rawData.headers.length; k++) tr.innerHTML += `<td>-</td>`;
+                tbody.appendChild(tr);
+                return;
+            }
+
+            const dateStr = targetRow[0].split('T')[0];
+            let tr = document.createElement('tr');
+            tr.onclick = () => openModal(key, history.slice(0, 3));
+
+            let hasError = false;
+            for (let i = 2; i < rawData.headers.length; i++) {
+                if (!checkStatus(targetRow[i], rawData.lowerLimits[i], rawData.upperLimits[i])) { hasError = true; break; }
+            }
+            const dotClass = hasError ? "dot-err" : "dot-ok";
+
+            let tdName = document.createElement('td');
+            tdName.innerHTML = `<span class="status-dot ${dotClass}"></span>${key}`;
+            tr.appendChild(tdName);
+            let tdDate = document.createElement('td');
+            tdDate.innerText = dateStr;
+            tr.appendChild(tdDate);
+
+            for (let i = 2; i < rawData.headers.length; i++) {
+                let td = document.createElement('td');
+                let val = targetRow[i];
+                if (!checkStatus(val, rawData.lowerLimits[i], rawData.upperLimits[i])) {
+                    td.className = "val-limit";
+                    let limitTip = "";
+                    if(rawData.lowerLimits[i]) limitTip += `>${rawData.lowerLimits[i]} `;
+                    if(rawData.upperLimits[i]) limitTip += `<${rawData.upperLimits[i]}`;
+                    td.title = `標準: ${limitTip}`;
+                }
+                td.innerText = val;
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+    }
+
+    function openModal(machineId, historyRows) {
+        const modal = document.getElementById('detailModal');
+        const theadRow = document.getElementById('modalHeaderRow');
+        const tbody = document.getElementById('detailTableBody');
+        document.getElementById('modalTitle').innerText = `${machineId} - 近三次歷史報告`;
+        
+        let headerHtml = `<th style="width:30%">檢驗項目</th><th style="width:15%">標準</th>`;
+        historyRows.forEach((row, idx) => {
+            const date = row[0].split('T')[0];
+            headerHtml += `<th class="${idx===0?'col-latest':''}">${date}</th>`;
+        });
+        for(let i=historyRows.length; i<3; i++) headerHtml += `<th>-</th>`;
+        theadRow.innerHTML = headerHtml;
+
+        tbody.innerHTML = "";
+        for(let i=2; i<rawData.headers.length; i++) {
+            const cnName = rawData.cnHeaders[i] || rawData.headers[i];
+            const unit = rawData.units[i] || "";
+            const lower = rawData.lowerLimits[i];
+            const upper = rawData.upperLimits[i];
+            let limitText = (lower && upper) ? `${lower}~${upper}` : (lower ? `>${lower}` : (upper ? `<${upper}` : "-"));
+            let rowHtml = `<tr><td>${cnName} <span style="color:#999;font-size:0.8em">(${unit})</span></td><td style="color:#666;font-size:0.85em">${limitText}</td>`;
+            for(let j=0; j<3; j++) {
+                const isLatest = (j === 0) ? 'col-latest' : '';
+                if (j < historyRows.length) {
+                    const val = historyRows[j][i];
+                    const valClass = checkStatus(val, lower, upper) ? "" : "val-limit";
+                    rowHtml += `<td class="${isLatest} ${valClass}">${val}</td>`;
+                } else { rowHtml += `<td class="${isLatest}">-</td>`; }
+            }
+            rowHtml += `</tr>`;
+            tbody.innerHTML += rowHtml;
+        }
+        modal.style.display = 'block';
+    }
+    function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+    window.onclick = function(event) { if (event.target == document.getElementById('detailModal')) closeModal(); }
+
+    // --- 圖表更新 (修復上下限線條顯示) ---
+    function updateChart() {
+        const checkboxes = document.querySelectorAll('#machineCheckboxes input:checked');
+        const selectedMachines = Array.from(checkboxes).map(cb => cb.value);
+        const year = document.getElementById('chartYear').value;
+        const pIdx = parseInt(document.getElementById('chartParam').value);
+
+        if (selectedMachines.length === 0) {
+            if(chartInstance) chartInstance.data.datasets = []; chartInstance.update(); return;
+        }
+
+        let datasets = [];
+        let allLabels = new Set();
+
+        // 1. 準備數據 & 統一時間軸
+        let machineDataMap = {};
+        selectedMachines.forEach((mId, index) => {
+            const filteredData = rawData.data.filter(r => {
+                const isMachineMatch = (r[1] === mId);
+                const isYearMatch = (year === 'all') || (r[0].startsWith(year));
+                return isMachineMatch && isYearMatch;
+            }).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+
+            machineDataMap[mId] = filteredData;
+            filteredData.forEach(r => allLabels.add(r[0].split('T')[0]));
+        });
+
+        const sortedLabels = Array.from(allLabels).sort();
+
+        // 2. 建立 Datasets
+        selectedMachines.forEach((mId, index) => {
+            const dataPoints = sortedLabels.map(date => {
+                const record = machineDataMap[mId].find(r => r[0].split('T')[0] === date);
+                return record ? (parseFloat(record[pIdx]) || null) : null;
+            });
+
+            datasets.push({
+                label: mId,
+                data: dataPoints,
+                borderColor: LINE_COLORS[index % LINE_COLORS.length],
+                backgroundColor: LINE_COLORS[index % LINE_COLORS.length],
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+                tension: 0.1,
+                spanGaps: true
+            });
+        });
+
+        // 3. 加入上下限紅線
+        const lower = parseFloat(rawData.lowerLimits[pIdx]);
+        const upper = parseFloat(rawData.upperLimits[pIdx]);
+        
+        if (!isNaN(upper)) {
+            datasets.push({ 
+                label: '上限', 
+                data: new Array(sortedLabels.length).fill(upper), 
+                borderColor: '#dc3545', 
+                borderWidth: 1.5, 
+                borderDash: [5, 5], 
+                pointRadius: 0, 
+                fill: false 
+            });
+        }
+        if (!isNaN(lower)) {
+            datasets.push({ 
+                label: '下限', 
+                data: new Array(sortedLabels.length).fill(lower), 
+                borderColor: '#dc3545', 
+                borderWidth: 1.5, 
+                borderDash: [5, 5], 
+                pointRadius: 0, 
+                fill: false 
+            });
+        }
+
+        const ctx = document.getElementById('historyChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        const gridColor = isDark ? '#444' : '#ddd';
+        const textColor = isDark ? '#eee' : '#666';
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: { labels: sortedLabels, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: { 
+                    y: { beginAtZero: false, grid: {color: gridColor}, ticks: {color: textColor} },
+                    x: { 
+                        grid: {color: gridColor}, 
+                        ticks: { color: textColor, maxTicksLimit: 12, maxRotation: 0 } 
+                    }
+                },
+                plugins: { legend: { labels: { color: textColor } } }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

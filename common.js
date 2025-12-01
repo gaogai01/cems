@@ -25,8 +25,8 @@ document.addEventListener("DOMContentLoaded", function() {
     if (navPlaceholder) {
         // 定義選單項目 (如果要新增網頁，加在這裡即可)
         const menuItems = [
-            { name: "廢油水處理", link: "index.html" },
-            { name: "CEMS 監測", link: "cems.html" },
+            { name: "廢水處理", link: "index.html" },
+            { name: "CEMS監測", link: "cems.html" },
             { name: "尿素分析", link: "urea.html" },
             { name: "滑油報告", link: "oil.html" }
         ];

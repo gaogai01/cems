@@ -98,8 +98,8 @@
 <body>
 
 <div class="navbar">
-    <a href="index.html" class="nav-link">廢油水</a>
-    <a href="cems.html" class="nav-link">CEMS</a>
+    <a href="index.html" class="nav-link">廢油水處理</a>
+    <a href="cems.html" class="nav-link">CEMS 監測</a>
     <a href="urea.html" class="nav-link active">尿素分析</a>
     <a href="oil.html" class="nav-link">滑油報告</a>
 </div>
@@ -206,7 +206,7 @@
     // ==========================================
     // 1. 設定 Apps Script 網址
     // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycby98L3g-L_r7V6X7tP0Q_G7n9q8Y8Z9a0b1c2/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwXoH46dO4rlR2XhZ2PFflCTeRooroVBPADiRltxTa-Jp05uZc9sk2OsGKKSzN92ryxtg/exec";
     // ↑↑↑ 請確認您的網址 ↑↑↑
 
     const exchangeRate = 32.5; 
@@ -392,7 +392,8 @@
                     ]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: { position: 'left', title: {display:true, text:'噸'} },
                         y1: { position: 'right', title: {display:true, text:'元'}, grid: {drawOnChartArea: false} }

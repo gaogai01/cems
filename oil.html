@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>綜研滑油化驗報告</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* --- CSS 變數定義 --- */
@@ -24,12 +26,6 @@
         }
 
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
-        
-        .navbar { background: #333; padding: 10px 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .nav-link { color: #ccc; text-decoration: none; padding: 6px 12px; border-radius: 5px; transition: 0.2s; }
-        .nav-link:hover { background: #555; color: white; }
-        .nav-link.active { background: var(--primary); color: white; font-weight: bold; }
-
         .container { max-width: 98%; margin: 0 auto; padding: 0 10px; }
         
         h2 { margin: 20px 0 15px 0; font-size: 1.3rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; align-items: center;}
@@ -83,12 +79,7 @@
 </head>
 <body>
 
-<div class="navbar">
-    <a href="index.html" class="nav-link">廢油水處理</a>
-    <a href="cems.html" class="nav-link">CEMS 監測</a>
-    <a href="urea.html" class="nav-link">尿素分析</a>
-    <a href="oil.html" class="nav-link active">滑油報告</a>
-</div>
+<div id="navbar-placeholder"></div>
 
 <div class="container">
     <h2>
@@ -110,7 +101,7 @@
         </select>
     </div>
 
-    <div id="loading" style="text-align:center; padding:20px;">資料載入中...</div>
+    <div id="loading" style="text-align:center; padding:20px;">正在驗證權限並載入數據...</div>
     
     <div class="table-container">
         <table class="overview-table" id="overviewTable"></table>
@@ -155,6 +146,8 @@
     </div>
 </div>
 
+<script src="common.js"></script>
+
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbwqP_rRkI8xyVYFvo8nWY9pq4i1OLlvrLfAMxmleSAh-XDbMQN3yGk3eF0j5OdDDVMYxw/exec";
 
@@ -162,8 +155,13 @@
     let chartInstance = null;
     const LINE_COLORS = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'];
 
-    if(localStorage.getItem('oil_theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
-    fetchData();
+    // ============================================================
+    // 3. 主程式邏輯 (startApp)
+    // ============================================================
+    function startApp() {
+        if(localStorage.getItem('oil_theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        fetchData();
+    }
 
     async function fetchData() {
         try {
@@ -190,8 +188,8 @@
         if (val === "" || val === undefined) return true; 
         let num = parseFloat(val);
         if (isNaN(num)) return true; 
-        if (lower !== "" && num < parseFloat(lower)) return false; // 低於下限
-        if (upper !== "" && num > parseFloat(upper)) return false; // 高於上限
+        if (lower !== "" && num < parseFloat(lower)) return false;
+        if (upper !== "" && num > parseFloat(upper)) return false;
         return true;
     }
 
@@ -314,7 +312,6 @@
         const theadRow = document.getElementById('modalHeaderRow');
         const tbody = document.getElementById('detailTableBody');
         document.getElementById('modalTitle').innerText = `${machineId} - 近三次歷史報告`;
-        
         let headerHtml = `<th style="width:30%">檢驗項目</th><th style="width:15%">標準</th>`;
         historyRows.forEach((row, idx) => {
             const date = row[0].split('T')[0];
@@ -322,7 +319,6 @@
         });
         for(let i=historyRows.length; i<3; i++) headerHtml += `<th>-</th>`;
         theadRow.innerHTML = headerHtml;
-
         tbody.innerHTML = "";
         for(let i=2; i<rawData.headers.length; i++) {
             const cnName = rawData.cnHeaders[i] || rawData.headers[i];
@@ -347,7 +343,6 @@
     function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
     window.onclick = function(event) { if (event.target == document.getElementById('detailModal')) closeModal(); }
 
-    // --- 圖表更新 (修復上下限線條顯示) ---
     function updateChart() {
         const checkboxes = document.querySelectorAll('#machineCheckboxes input:checked');
         const selectedMachines = Array.from(checkboxes).map(cb => cb.value);
@@ -360,9 +355,8 @@
 
         let datasets = [];
         let allLabels = new Set();
-
-        // 1. 準備數據 & 統一時間軸
         let machineDataMap = {};
+        
         selectedMachines.forEach((mId, index) => {
             const filteredData = rawData.data.filter(r => {
                 const isMachineMatch = (r[1] === mId);
@@ -376,7 +370,6 @@
 
         const sortedLabels = Array.from(allLabels).sort();
 
-        // 2. 建立 Datasets
         selectedMachines.forEach((mId, index) => {
             const dataPoints = sortedLabels.map(date => {
                 const record = machineDataMap[mId].find(r => r[0].split('T')[0] === date);
@@ -388,7 +381,7 @@
                 data: dataPoints,
                 borderColor: LINE_COLORS[index % LINE_COLORS.length],
                 backgroundColor: LINE_COLORS[index % LINE_COLORS.length],
-                borderWidth: 2,
+                borderWidth: 1.5,
                 pointRadius: 0,
                 fill: false,
                 tension: 0.1,
@@ -396,31 +389,13 @@
             });
         });
 
-        // 3. 加入上下限紅線
         const lower = parseFloat(rawData.lowerLimits[pIdx]);
         const upper = parseFloat(rawData.upperLimits[pIdx]);
-        
         if (!isNaN(upper)) {
-            datasets.push({ 
-                label: '上限', 
-                data: new Array(sortedLabels.length).fill(upper), 
-                borderColor: '#dc3545', 
-                borderWidth: 1.5, 
-                borderDash: [5, 5], 
-                pointRadius: 0, 
-                fill: false 
-            });
+            datasets.push({ label: '上限', data: new Array(sortedLabels.length).fill(upper), borderColor: '#dc3545', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
         }
         if (!isNaN(lower)) {
-            datasets.push({ 
-                label: '下限', 
-                data: new Array(sortedLabels.length).fill(lower), 
-                borderColor: '#dc3545', 
-                borderWidth: 1.5, 
-                borderDash: [5, 5], 
-                pointRadius: 0, 
-                fill: false 
-            });
+            datasets.push({ label: '下限', data: new Array(sortedLabels.length).fill(lower), borderColor: '#dc3545', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
         }
 
         const ctx = document.getElementById('historyChart').getContext('2d');
@@ -437,10 +412,7 @@
                 interaction: { mode: 'index', intersect: false },
                 scales: { 
                     y: { beginAtZero: false, grid: {color: gridColor}, ticks: {color: textColor} },
-                    x: { 
-                        grid: {color: gridColor}, 
-                        ticks: { color: textColor, maxTicksLimit: 12, maxRotation: 0 } 
-                    }
+                    x: { grid: {color: gridColor}, ticks: { color: textColor, maxTicksLimit: 12, maxRotation: 0 } }
                 },
                 plugins: { legend: { labels: { color: textColor } } }
             }

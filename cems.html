@@ -13,9 +13,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
     <style>
-
-        /* --- 原本 CEMS 的 CSS (保持不變) --- */
-        :root {
+        /* --- CSS 變數定義 --- */
+        :root { 
             --bg-body: #0a0b10;
             --bg-card: rgba(30, 34, 45, 0.7);
             --bg-card-border: 1px solid rgba(255, 255, 255, 0.1);
@@ -58,7 +57,6 @@
             background-image: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.03) 0%, transparent 50%);
         }
         
-        /* 為了配合導航列，這裡增加一點 padding */
         .cems-container { padding: 10px 20px; }
 
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
@@ -260,8 +258,6 @@
 </div>
 
 <script>
-
-
     // ============================================================
     // 2. 原本 CEMS 的邏輯 (startApp)
     // ============================================================
@@ -276,7 +272,6 @@
         const COLORS_4 = ['#29b6f6', '#00e676', '#ffea00', '#ff1744'];
         let chartInstance = null; let globalHistoryData = []; let currentTotalLoadVal = 0; const BOILER_UNITS = [1, 2, 3, 4, 5, 7, 9, 11];
 
-        // ... (以下為原本 CEMS 的函數，為節省篇幅直接引用您的邏輯) ...
         function generateGradientByValue(values, colors, max) {
             let gradientStr = 'linear-gradient(90deg, ';
             for (let i = 0; i < values.length - 1; i++) {
@@ -295,7 +290,7 @@
             document.getElementById('bar-temp').style.background = generateGradientByValue(GAUGE_VALUES.temp, COLORS_4, THRESHOLDS.tempCard.max);
             document.getElementById('bar-wind').style.background = generateGradientByValue(GAUGE_VALUES.wind, COLORS_4, THRESHOLDS.windCard.max);
         }
-        window.toggleTheme = function() { // 掛載到 window 讓按鈕可呼叫
+        window.toggleTheme = function() { 
             const body = document.body; body.classList.toggle('light-mode');
             const isLight = body.classList.contains('light-mode');
             document.getElementById('themeIcon').innerText = isLight ? "🌙 暗色" : "☀️ 亮色";
@@ -438,6 +433,7 @@
         setInterval(fetchRealtimeData, 10000); setInterval(fetchHistoryData, 300000); setInterval(fetchWeather, 300000);
     }
 </script>
-    <script src="common.js"></script>
+
+<script src="common.js"></script>
 </body>
 </html>

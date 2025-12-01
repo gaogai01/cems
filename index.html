@@ -36,15 +36,6 @@
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
         .container { max-width: 100%; padding: 10px; }
 
-        /* --- 頂部導航列 (Navbar) --- */
-        .navbar { background: #333; padding: 10px 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .nav-link { color: #ccc; text-decoration: none; font-size: 1rem; padding: 6px 12px; border-radius: 5px; transition: 0.2s; }
-        .nav-link:hover { background: #555; color: white; }
-        .nav-link.active { background: #007bff; color: white; font-weight: bold; }
-        .user-info { margin-left: auto; color: white; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
-        .btn-logout { background: transparent; border: 1px solid #777; color: #f8d7da; cursor: pointer; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; }
-        .btn-logout:hover { background: #c82333; border-color: #bd2130; color: white; }
-
         /* --- 頁面標題區 --- */
         .page-header { background: var(--bg-card); padding: 8px 15px; border-radius: 6px; box-shadow: 0 2px 5px var(--shadow); display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-left: 5px solid #007bff; }
         h1 { color: var(--text-main); margin: 0; font-size: 1.2rem; letter-spacing: 1px; }
@@ -133,14 +124,7 @@
 </head>
 <body>
 
-<div class="navbar">
-    <a href="index.html" class="nav-link active">廢油水處理</a>
-    <a href="cems.html" class="nav-link">CEMS 監測</a>
-    <div class="user-info">
-        <span id="user-name">載入中...</span>
-        <button class="btn-logout" onclick="logout()">登出</button>
-    </div>
-</div>
+<div id="navbar-placeholder"></div>
 
 <div class="container">
     <div class="page-header">
@@ -185,21 +169,9 @@
 </div>
 
 <script>
-    // ============================================================
-    // 1. Firebase 設定 (請填入您的設定)
-    // ============================================================
-    const firebaseConfig = {
-  apiKey: "AIzaSyA58DOYplXhmo7HDYN_2Hgu-wo4ceYmINA",
-  authDomain: "tpc-monitor.firebaseapp.com",
-  projectId: "tpc-monitor",
-  storageBucket: "tpc-monitor.firebasestorage.app",
-  messagingSenderId: "1066125366380",
-  appId: "1:1066125366380:web:836d5898c051226669f449"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
 
+    
+    
     // ============================================================
     // 2. Google Apps Script 網址
     // ============================================================
@@ -439,6 +411,6 @@
         myChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { maxTicksLimit: 10 } } }, plugins: { legend: { labels: { color: textColor } } } } });
     }
 </script>
-
+<script src="common.js"></script>
 </body>
 </html>

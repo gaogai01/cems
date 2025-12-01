@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>尖山發電廠 - 廢油水監控系統</title>
     
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -168,40 +164,19 @@
     </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="common.js"></script>
+
 <script>
-
-    
-    
     // ============================================================
-    // 2. Google Apps Script 網址
+    // Google Apps Script 網址
     // ============================================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbzwFRkiITDbICO-zisn_rr-6uT0-DFNeMvgFFYWFTVKHGrZz7K9XbIi18NBW4Gr2Nty/exec"; 
-    // ↑↑↑ 請確認這是您的網址 ↑↑↑
+    const API_URL = "https://script.google.com/macros/s/AKfycbzwFRkiITDbICO-zisn_rr-6uT0-DFNeMvgFFYWFTVKHGrZz7K9XbIi18NBW4Gr2Nty/exec";
 
     // ============================================================
-    // 3. 權限檢查邏輯
-    // ============================================================
-    auth.onAuthStateChanged(async (user) => {
-        if (!user) {
-            location.href = 'login.html';
-        } else {
-            const doc = await db.collection('users').doc(user.uid).get();
-            if (!doc.exists || !doc.data().isApproved) {
-                alert("您的帳號尚未核准，請聯繫管理員。");
-                location.href = 'login.html';
-            } else {
-                document.getElementById('user-name').innerText = doc.data().name;
-                startApp(); // 權限通過，啟動監控
-            }
-        }
-    });
-
-    function logout() {
-        auth.signOut().then(() => location.href = 'login.html');
-    }
-
-    // ============================================================
-    // 4. 監控系統邏輯 (startApp)
+    // 設定檔 (警報與儀表板配置)
     // ============================================================
     const ALARMS = {
         "LI018_VAL0":   { max: 120, warn: 90,  crit: 100 },
@@ -307,6 +282,26 @@
         }
     ];
 
+    // ============================================================
+    // 5. 主要應用程式邏輯 (startApp)
+    // ============================================================
+    function startApp() {
+        // 1. 啟動定時更新
+        setInterval(fetchData, 5000);
+        fetchData();
+        
+        // 2. 初始化圖表日期
+        document.getElementById('chartDate').valueAsDate = new Date();
+        
+        // 3. 載入主題設定
+        const savedTheme = localStorage.getItem("theme"); 
+        if (savedTheme) { 
+            document.body.setAttribute("data-theme", savedTheme); 
+            document.getElementById("themeBtn").innerHTML = savedTheme === "dark" ? "☀️" : "🌓"; 
+        }
+    }
+
+    // --- 輔助函數：數值顯示上限 ---
     function applyDisplayLimit(colName, value) {
         let val = parseFloat(value); if (isNaN(val)) return value;
         if (colName === "SS018_VAL0" && val > 27) return 27;
@@ -315,6 +310,7 @@
         return value;
     }
 
+    // --- 輔助函數：繪製 Gauge ---
     function getGaugeHTML(colName, value) {
         let val = parseFloat(value); if (isNaN(val)) return "";
         let rule = ALARMS[colName];
@@ -339,6 +335,7 @@
         return "";
     }
 
+    // --- 輔助函數：檢查警報狀態 ---
     function checkAlarm(colName, value) {
         let val = parseFloat(value); if (isNaN(val)) return "";
         if (colName.indexOf("PHI") !== -1) { if (val < 6 || val > 9) return "status-critical"; if (val < 6.5 || val > 8.5) return "status-warning"; return ""; }
@@ -354,19 +351,49 @@
         return "";
     }
 
-    function startApp() {
-        setInterval(fetchData, 5000);
-        fetchData();
-        
-        document.getElementById('chartDate').valueAsDate = new Date();
+    // --- 資料讀取與渲染 ---
+    function fetchData() { 
+        fetch(API_URL + "?mode=read&t=" + new Date().getTime())
+            .then(response => response.json())
+            .then(data => { 
+                if(data.timestamp) document.getElementById('last-update').innerText = data.timestamp.split(' ')[1]; 
+                let htmlContent = ''; 
+                DASHBOARD_CONFIG.forEach(group => { 
+                    htmlContent += `<div class="system-group ${group.className}"><div class="system-title">${group.title} <span>${group.items.length}</span></div><div class="inner-grid">`; 
+                    group.items.forEach(item => { 
+                        let val = data[item.col] !== undefined ? data[item.col] : '--'; 
+                        val = applyDisplayLimit(item.col, val); 
+                        if (!isNaN(val) && val.toString().indexOf('.') !== -1) { 
+                            val = parseFloat(val).toFixed(1); 
+                            if(val.endsWith('.0')) val = val.replace('.0', ''); 
+                        } 
+                        let statusClass = checkAlarm(item.col, val); 
+                        let gaugeHTML = getGaugeHTML(item.col, val); 
+                        htmlContent += `<div class="card ${statusClass}"><div class="card-header"><span class="tag-name">${item.name}</span><span class="tag-id">${item.tag}</span></div><div class="data-row"><span class="value">${val}</span><span class="unit">${item.unit}</span></div>${gaugeHTML}</div>`; 
+                    }); 
+                    htmlContent += `</div></div>`; 
+                }); 
+                document.getElementById('app').innerHTML = htmlContent; 
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('last-update').innerText = "連線異常";
+            }); 
     }
 
-    function fetchData() { fetch(API_URL + "?mode=read&t=" + new Date().getTime()).then(response => response.json()).then(data => { if(data.timestamp) document.getElementById('last-update').innerText = data.timestamp.split(' ')[1]; let htmlContent = ''; DASHBOARD_CONFIG.forEach(group => { htmlContent += `<div class="system-group ${group.className}"><div class="system-title">${group.title} <span>${group.items.length}</span></div><div class="inner-grid">`; group.items.forEach(item => { let val = data[item.col] !== undefined ? data[item.col] : '--'; val = applyDisplayLimit(item.col, val); if (!isNaN(val) && val.toString().indexOf('.') !== -1) { val = parseFloat(val).toFixed(1); if(val.endsWith('.0')) val = val.replace('.0', ''); } let statusClass = checkAlarm(item.col, val); let gaugeHTML = getGaugeHTML(item.col, val); htmlContent += `<div class="card ${statusClass}"><div class="card-header"><span class="tag-name">${item.name}</span><span class="tag-id">${item.tag}</span></div><div class="data-row"><span class="value">${val}</span><span class="unit">${item.unit}</span></div>${gaugeHTML}</div>`; }); htmlContent += `</div></div>`; }); document.getElementById('app').innerHTML = htmlContent; }).catch(err => console.error(err)); }
+    // --- 切換主題 ---
+    function toggleTheme() { 
+        const body = document.body; 
+        const newTheme = body.getAttribute("data-theme") === "dark" ? "light" : "dark"; 
+        body.setAttribute("data-theme", newTheme); 
+        localStorage.setItem("theme", newTheme); 
+        document.getElementById("themeBtn").innerHTML = newTheme === "dark" ? "☀️" : "🌓"; 
+        if(myChart) updateChart(); 
+    }
     
-    function toggleTheme() { const body = document.body; const newTheme = body.getAttribute("data-theme") === "dark" ? "light" : "dark"; body.setAttribute("data-theme", newTheme); localStorage.setItem("theme", newTheme); document.getElementById("themeBtn").innerHTML = newTheme === "dark" ? "☀️" : "🌓"; if(myChart) updateChart(); }
-    const savedTheme = localStorage.getItem("theme"); if (savedTheme) { document.body.setAttribute("data-theme", savedTheme); document.getElementById("themeBtn").innerHTML = savedTheme === "dark" ? "☀️" : "🌓"; }
-    
+    // --- 圖表功能 ---
     let historyData = null; let myChart = null; 
+    
     function openChartModal() { 
         document.getElementById('chartModal').style.display = 'block'; 
         renderCheckboxes(); 
@@ -374,12 +401,30 @@
         renderCheckboxes();
         setTimeout(() => {
             const defaultChk = document.querySelector('input[value="LIT000_VAL0"]');
-            if(defaultChk) { defaultChk.checked = true; if (!historyData) fetchHistory(); else updateChart(); }
+            if(defaultChk) { 
+                defaultChk.checked = true; 
+                if (!historyData) fetchHistory(); else updateChart(); 
+            }
         }, 100);
     }
+    
     function closeChartModal() { document.getElementById('chartModal').style.display = 'none'; }
-    function fetchHistory() { fetch(API_URL + "?mode=history").then(res => res.json()).then(json => { historyData = json; updateChart(); }); }
-    function renderCheckboxes() { const cat = document.getElementById('categorySelect').value; const container = document.getElementById('tagCheckboxes'); container.innerHTML = ''; let items = []; DASHBOARD_CONFIG.forEach(group => { group.items.forEach(item => { if (item.cat === cat) items.push(item); }); }); items.forEach((item) => { container.innerHTML += `<div class="checkbox-item"><input type="checkbox" value="${item.col}" id="chk_${item.col}" onchange="updateChart()"><label for="chk_${item.col}">${item.name} (${item.tag})</label></div>`; }); } 
+    
+    function fetchHistory() { 
+        fetch(API_URL + "?mode=history").then(res => res.json()).then(json => { historyData = json; updateChart(); }); 
+    }
+    
+    function renderCheckboxes() { 
+        const cat = document.getElementById('categorySelect').value; 
+        const container = document.getElementById('tagCheckboxes'); 
+        container.innerHTML = ''; 
+        let items = []; 
+        DASHBOARD_CONFIG.forEach(group => { group.items.forEach(item => { if (item.cat === cat) items.push(item); }); }); 
+        items.forEach((item) => { 
+            container.innerHTML += `<div class="checkbox-item"><input type="checkbox" value="${item.col}" id="chk_${item.col}" onchange="updateChart()"><label for="chk_${item.col}">${item.name} (${item.tag})</label></div>`; 
+        }); 
+    } 
+    
     function updateChart() {
         if (!historyData) return;
         const timeRangeHours = parseInt(document.getElementById('timeRange').value);
@@ -388,7 +433,7 @@
         const baseTime = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59).getTime();
         const headers = historyData.headers; const rawRows = historyData.data; const checkboxes = document.querySelectorAll('#tagCheckboxes input:checked'); const selectedCols = [];
         checkboxes.forEach(chk => { const idx = headers.indexOf(chk.value); if (idx !== -1) selectedCols.push({ idx: idx, label: chk.parentNode.textContent.trim(), key: chk.value, data: [] }); });
-        const labels = [];
+        const now = new Date(); const labels = [];
         rawRows.forEach(row => {
             let timeStr = row[0]; let rowDate = new Date(timeStr.replace(/-/g, "/")); let rowTime = rowDate.getTime(); let diffHours = (baseTime - rowTime) / 1000 / 60 / 60;
             if (diffHours >= 0 && diffHours <= timeRangeHours) {
@@ -411,6 +456,6 @@
         myChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { maxTicksLimit: 10 } } }, plugins: { legend: { labels: { color: textColor } } } } });
     }
 </script>
-<script src="common.js"></script>
+
 </body>
 </html>

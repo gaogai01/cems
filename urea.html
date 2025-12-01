@@ -4,26 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>尿素採購與庫存分析</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
 
     <style>
         :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --border-color: #e0e0e0; --primary: #3f51b5; --danger: #d32f2f; --warning: #ff9800; --success: #4caf50; }
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        [data-theme="dark"] {
+            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --border-color: #333333;
+        }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; transition: background 0.3s; }
         
-        /* 導航列 */
-        .navbar { background: #333; padding: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 15px; }
-        .nav-link { color: #ccc; text-decoration: none; padding: 8px 12px; border-radius: 5px; font-size: 0.95rem; text-align: center; flex: 1; white-space: nowrap; }
-        .nav-link:hover { background: #555; color: white; }
-        .nav-link.active { background: var(--primary); color: white; font-weight: bold; }
+        /* 導航列相關樣式已移至 common.js，這裡移除 */
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
         
         /* 卡片 */
         .card { 
             background: var(--bg-card); border-radius: 10px; padding: 15px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid var(--primary); 
-            overflow: hidden; /* 關鍵：防止卡片被內部表格撐爆 */
+            overflow: hidden;
         }
         .card h2 { margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         .full-width { grid-column: 1 / -1; }
@@ -56,45 +60,20 @@
         .inventory-input label { display: block; font-size: 0.85rem; margin-bottom: 4px; font-weight: bold; color: #444; }
         .inventory-input input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; background: #fff; }
         
-        /* --- 橫向捲動表格 (核心修正) --- */
+        /* 橫向捲動表格 */
         .horizontal-scroll { 
-            width: 100%; 
-            overflow-x: auto; /* 允許橫向捲動 */
-            -webkit-overflow-scrolling: touch; /* 手機滑動順暢 */
-            border: 1px solid #eee; 
-            border-radius: 5px; 
-            margin-top: 10px;
-            padding-bottom: 5px; /* 預留捲軸空間 */
+            width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; 
+            border: 1px solid #eee; border-radius: 5px; margin-top: 10px; padding-bottom: 5px; 
         }
-        
-        .h-table { 
-            border-collapse: collapse; 
-            width: max-content; /* 關鍵：讓表格依內容撐開寬度 */
-            min-width: 100%;    /* 至少填滿容器 */
-        } 
-        
+        .h-table { border-collapse: collapse; width: max-content; min-width: 100%; } 
         .h-table th { 
-            background: #f8f9fa; 
-            position: sticky; 
-            left: 0; 
-            z-index: 2; 
-            padding: 10px; 
-            text-align: right; 
-            border-right: 2px solid #ddd; 
-            border-bottom: 1px solid #eee; 
-            white-space: nowrap; /* 不換行 */
-            font-size: 0.85rem; 
-            min-width: 80px; /* 固定標題寬度 */
+            background: #f8f9fa; position: sticky; left: 0; z-index: 2; padding: 10px; 
+            text-align: right; border-right: 2px solid #ddd; border-bottom: 1px solid #eee; 
+            white-space: nowrap; font-size: 0.85rem; min-width: 80px; 
         }
-        
         .h-table td { 
-            padding: 8px 12px; 
-            text-align: center; 
-            border-bottom: 1px solid #eee; 
-            border-right: 1px dashed #eee; 
-            min-width: 60px; /* 確保每格有足夠寬度 */
-            font-size: 0.9rem; 
-            white-space: nowrap; /* 不換行 */
+            padding: 8px 10px; text-align: center; border-bottom: 1px solid #eee; 
+            border-right: 1px dashed #eee; min-width: 60px; font-size: 0.9rem; white-space: nowrap; 
         }
         
         .cell-weekend { color: var(--primary); font-weight: bold; background-color: #f4f7ff; }
@@ -102,40 +81,25 @@
         .cell-delivery { background-color: #e3f2fd; color: #0d47a1; font-weight: bold; } 
         .cell-empty { background-color: #e0e0e0; color: #999; }
 
-        /* 手機版響應式設計 */
+        /* RWD */
         @media (max-width: 768px) { 
             .container { grid-template-columns: 1fr; gap: 10px; padding: 5px; } 
-            .navbar { gap: 5px; padding: 8px; }
-            .nav-link { font-size: 0.85rem; padding: 6px 8px; }
-            
             .card { padding: 12px; }
             .card h2 { font-size: 1.1rem; }
-
-            /* 庫存輸入：2x2 網格 */
             .inventory-input { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .inventory-input div { margin-bottom: 0; }
-            
-            /* 濃度換算：上下堆疊 */
             .calc-container { flex-direction: column; gap: 15px; }
             .calc-inputs { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .calc-group { margin-bottom: 0; }
             .calc-chart { width: 100%; height: 200px; }
-            
-            /* 表格字體微調 */
-            .h-table th, .h-table td { padding: 8px; font-size: 0.85rem; }
-            
+            .h-table th, .h-table td { padding: 6px 8px; font-size: 0.85rem; }
             button { padding: 6px 10px; }
         }
     </style>
 </head>
 <body>
 
-<div class="navbar">
-    <a href="index.html" class="nav-link">廢油水處理</a>
-    <a href="cems.html" class="nav-link">CEMS 監測</a>
-    <a href="urea.html" class="nav-link active">尿素分析</a>
-    <a href="oil.html" class="nav-link">滑油報告</a>
-</div>
+<div id="navbar-placeholder"></div>
 
 <div class="container">
 
@@ -143,7 +107,13 @@
         <h2>國際尿素成本 <button onclick="updatePrice()" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">更新</button></h2>
         <p style="font-size:0.8rem; color:#666; margin-bottom:8px;">* 請輸入最新國際報價 (USD)：</p>
         <table class="cost-table">
-            <tr><td class="label">1. 國際報價</td><td class="value"><input type="number" id="usdPrice" value="325" class="input-usd" oninput="updatePrice()"> <span style="font-size:0.8rem;">USD/頓</span></td></tr>
+            <tr>
+                <td class="label">1. 國際報價</td>
+                <td class="value">
+                    <input type="number" id="usdPrice" value="325" class="input-usd" oninput="updatePrice()"> 
+                    <span style="font-size:0.8rem;">USD/頓</span>
+                </td>
+            </tr>
             <tr><td class="label">2. 匯率</td><td class="value"><span id="exchangeRate">32.5</span></td></tr>
             <tr style="background-color: #f1f3f5;"><td class="label" style="font-weight:bold;">➡ 原料成本</td><td class="value"><span id="rawCost">10.6</span> <small>元/kg</small></td></tr>
             <tr><td class="label">+ 海運 (東南亞-台灣)</td><td class="value">+ <span id="seaFreight">1.5</span></td></tr>
@@ -172,11 +142,9 @@
             <div><label>通知交貨 (天)</label><input type="number" id="leadTime" value="10" oninput="predictStock()"></div>
             <div><label>驗收期 (天)</label><input type="number" id="inspectTime" value="5" oninput="predictStock()"></div>
         </div>
-        
         <div class="horizontal-scroll">
             <table class="h-table" id="stockTable"></table>
         </div>
-        
         <div style="margin-top:8px; font-size:0.8rem; display:flex; gap:12px; flex-wrap:wrap;">
             <span style="display:flex; align-items:center;"><div style="width:12px;height:12px;background:#fff3cd;margin-right:5px;border:1px solid #ffc107;"></div> 第0天(叫貨)</span>
             <span style="display:flex; align-items:center;"><div style="width:12px;height:12px;background:#e3f2fd;margin-right:5px;border:1px solid #0d47a1;"></div> 交貨期</span>
@@ -202,18 +170,26 @@
 
 </div>
 
+<script src="common.js"></script>
+
 <script>
     // ==========================================
-    // 1. 設定 Apps Script 網址
+    // 3. 主程式邏輯 (startApp)
     // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbwXoH46dO4rlR2XhZ2PFflCTeRooroVBPADiRltxTa-Jp05uZc9sk2OsGKKSzN92ryxtg/exec";
-    // ↑↑↑ 請確認您的網址 ↑↑↑
-
+    const API_URL = "https://script.google.com/macros/s/AKfycby98L3g-L_r7V6X7tP0Q_G7n9q8Y8Z9a0b1c2/exec";
     const exchangeRate = 32.5; 
     const HOLIDAYS_2025 = [
         "2025-01-01", "2025-01-25", "2025-01-26", "2025-01-27", "2025-01-28", "2025-01-29", "2025-01-30", "2025-01-31",
         "2025-02-28", "2025-04-03", "2025-04-04", "2025-05-30", "2025-05-31", "2025-10-06", "2025-10-10"
     ];
+
+    // 當 common.js 驗證成功後，會呼叫此函式
+    function startApp() {
+        updatePrice();
+        initConcChart();
+        predictStock();
+        fetchChartData();
+    }
 
     function isWorkDay(date) {
         const day = date.getDay();
@@ -232,9 +208,6 @@
         document.getElementById('finalPrice').innerText = totalCost.toFixed(1);
     }
 
-    // ==========================================
-    // 2. 濃度換算
-    // ==========================================
     let concChart;
     function initConcChart() {
         const ctx = document.getElementById('concChart').getContext('2d');
@@ -289,9 +262,6 @@
         }
     }
 
-    // ==========================================
-    // 3. 庫存預測
-    // ==========================================
     function predictStock() {
         const stock = parseFloat(document.getElementById('currentStock').value);
         const usage = parseFloat(document.getElementById('dailyUsage').value);
@@ -364,9 +334,6 @@
         table.innerHTML = `<tr>${rowDates.join('')}</tr><tr>${rowWeeks.join('')}</tr><tr>${rowStocks.join('')}</tr><tr>${rowStatus.join('')}</tr>`;
     }
 
-    // ==========================================
-    // 4. 歷史圖表
-    // ==========================================
     async function fetchChartData() {
         try {
             const res = await fetch(API_URL + "?mode=urea_stats");
@@ -398,12 +365,6 @@
             });
         } catch (e) { console.error("圖表載入失敗", e); }
     }
-
-    updatePrice();
-    initConcChart();
-    predictStock();
-    fetchChartData();
 </script>
-
 </body>
 </html>

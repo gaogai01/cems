@@ -2,131 +2,160 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>尿素採購與庫存分析</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
 
     <style>
         :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --border-color: #e0e0e0; --primary: #3f51b5; --danger: #d32f2f; --warning: #ff9800; --success: #4caf50; }
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
-        /* 導航列 */
-        .navbar { background: #333; padding: 10px 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-        .nav-link { color: #ccc; text-decoration: none; padding: 6px 12px; border-radius: 5px; }
+        /* --- 導航列 (手機優化) --- */
+        .navbar { background: #333; padding: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .nav-link { color: #ccc; text-decoration: none; padding: 8px 12px; border-radius: 5px; font-size: 0.95rem; text-align: center; flex: 1; white-space: nowrap; }
         .nav-link:hover { background: #555; color: white; }
         .nav-link.active { background: var(--primary); color: white; font-weight: bold; }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
-        .card { background: var(--bg-card); border-radius: 10px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid var(--primary); }
-        .card h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        .card { background: var(--bg-card); border-radius: 10px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid var(--primary); }
+        .card h2 { margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         
         .full-width { grid-column: 1 / -1; }
         
-        /* 1. 國際行情與成本結構 (依照截圖樣式還原) */
-        .cost-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.95rem; }
-        .cost-table td { padding: 8px 5px; border-bottom: 1px dashed #eee; }
+        /* 規格表 */
+        .spec-list { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; color: #555; }
+        .spec-list li { padding: 6px 0; border-bottom: 1px dashed #eee; line-height: 1.4; }
+        .spec-list li b { color: #333; display: inline-block; min-width: 80px; }
+
+        /* 國際行情區 */
+        .price-box { display: flex; justify-content: space-around; text-align: center; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 8px; }
+        .price-item .val { font-size: 1.6rem; font-weight: bold; color: var(--danger); }
+        .price-item .sub { font-size: 0.8rem; color: #666; margin-top: 2px; }
+        
+        .cost-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.9rem; }
+        .cost-table td { padding: 8px 4px; border-bottom: 1px dashed #eee; }
         .cost-table .label { color: #555; text-align: left; }
-        .cost-table .value { text-align: right; font-weight: bold; color: #333; }
-        .cost-table .total-row td { border-top: 2px solid #eee; border-bottom: none; padding-top: 15px; font-size: 1.2rem; color: var(--danger); font-weight: bold; }
-        .cost-table .input-usd { width: 80px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; text-align: right; font-weight: bold; color: var(--primary); font-size: 1rem; }
-        .cost-note { font-size: 0.85rem; color: #666; margin-bottom: 10px; }
-
-        /* 2. 濃度換算 (圖表區) */
-        .calc-container { display: flex; gap: 20px; align-items: center; height: 100%; }
+        .cost-table .value { text-align: right; font-weight: bold; color: #333; white-space: nowrap; }
+        .cost-table .total-row td { border-top: 2px solid #eee; border-bottom: none; padding-top: 12px; font-size: 1.1rem; color: var(--danger); }
+        .input-usd { width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; text-align: right; font-weight: bold; color: var(--primary); font-size: 1rem; }
+        
+        /* 濃度換算 (圖表區) */
+        .calc-container { display: flex; gap: 20px; align-items: flex-start; }
         .calc-inputs { flex: 0 0 40%; }
-        .calc-chart { flex: 1; height: 250px; position: relative; }
-        .calc-group { margin-bottom: 20px; }
-        .calc-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: #555; }
-        .calc-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
-        .calc-result { text-align: right; font-size: 1.1rem; color: var(--primary); font-weight: bold; margin-top: 5px; min-height: 1.2em; }
+        .calc-chart { flex: 1; height: 220px; position: relative; }
+        .calc-group { margin-bottom: 15px; }
+        .calc-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 0.85rem; color: #555; }
+        .calc-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1rem; }
+        .calc-result { text-align: right; font-size: 1.1rem; color: var(--primary); font-weight: bold; margin-top: 2px; }
 
-        /* 3. 庫存預測 */
-        .inventory-input { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px; flex-wrap: wrap; }
-        .inventory-input div { flex: 1; min-width: 100px; }
-        .inventory-input label { display: block; font-size: 0.85rem; margin-bottom: 3px; font-weight: bold; }
-        .inventory-input input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        /* 庫存預測 */
+        /* PC版: 一排顯示 */
+        .inventory-input { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px; }
+        .inventory-input div { flex: 1; }
         
-        .horizontal-scroll { overflow-x: auto; border: 1px solid #eee; border-radius: 5px; }
+        .inventory-input label { display: block; font-size: 0.85rem; margin-bottom: 4px; font-weight: bold; color: #444; }
+        .inventory-input input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; background: #fff; }
+        
+        .horizontal-scroll { overflow-x: auto; border: 1px solid #eee; border-radius: 5px; -webkit-overflow-scrolling: touch; }
         .h-table { border-collapse: collapse; width: max-content; } 
-        .h-table th { background: #f8f9fa; position: sticky; left: 0; z-index: 2; padding: 8px 12px; text-align: right; border-right: 2px solid #ddd; border-bottom: 1px solid #eee; white-space: nowrap; min-width: 80px; }
-        .h-table td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #eee; border-right: 1px dashed #eee; min-width: 60px; }
+        .h-table th { background: #f8f9fa; position: sticky; left: 0; z-index: 2; padding: 10px; text-align: right; border-right: 2px solid #ddd; border-bottom: 1px solid #eee; white-space: nowrap; min-width: 70px; font-size: 0.85rem; }
+        .h-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid #eee; border-right: 1px dashed #eee; min-width: 55px; font-size: 0.9rem; }
         
-        .cell-weekend { color: var(--primary); font-weight: bold; background-color: #f0f4ff; }
+        .cell-weekend { color: var(--primary); font-weight: bold; background-color: #f4f7ff; }
         .cell-order { background-color: #fff3cd; color: #856404; font-weight: bold; border: 2px solid #ffc107; } 
         .cell-delivery { background-color: #e3f2fd; color: #0d47a1; font-weight: bold; } 
         .cell-empty { background-color: #e0e0e0; color: #999; }
 
+        /* 手機版響應式設計 (關鍵優化) */
         @media (max-width: 768px) { 
-            .container { grid-template-columns: 1fr; } 
-            .calc-container { flex-direction: column; }
+            .container { grid-template-columns: 1fr; gap: 10px; padding: 5px; } 
+            .navbar { gap: 5px; padding: 8px; }
+            .nav-link { font-size: 0.85rem; padding: 6px 8px; }
+            
+            .card { padding: 12px; }
+            .card h2 { font-size: 1.1rem; }
+
+            /* 庫存輸入：手機版改為 2x2 網格 */
+            .inventory-input { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .inventory-input div { margin-bottom: 0; }
+            
+            /* 濃度換算：手機版上下堆疊 */
+            .calc-container { flex-direction: column; gap: 15px; }
+            .calc-inputs { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .calc-group { margin-bottom: 0; }
             .calc-chart { width: 100%; height: 200px; }
-            .calc-inputs { width: 100%; }
+            
+            /* 調整表格字體 */
+            .h-table th, .h-table td { padding: 6px 8px; font-size: 0.85rem; }
+            
+            /* 調整按鈕大小 */
+            button { padding: 6px 10px; }
         }
     </style>
 </head>
 <body>
 
 <div class="navbar">
-    <a href="index.html" class="nav-link">廢油水處理</a>
-    <a href="cems.html" class="nav-link">CEMS 監測</a>
+    <a href="index.html" class="nav-link">廢油水</a>
+    <a href="cems.html" class="nav-link">CEMS</a>
     <a href="urea.html" class="nav-link active">尿素分析</a>
+    <a href="oil.html" class="nav-link">滑油報告</a>
 </div>
 
 <div class="container">
 
     <div class="card">
-        <h2>國際尿素成本分析</h2>
-        <p class="cost-note">
-            請輸入最新國際報價 (因 API 限制需手動更新)：
-        </p>
+        <h2>國際尿素成本 <button onclick="updatePrice()" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">更新</button></h2>
+        <p style="font-size:0.8rem; color:#666; margin-bottom:8px;">* 請輸入最新國際報價 (USD)：</p>
+        
         <table class="cost-table">
             <tr>
-                <td class="label">1. 國際報價 (FOB)</td>
+                <td class="label">1. 國際報價</td>
                 <td class="value">
                     <input type="number" id="usdPrice" value="325" class="input-usd" oninput="updatePrice()"> 
-                    <span style="font-size:0.9rem; color:#333; margin-left:5px;">USD/頓</span>
+                    <span style="font-size:0.8rem;">USD/頓</span>
                 </td>
             </tr>
             <tr>
-                <td class="label">2. 匯率 (USD/TWD)</td>
+                <td class="label">2. 匯率</td>
                 <td class="value"><span id="exchangeRate">32.5</span></td>
             </tr>
-            <tr style="background-color: #f8f9fa;">
-                <td class="label" style="font-weight:bold;">➡ 折合原料成本</td>
-                <td class="value"><span id="rawCost">10.6</span> 元/kg</td>
+            <tr style="background-color: #f1f3f5;">
+                <td class="label" style="font-weight:bold;">➡ 原料成本</td>
+                <td class="value"><span id="rawCost">10.6</span> <small>元/kg</small></td>
             </tr>
             <tr>
-                <td class="label">+ 國際海運費 (東南亞-台灣)</td>
-                <td class="value">+ <span id="seaFreight">1.5</span> 元/kg</td>
+                <td class="label">+ 海運 (東南亞-台灣)</td>
+                <td class="value">+ <span id="seaFreight">1.5</span></td>
             </tr>
             <tr>
-                <td class="label">+ 島內轉運費 (台灣-澎湖)</td>
-                <td class="value">+ <span id="localFreight">2.5</span> 元/kg</td>
+                <td class="label">+ 轉運 (台灣-澎湖)</td>
+                <td class="value">+ <span id="localFreight">2.5</span></td>
             </tr>
             <tr>
-                <td class="label">+ 關稅、保險與雜支 (約15%)</td>
-                <td class="value">+ <span id="taxMisc">1.6</span> 元/kg</td>
+                <td class="label">+ 關稅/保險/雜支</td>
+                <td class="value">+ <span id="taxMisc">1.6</span></td>
             </tr>
             <tr class="total-row">
-                <td class="label">預估到廠總成本</td>
-                <td class="value"><span id="finalPrice">16.1</span> 元/kg</td>
+                <td class="label">預估到廠價</td>
+                <td class="value"><span id="finalPrice">16.1</span> <small>元/kg</small></td>
             </tr>
         </table>
     </div>
 
     <div class="card">
-        <h2>濃度/比重 換算趨勢圖</h2>
+        <h2>濃度/比重 換算</h2>
         <div class="calc-container">
             <div class="calc-inputs">
                 <div class="calc-group">
-                    <label>輸入比重 (SG)</label>
+                    <label>比重 (SG)</label>
                     <input type="number" id="sgInput" placeholder="1.11" step="0.01" oninput="calcConc()">
                     <div class="calc-result" id="concResult">-- %</div>
                 </div>
                 <div class="calc-group">
-                    <label>輸入濃度 (%)</label>
+                    <label>濃度 (%)</label>
                     <input type="number" id="concInput" placeholder="40" step="0.1" oninput="calcSg()">
                     <div class="calc-result" id="sgResult">--</div>
                 </div>
@@ -138,7 +167,7 @@
     </div>
 
     <div class="card full-width">
-        <h2>庫存消耗預測與叫貨排程</h2>
+        <h2>庫存消耗與叫貨排程</h2>
         <div class="inventory-input">
             <div><label>目前庫存 (噸)</label><input type="number" id="currentStock" value="262" oninput="predictStock()"></div>
             <div><label>日用量 (噸)</label><input type="number" id="dailyUsage" value="11.7" oninput="predictStock()"></div>
@@ -148,24 +177,26 @@
         <div class="horizontal-scroll">
             <table class="h-table" id="stockTable"></table>
         </div>
-        <div style="margin-top:5px; font-size:0.85rem; display:flex; gap:15px;">
-            <span style="display:flex; align-items:center;"><div style="width:12px;height:12px;background:#fff3cd;margin-right:5px;border:1px solid #ffc107;"></div> 第0天 (叫貨)</span>
-            <span style="display:flex; align-items:center;"><div style="width:12px;height:12px;background:#e3f2fd;margin-right:5px;border:1px solid #0d47a1;"></div> 交貨期間</span>
+        <div style="margin-top:8px; font-size:0.8rem; display:flex; gap:12px; flex-wrap:wrap;">
+            <span style="display:flex; align-items:center;"><div style="width:12px;height:12px;background:#fff3cd;margin-right:5px;border:1px solid #ffc107;"></div> 第0天(叫貨)</span>
+            <span style="display:flex; align-items:center;"><div style="width:12px;height:12px;background:#e3f2fd;margin-right:5px;border:1px solid #0d47a1;"></div> 交貨期</span>
+            <span style="display:flex; align-items:center; color:#3f51b5; font-weight:bold;">* 藍字: 週末</span>
         </div>
     </div>
 
     <div class="card full-width">
-        <h2>尿素用量比較</h2>
-        <div style="height:350px;">
+        <h2>113年 vs 114年 用量比較</h2>
+        <div style="height:300px;">
             <canvas id="trendChart"></canvas>
         </div>
     </div>
     
     <div class="card full-width">
         <h2>工業級尿素規範</h2>
-        <ul class="spec-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px;">
-            <li><b>(一) 外觀：</b>白色之顆粒體或結晶體</li><li><b>(二) 全氮量：</b>不得低於 46%</li><li><b>(三) 鐵分：</b>＜ 10 ppm</li>
-            <li><b>(四) 游離氨：</b>＜ 150 ppm</li><li><b>(五) 酸鹼度：</b>pH 7.0 ～ 9.8 (10%溶液 @ 20℃)</li><li><b>(六) 甲醛：</b>＜ 100 ppm</li>
+        <ul class="spec-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 5px;">
+            <li><b>(一) 外觀：</b>白色之顆粒體或結晶體</li><li><b>(二) 全氮量：</b>不得低於 46%</li>
+            <li><b>(三) 鐵分：</b>＜ 10 ppm</li><li><b>(四) 游離氨：</b>＜ 150 ppm</li>
+            <li><b>(五) 酸鹼度：</b>pH 7.0 ～ 9.8</li><li><b>(六) 甲醛：</b>＜ 100 ppm</li>
         </ul>
     </div>
 
@@ -175,7 +206,7 @@
     // ==========================================
     // 1. 設定 Apps Script 網址
     // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbwXoH46dO4rlR2XhZ2PFflCTeRooroVBPADiRltxTa-Jp05uZc9sk2OsGKKSzN92ryxtg/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycby98L3g-L_r7V6X7tP0Q_G7n9q8Y8Z9a0b1c2/exec";
     // ↑↑↑ 請確認您的網址 ↑↑↑
 
     const exchangeRate = 32.5; 
@@ -194,27 +225,20 @@
 
     function updatePrice() {
         const ureaUsd = parseFloat(document.getElementById('usdPrice').value) || 0;
-        
-        // 計算邏輯 (依照您的圖片)
         const rawCost = (ureaUsd * exchangeRate) / 1000; 
-        const seaFreight = 1.5;
-        const localFreight = 2.5; 
-        const taxAndMisc = rawCost * 0.15; // 15% 雜支
-        const totalCost = rawCost + seaFreight + localFreight + taxAndMisc;
-
+        const totalCost = rawCost + 1.5 + 2.5 + (rawCost * 0.15);
         document.getElementById('rawCost').innerText = rawCost.toFixed(1);
-        document.getElementById('taxMisc').innerText = taxAndMisc.toFixed(1);
+        document.getElementById('taxMisc').innerText = (rawCost * 0.15).toFixed(1);
         document.getElementById('finalPrice').innerText = totalCost.toFixed(1);
     }
 
     // ==========================================
-    // 2. 濃度換算 (初始化圖表)
+    // 2. 濃度換算
     // ==========================================
     let concChart;
     function initConcChart() {
         const ctx = document.getElementById('concChart').getContext('2d');
         const dataPoints = [];
-        // 繪製參考線 (SG 1.0 ~ 1.2)
         for(let sg=1.00; sg<=1.20; sg+=0.01) {
             let conc = (sg - 1) * 1000 / 2.78;
             dataPoints.push({x: sg, y: conc});
@@ -225,30 +249,18 @@
             data: {
                 datasets: [
                     {
-                        label: '對照曲線',
-                        data: dataPoints,
-                        borderColor: '#ccc',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0.4
+                        label: '對照曲線', data: dataPoints, borderColor: '#ccc', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.4
                     },
                     {
-                        label: '目前位置',
-                        data: [], // 動態填入
-                        backgroundColor: 'red',
-                        borderColor: 'red',
-                        pointRadius: 6,
-                        type: 'scatter'
+                        label: '目前', data: [], backgroundColor: 'red', borderColor: 'red', pointRadius: 6, type: 'scatter'
                     }
                 ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: {
-                    x: { type: 'linear', title: {display:true, text:'比重 (SG)'}, min: 1.0, max: 1.2 },
-                    y: { title: {display:true, text:'濃度 (%)'}, min: 0, max: 60 }
+                    x: { type: 'linear', title: {display:true, text:'比重'}, min: 1.0, max: 1.2 },
+                    y: { title: {display:true, text:'濃度%'}, min: 0, max: 60 }
                 },
                 plugins: { legend: {display: false} }
             }
@@ -301,18 +313,13 @@
         let triggerDate = null;
         
         for(let i=0; i<60; i++) {
-            if (tempStock <= safetyStock) {
-                triggerDate = new Date(tempDate);
-                break;
-            }
+            if (tempStock <= safetyStock) { triggerDate = new Date(tempDate); break; }
             tempStock -= usage;
             tempDate.setDate(tempDate.getDate() + 1);
         }
 
         if (triggerDate) {
-            while (!isWorkDay(triggerDate)) {
-                triggerDate.setDate(triggerDate.getDate() - 1);
-            }
+            while (!isWorkDay(triggerDate)) { triggerDate.setDate(triggerDate.getDate() - 1); }
         }
 
         let currentSimStock = stock;
@@ -331,19 +338,17 @@
             let dayOfWeek = weekDays[date.getDay()];
             let isWeekend = (date.getDay() === 0 || date.getDay() === 6);
             
-            if (triggerDate && date.toDateString() === triggerDate.toDateString()) {
-                deliveryCounter = 0;
-            }
+            if (triggerDate && date.toDateString() === triggerDate.toDateString()) { deliveryCounter = 0; }
 
             let status = "";
             let cellClass = "";
 
             if (deliveryCounter === 0) {
-                status = "第0天(叫貨)";
+                status = "叫貨";
                 cellClass = "cell-order";
                 deliveryCounter++;
             } else if (deliveryCounter > 0 && deliveryCounter <= leadTime) {
-                status = `第${deliveryCounter}天`;
+                status = `D${deliveryCounter}`;
                 cellClass = "cell-delivery";
                 deliveryCounter++;
             } else if (currentSimStock <= 0) {
@@ -381,17 +386,16 @@
                 data: {
                     labels: months,
                     datasets: [
-                        { label: '113年 用量', data: usage113, backgroundColor: 'rgba(200, 200, 200, 0.5)', order: 3 },
-                        { label: '114年 用量', data: usage114, backgroundColor: 'rgba(63, 81, 181, 0.8)', order: 2 },
+                        { label: '113年', data: usage113, backgroundColor: 'rgba(200, 200, 200, 0.5)', order: 3 },
+                        { label: '114年', data: usage114, backgroundColor: 'rgba(63, 81, 181, 0.8)', order: 2 },
                         { label: '114年 單價', data: costData, borderColor: '#ff9800', type: 'line', yAxisID: 'y1', order: 1 }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     scales: {
-                        y: { position: 'left', title: {display:true, text:'用量 (噸)'} },
-                        y1: { position: 'right', title: {display:true, text:'元/kg'}, grid: {drawOnChartArea: false} }
+                        y: { position: 'left', title: {display:true, text:'噸'} },
+                        y1: { position: 'right', title: {display:true, text:'元'}, grid: {drawOnChartArea: false} }
                     }
                 }
             });

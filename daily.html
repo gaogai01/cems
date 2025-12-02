@@ -12,61 +12,45 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        :root { 
-            --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666666; --text-value: #2c3e50;
-            --border-color: #e0e0e0; --primary: #007bff; 
-            --gauge-val: #29b6f6; /* 亮藍 */
-            --gauge-bg: #0d47a1;  /* 深藍 */
-        }
-        [data-theme="dark"] { 
-            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaaaaa; --text-value: #ffffff;
-            --border-color: #333; 
-        }
+        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --border-color: #e0e0e0; --primary: #007bff; 
+            --gauge-val: #29b6f6; --gauge-bg: #0d47a1; --warn-color: #ffc107; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --border-color: #333; }
         
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
         .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
         
-        h2 { margin: 20px 0 15px 0; font-size: 1.2rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; }
-
-        /* --- 最新數據卡片網格 --- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* 自動調整欄數 */
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
         .card {
+            background: var(--bg-card); border-radius: 10px; padding: 20px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        h2 { margin: 0 0 15px 0; font-size: 1.2rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 最新數據卡片網格 */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .data-card {
             background: var(--bg-card); border-radius: 10px; padding: 15px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
-            border-top: 4px solid var(--primary);
-            position: relative;
+            border-top: 4px solid var(--primary); position: relative;
         }
-
-        .card h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--text-sub); text-transform: uppercase; font-weight: bold; display: flex; justify-content: space-between; }
-        
+        .data-card h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: #666; text-transform: uppercase; font-weight: bold; }
         .data-row { display: flex; justify-content: center; align-items: baseline; gap: 5px; margin-bottom: 8px; }
-        .value { font-size: 1.8rem; font-weight: 800; color: var(--text-value); line-height: 1; }
-        .unit { font-size: 0.8rem; color: var(--text-sub); }
+        .value { font-size: 1.8rem; font-weight: 800; color: var(--text-main); line-height: 1; }
+        .unit { font-size: 0.8rem; color: #888; }
+        
+        /* 儀表板條 */
+        .gauge-container { height: 8px; width: 100%; background: var(--gauge-bg); border-radius: 4px; position: relative; overflow: hidden; }
+        .gauge-bar { height: 100%; width: 0%; background: var(--gauge-val); border-radius: 4px; transition: width 0.5s ease-out; }
+        .limit-text { font-size: 0.75rem; color: #888; text-align: right; margin-top: 2px; }
 
-        /* --- 儀表板條 (Gauge) --- */
-        .gauge-container { 
-            height: 8px; width: 100%; background: var(--gauge-bg); /* 深藍底 */
-            border-radius: 4px; position: relative; overflow: hidden; 
-        }
-        .gauge-bar { 
-            height: 100%; width: 0%; background: var(--gauge-val); /* 亮藍進度 */
-            border-radius: 4px; transition: width 0.5s ease-out; 
-        }
-        .limit-text { font-size: 0.75rem; color: var(--text-sub); text-align: right; margin-top: 2px; }
-
-        /* 歷史趨勢圖 */
-        .chart-card { background: var(--bg-card); border-radius: 10px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
         .chart-controls { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
         select { padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); }
         
         #loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #888; }
         .chart-container { position: relative; height: 400px; width: 100%; }
+        
+        /* 資料過期警示 */
+        .outdated-warning { color: #dc3545; font-weight: bold; font-size: 0.9rem; background: #f8d7da; padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -76,11 +60,15 @@
 <div class="container">
     <div id="loading">資料載入中...</div>
 
-    <h2>最新數據總覽 <span style="font-size:0.8rem; color:var(--text-sub); font-weight:normal;" id="lastDate">...</span></h2>
-    <div id="dashboardGrid" class="dashboard-grid">
-        </div>
+    <h2>
+        最新數據總覽 
+        <span style="font-size:0.8rem; color:#666; font-weight:normal; display:flex; align-items:center;" id="dateInfo">
+            <span id="lastDate">...</span>
+        </span>
+    </h2>
+    <div id="dashboardGrid" class="dashboard-grid"></div>
 
-    <div class="chart-card" id="lineSection" style="display:none;">
+    <div class="card" id="lineSection" style="display:none;">
         <h2>歷史趨勢分析</h2>
         <div class="chart-controls">
             <label>選擇項目：</label>
@@ -93,29 +81,22 @@
 </div>
 
 <script src="common.js"></script>
-
 <script>
-    // ▼▼▼ 請務必確認這是您最新的 Apps Script 網址 ▼▼▼
     const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec"; 
     
     let rawData = null;
     let lineChart = null;
 
-    // 由 common.js 呼叫
     function startApp() {
         fetchData();
     }
 
     async function fetchData() {
         try {
-            // 呼叫 daily 模式
             const res = await fetch(API_URL + "?mode=daily");
             const json = await res.json();
             
-            if (json.error) {
-                document.getElementById('loading').innerText = "錯誤: " + json.error;
-                return;
-            }
+            if (json.error) { document.getElementById('loading').innerText = "錯誤: " + json.error; return; }
 
             if (json.data && json.data.length > 0) {
                 rawData = json;
@@ -126,23 +107,49 @@
                 initDropdown();
                 updateLineChart();
             } else {
-                document.getElementById('loading').innerText = "Google 試算表 '每日巡查紀錄表' 無資料";
+                document.getElementById('loading').innerText = "無資料";
             }
         } catch (e) {
             console.error("Error:", e);
-            document.getElementById('loading').innerText = "載入失敗，請檢查網址或 Apps Script 權限";
+            document.getElementById('loading').innerText = "載入失敗";
         }
     }
 
-    // --- 1. 渲染儀表板卡片 (核心修改) ---
     function renderDashboard() {
         const grid = document.getElementById('dashboardGrid');
-        grid.innerHTML = ""; // 清空
+        grid.innerHTML = "";
 
-        const latestRow = rawData.data[rawData.data.length - 1];
-        document.getElementById('lastDate').innerText = "更新時間: " + latestRow[0];
+        // 1. 尋找最新的一筆「有效數據」 (從後面往前找)
+        // 有些列可能是空的，或者日期是未來的(預填)，我們要找最近的有值的列
+        let latestRow = null;
+        for (let i = rawData.data.length - 1; i >= 0; i--) {
+            // 簡單判斷：如果該列的第一欄(日期)有值，且第二欄也有值(不是全空列)
+            if (rawData.data[i][0] && rawData.data[i][2]) {
+                latestRow = rawData.data[i];
+                break;
+            }
+        }
+        
+        if (!latestRow) {
+            grid.innerHTML = "<p>無有效數據</p>";
+            return;
+        }
 
-        // 指定要顯示的欄位名稱
+        // 2. 顯示日期與過期警示
+        const dateStr = latestRow[0];
+        const dataDate = new Date(dateStr);
+        const today = new Date();
+        // 簡單判斷：如果資料日期跟今天差超過 2 天，顯示警示
+        const diffTime = Math.abs(today - dataDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        
+        let dateHtml = `資料日期: ${dateStr}`;
+        if (diffDays > 2) {
+            dateHtml += `<span class="outdated-warning">注意：非今日數據</span>`;
+        }
+        document.getElementById('dateInfo').innerHTML = dateHtml;
+
+        // 3. 渲染卡片
         const targetFields = [
             "回收水量", "1號機造水量", "2號機造水量", "15000公秉儲水位", "用水量", 
             "尿素比重", "尿素用量", "尿素庫存", "1號機海水壓力", "2號機海水壓力"
@@ -150,19 +157,17 @@
 
         for (let i = 0; i < rawData.headers.length; i++) {
             const headerName = rawData.headers[i];
-            // 只顯示指定欄位
             if (targetFields.includes(headerName)) {
                 const val = parseFloat(latestRow[i]);
-                const max = parseFloat(rawData.limits[i]) || 100; // 如果沒有上限，預設100 (避免分母為0)
+                const max = parseFloat(rawData.limits[i]) || 100; 
                 const unit = rawData.units[i] || "";
                 
                 let displayVal = isNaN(val) ? "--" : val;
                 let pct = isNaN(val) ? 0 : (val / max) * 100;
                 if (pct > 100) pct = 100;
 
-                // 生成卡片 HTML
                 const card = document.createElement('div');
-                card.className = 'card';
+                card.className = 'data-card';
                 card.innerHTML = `
                     <h3>${headerName}</h3>
                     <div class="data-row">
@@ -179,16 +184,12 @@
         }
     }
 
-    // --- 2. 趨勢圖 ---
     function initDropdown() {
         const select = document.getElementById('chartParam');
         if (select.options.length > 0) return;
-
         for (let i = 2; i < rawData.headers.length; i++) {
             let header = rawData.headers[i];
-            if (header) {
-                select.innerHTML += `<option value="${i}">${header}</option>`;
-            }
+            if (header) select.innerHTML += `<option value="${i}">${header}</option>`;
         }
     }
 
@@ -202,7 +203,7 @@
         const values = [];
 
         rawData.data.forEach(row => {
-            labels.push(row[0]); // 日期
+            labels.push(row[0]); 
             values.push(parseFloat(row[colIdx]) || null);
         });
 
@@ -220,7 +221,6 @@
             tension: 0.1
         }];
 
-        // 畫上限紅線
         if (!isNaN(limit)) {
             datasets.push({
                 label: '上限 (' + limit + ')',
@@ -235,13 +235,9 @@
 
         lineChart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: datasets
-            },
+            data: { labels: labels, datasets: datasets },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true, title: {display: true, text: unit} } }
             }
         });

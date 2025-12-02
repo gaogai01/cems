@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>後台管理系統</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333; --border-color: #ddd; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --border-color: #333; }
+        
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gap: 20px; }
+        
+        h2 { border-left: 5px solid #dc3545; padding-left: 10px; margin-bottom: 15px; }
+
+        .card { background: var(--bg-card); padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        /* 表格樣式 */
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .admin-table th, .admin-table td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
+        .admin-table th { background: rgba(0,0,0,0.05); font-weight: bold; }
+        
+        /* 狀態標籤 */
+        .tag { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .tag-online { background: #d4edda; color: #155724; }
+        .tag-offline { background: #f8d7da; color: #721c24; }
+        .tag-pending { background: #fff3cd; color: #856404; }
+        
+        /* 按鈕 */
+        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-size: 0.9rem; }
+        .btn-approve { background: #28a745; color: white; }
+        .btn-update { background: #007bff; color: white; }
+        .btn-del { background: #dc3545; color: white; }
+        
+        select { padding: 5px; border-radius: 4px; }
+
+        @media (max-width: 768px) {
+            .admin-table th:nth-child(3), .admin-table td:nth-child(3) { display: none; } /* 手機隱藏 Email */
+        }
+    </style>
+</head>
+<body>
+
+<div id="navbar-placeholder"></div>
+
+<div class="container">
+    
+    <div class="card">
+        <h2>🟢 目前線上人員</h2>
+        <p style="color:#666; font-size:0.9rem;">* 顯示最近 5 分鐘內有活動的使用者</p>
+        <table class="admin-table">
+            <thead><tr><th>姓名</th><th>部門/職稱</th><th>最後活動時間</th><th>狀態</th></tr></thead>
+            <tbody id="online-list"></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>⏳ 待審核申請</h2>
+        <table class="admin-table">
+            <thead><tr><th>姓名</th><th>部門/職稱</th><th>Email</th><th>權限設定</th><th>操作</th></tr></thead>
+            <tbody id="pending-list"></tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>👥 人員權限管理</h2>
+        <input type="text" id="searchBox" placeholder="搜尋姓名..." onkeyup="filterUsers()" style="padding:5px; width:200px; margin-bottom:10px;">
+        <table class="admin-table">
+            <thead><tr><th>姓名</th><th>部門/職稱</th><th>Email</th><th>目前權限</th><th>操作</th></tr></thead>
+            <tbody id="all-users-list"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script src="common.js"></script>
+
+<script>
+    // ============================================================
+    // 3. 主程式邏輯 (startApp) - 由 common.js 呼叫
+    // ============================================================
+    function startApp() {
+        // 載入主題
+        if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        
+        // 載入資料
+        loadOnlineUsers();
+        loadAllUsers();
+    }
+
+    // 1. 載入線上人員
+    async function loadOnlineUsers() {
+        const list = document.getElementById('online-list');
+        list.innerHTML = '<tr><td colspan="4">載入中...</td></tr>';
+        
+        // 抓取所有使用者，然後在前端過濾 (因為 Firestore 查詢限制)
+        const snap = await db.collection('users').get();
+        let html = '';
+        let count = 0;
+        const now = new Date();
+
+        snap.forEach(doc => {
+            const u = doc.data();
+            if (u.lastSeen) {
+                const lastSeenDate = u.lastSeen.toDate();
+                const diffMins = (now - lastSeenDate) / 1000 / 60;
+                
+                // 5 分鐘內算線上
+                if (diffMins <= 5) {
+                    count++;
+                    html += `<tr>
+                        <td>${u.name}</td>
+                        <td>${u.dept} ${u.title || ''}</td>
+                        <td>${lastSeenDate.toLocaleTimeString()}</td>
+                        <td><span class="tag tag-online">Online</span></td>
+                    </tr>`;
+                }
+            }
+        });
+
+        if(count === 0) html = '<tr><td colspan="4">目前無人線上</td></tr>';
+        list.innerHTML = html;
+    }
+
+    // 2. 載入所有使用者 (包含待審核)
+    async function loadAllUsers() {
+        const pendingList = document.getElementById('pending-list');
+        const allList = document.getElementById('all-users-list');
+        
+        const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
+        
+        let pendingHtml = '';
+        let allHtml = '';
+        let pendingCount = 0;
+
+        snap.forEach(doc => {
+            const u = doc.data();
+            const roleOptions = `
+                <option value="guest" ${u.role==='guest'?'selected':''}>訪客 (停用)</option>
+                <option value="env" ${u.role==='env'?'selected':''}>環化課 (全開)</option>
+                <option value="mech" ${u.role==='mech'?'selected':''}>機械組 (僅滑油)</option>
+                <option value="ops" ${u.role==='ops'?'selected':''}>運轉組 (CEMS+滑油)</option>
+                <option value="admin" ${u.role==='admin'?'selected':''}>管理員 (全開+後台)</option>
+            `;
+            
+            // 待審核區
+            if (!u.isApproved) {
+                pendingCount++;
+                pendingHtml += `<tr>
+                    <td>${u.name}</td>
+                    <td>${u.dept} ${u.title || ''}</td>
+                    <td>${u.email}</td>
+                    <td><select id="role-p-${doc.id}">${roleOptions}</select></td>
+                    <td><button class="btn-approve" onclick="approveUser('${doc.id}')">核准</button></td>
+                </tr>`;
+            }
+
+            // 所有人員區
+            allHtml += `<tr class="user-row">
+                <td class="u-name">${u.name}</td>
+                <td>${u.dept} ${u.title || ''}</td>
+                <td>${u.email}</td>
+                <td><select id="role-a-${doc.id}">${roleOptions}</select></td>
+                <td><button class="btn-update" onclick="updateUser('${doc.id}')">更新</button></td>
+            </tr>`;
+        });
+
+        if(pendingCount === 0) pendingHtml = '<tr><td colspan="5">無待審核申請</td></tr>';
+        
+        pendingList.innerHTML = pendingHtml;
+        allList.innerHTML = allHtml;
+    }
+
+    // 核准用戶
+    function approveUser(uid) {
+        const role = document.getElementById(`role-p-${uid}`).value;
+        db.collection('users').doc(uid).update({
+            isApproved: true,
+            role: role,
+            isAdmin: (role === 'admin')
+        }).then(() => {
+            alert("已核准！");
+            loadAllUsers(); // 重新整理列表
+        });
+    }
+
+    // 更新用戶權限
+    function updateUser(uid) {
+        const role = document.getElementById(`role-a-${uid}`).value;
+        const isApproved = (role !== 'guest'); // 如果設為訪客，視為停用
+        
+        db.collection('users').doc(uid).update({
+            isApproved: isApproved,
+            role: role,
+            isAdmin: (role === 'admin')
+        }).then(() => {
+            alert("權限已更新！");
+            loadAllUsers();
+        });
+    }
+
+    // 簡單搜尋功能
+    function filterUsers() {
+        const input = document.getElementById('searchBox').value.toUpperCase();
+        const rows = document.querySelectorAll('.user-row');
+        rows.forEach(row => {
+            const name = row.querySelector('.u-name').innerText.toUpperCase();
+            row.style.display = name.includes(input) ? '' : 'none';
+        });
+    }
+
+    // 每分鐘自動刷新線上狀態
+    setInterval(loadOnlineUsers, 60000);
+
+</script>
+
+</body>
+</html>

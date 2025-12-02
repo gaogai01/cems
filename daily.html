@@ -62,7 +62,7 @@
 
 <script>
     // ▼▼▼ 請務必更新為您最新的 Apps Script 網址 ▼▼▼
-    const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbwqP_rRkI8xyVYFvo8nWY9pq4i1OLlvrLfAMxmleSAh-XDbMQN3yGk3eF0j5OdDDVMYxw/exec"; 
     // ▲▲▲ (請確認結尾是 exec) ▲▲▲
 
     let rawData = null;
@@ -85,6 +85,7 @@
                 return;
             }
 
+            // 檢查是否有數據
             if (json.data && json.data.length > 0) {
                 rawData = json;
                 document.getElementById('loading').style.display = 'none';
@@ -95,11 +96,11 @@
                 initDropdown();
                 updateLineChart();
             } else {
-                document.getElementById('loading').innerText = "Google 試算表無資料";
+                document.getElementById('loading').innerText = "Google 試算表 '每日巡查紀錄表' 無資料";
             }
         } catch (e) {
             console.error("Error:", e);
-            document.getElementById('loading').innerText = "載入失敗，請檢查網址或網路";
+            document.getElementById('loading').innerText = "載入失敗，請檢查網址或 Apps Script 權限";
         }
     }
 
@@ -107,13 +108,15 @@
     function renderBarChart() {
         const ctx = document.getElementById('barChart').getContext('2d');
         const latestRow = rawData.data[rawData.data.length - 1];
-        document.getElementById('lastDate').innerText = "更新時間: " + latestRow[0]; // 第 0 欄是日期
+        
+        // 假設日期在第 0 欄
+        document.getElementById('lastDate').innerText = "更新時間: " + latestRow[0]; 
 
         const labels = [];
         const data = [];
         const bgColors = [];
 
-        // 從第 2 欄開始 (0=日期, 1=星期)
+        // 從第 2 欄開始 (跳過 日期、星期)
         for (let i = 2; i < rawData.headers.length; i++) {
             let val = parseFloat(latestRow[i]);
             let label = rawData.headers[i];
@@ -143,7 +146,18 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { 
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let idx = context.dataIndex;
+                                // 嘗試顯示單位
+                                // 注意：dataIndex 對應的是 labels 的索引，我們需要反查原始 headers 的索引
+                                // 這裡簡化處理，直接顯示數值
+                                return context.raw;
+                            }
+                        }
+                    }
                 },
                 scales: { y: { beginAtZero: true } }
             }
@@ -153,8 +167,7 @@
     // --- 2. 趨勢圖 ---
     function initDropdown() {
         const select = document.getElementById('chartParam');
-        if (select.options.length > 0) return;
-
+        // 從第 2 欄開始加入選項
         for (let i = 2; i < rawData.headers.length; i++) {
             let header = rawData.headers[i];
             if (header) {
@@ -173,7 +186,8 @@
         const values = [];
 
         rawData.data.forEach(row => {
-            labels.push(row[0]); // 日期
+            // 處理日期格式 (有些瀏覽器不支援 "2025/11/2" 這種格式，需轉為標準)
+            labels.push(row[0]); 
             values.push(parseFloat(row[colIdx]) || null);
         });
 

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日紀錄 - 尖山發電廠</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <style>
+        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --border-color: #e0e0e0; --primary: #007bff; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --border-color: #333; }
+        
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
+        
+        .chart-card {
+            background: var(--bg-card); border-radius: 10px; padding: 20px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        h2 { margin: 0; font-size: 1.2rem; border-left: 5px solid var(--primary); padding-left: 10px; }
+        
+        select { padding: 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); }
+        
+        .chart-box { position: relative; height: 400px; width: 100%; }
+        #loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #888; }
+    </style>
+</head>
+<body>
+
+<div id="navbar-placeholder"></div>
+
+<div class="container">
+    <div id="loading">正在載入數據...</div>
+
+    <div class="chart-card" id="barSection" style="display:none;">
+        <div class="chart-header">
+            <h2>即時數值總覽 (最新)</h2>
+            <span style="font-size:0.8rem; color:#888;" id="updateTime">...</span>
+        </div>
+        <div class="chart-box">
+            <canvas id="barChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card" id="lineSection" style="display:none;">
+        <div class="chart-header">
+            <h2>歷史趨勢分析</h2>
+            <div>
+                <select id="chartParam" onchange="updateLineChart()"></select>
+                <select id="timeRange" onchange="updateLineChart()">
+                    <option value="24">24 小時</option>
+                    <option value="168">7 天</option>
+                    <option value="720">30 天</option>
+                </select>
+            </div>
+        </div>
+        <div class="chart-box">
+            <canvas id="lineChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+    // 使用您提供的新 Apps Script 網址
+    const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec";
+
+    let historyData = null; // {headers: [], data: []}
+    let barChart = null;
+    let lineChart = null;
+
+    function startApp() {
+        fetchData();
+        setInterval(fetchData, 60000); // 每分鐘更新一次
+    }
+
+    async function fetchData() {
+        try {
+            // 抓取歷史資料 (包含最新的一筆)
+            const res = await fetch(API_URL + "?mode=history");
+            const json = await res.json();
+            
+            if (json.data && json.data.length > 0) {
+                historyData = json;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('barSection').style.display = 'block';
+                document.getElementById('lineSection').style.display = 'block';
+                
+                initDropdowns();
+                renderBarChart();
+                updateLineChart();
+            }
+        } catch (e) {
+            console.error("Error:", e);
+            document.getElementById('loading').innerText = "載入失敗";
+        }
+    }
+
+    // --- 1. 長條圖 (最新一筆) ---
+    function renderBarChart() {
+        const ctx = document.getElementById('barChart').getContext('2d');
+        const latestRow = historyData.data[historyData.data.length - 1]; // 最後一筆
+        const headers = historyData.headers;
+        
+        document.getElementById('updateTime').innerText = "更新時間: " + latestRow[0];
+
+        // 過濾掉 timestamp 和 _Q (累積流量) 和 _DAILY (日流量) 以避免圖表太亂
+        // 只顯示即時數值 (液位、PH、流量)
+        const labels = [];
+        const data = [];
+        const colors = [];
+
+        for (let i = 1; i < headers.length; i++) {
+            const key = headers[i];
+            if (key.includes("_Q_VAL0") || key.includes("_DAILY")) continue;
+            
+            let val = parseFloat(latestRow[i]);
+            if (isNaN(val)) continue;
+
+            // 簡化標籤名稱 (移除 _VAL0)
+            let label = key.replace("_VAL0", "");
+            labels.push(label);
+            data.push(val);
+
+            // 簡單配色：液位藍色，流量綠色，PH紫色，其他灰色
+            if (key.includes("LI") || key.includes("LIT")) colors.push('rgba(54, 162, 235, 0.7)');
+            else if (key.includes("FI") || key.includes("FIT")) colors.push('rgba(75, 192, 192, 0.7)');
+            else if (key.includes("PH")) colors.push('rgba(153, 102, 255, 0.7)');
+            else colors.push('rgba(201, 203, 207, 0.7)');
+        }
+
+        if (barChart) barChart.destroy();
+
+        barChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '即時數值',
+                    data: data,
+                    backgroundColor: colors,
+                    borderColor: colors.map(c => c.replace('0.7', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // --- 2. 曲線圖 (歷史趨勢) ---
+    function initDropdowns() {
+        const select = document.getElementById('chartParam');
+        if (select.options.length > 0) return; // 已初始化過
+
+        historyData.headers.forEach((h, i) => {
+            if (i === 0) return; // 跳過 timestamp
+            // 只顯示數值型欄位
+            select.innerHTML += `<option value="${i}">${h.replace("_VAL0", "")}</option>`;
+        });
+    }
+
+    function updateLineChart() {
+        const ctx = document.getElementById('lineChart').getContext('2d');
+        const colIdx = parseInt(document.getElementById('chartParam').value);
+        const rangeHours = parseInt(document.getElementById('timeRange').value);
+        
+        const now = new Date();
+        const startTime = new Date(now.getTime() - rangeHours * 60 * 60 * 1000);
+
+        const labels = [];
+        const values = [];
+
+        historyData.data.forEach(row => {
+            const t = new Date(row[0]);
+            if (t >= startTime) {
+                labels.push(t);
+                values.push(parseFloat(row[colIdx]) || null);
+            }
+        });
+
+        if (lineChart) lineChart.destroy();
+
+        lineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: historyData.headers[colIdx].replace("_VAL0", ""),
+                    data: values,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'time', time: { unit: 'hour', displayFormats: { hour: 'MM/dd HH:mm' } } },
+                    y: { beginAtZero: false }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

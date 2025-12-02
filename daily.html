@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>每日巡查紀錄</title>
+    <title>每日巡查紀錄 - 尖山發電廠</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -17,19 +18,17 @@
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
         .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
         
-        h2 { margin: 20px 0 15px 0; font-size: 1.3rem; border-left: 5px solid var(--primary); padding-left: 10px; }
-        
         .card {
             background: var(--bg-card); border-radius: 10px; padding: 20px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;
             border: 1px solid var(--border-color);
         }
-
+        h2 { margin: 0 0 15px 0; font-size: 1.2rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; }
+        
         .chart-controls { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
         select { padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); }
         
         #loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #888; }
-        
         .chart-container { position: relative; height: 400px; width: 100%; }
     </style>
 </head>
@@ -41,7 +40,7 @@
     <div id="loading">資料載入中...</div>
 
     <div class="card" id="barSection" style="display:none;">
-        <h2>最新數據總覽 (<span id="lastDate">--</span>)</h2>
+        <h2>最新數據總覽 <span style="font-size:0.8rem; color:#888; font-weight:normal;" id="lastDate">...</span></h2>
         <div class="chart-container">
             <canvas id="barChart"></canvas>
         </div>
@@ -62,8 +61,9 @@
 <script src="common.js"></script>
 
 <script>
-    // 您提供的網址
-    const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec";
+    // ▼▼▼ 請務必更新為您最新的 Apps Script 網址 ▼▼▼
+    const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec"; 
+    // ▲▲▲ (請確認結尾是 exec) ▲▲▲
 
     let rawData = null;
     let barChart = null;
@@ -76,9 +76,15 @@
 
     async function fetchData() {
         try {
+            // 呼叫 daily 模式
             const res = await fetch(API_URL + "?mode=daily");
             const json = await res.json();
             
+            if (json.error) {
+                document.getElementById('loading').innerText = "錯誤: " + json.error;
+                return;
+            }
+
             if (json.data && json.data.length > 0) {
                 rawData = json;
                 document.getElementById('loading').style.display = 'none';
@@ -89,11 +95,11 @@
                 initDropdown();
                 updateLineChart();
             } else {
-                document.getElementById('loading').innerText = "無資料或讀取錯誤";
+                document.getElementById('loading').innerText = "Google 試算表無資料";
             }
         } catch (e) {
             console.error("Error:", e);
-            document.getElementById('loading').innerText = "載入失敗";
+            document.getElementById('loading').innerText = "載入失敗，請檢查網址或網路";
         }
     }
 
@@ -101,18 +107,17 @@
     function renderBarChart() {
         const ctx = document.getElementById('barChart').getContext('2d');
         const latestRow = rawData.data[rawData.data.length - 1];
-        document.getElementById('lastDate').innerText = latestRow[0]; // 日期在第 0 欄
+        document.getElementById('lastDate').innerText = "更新時間: " + latestRow[0]; // 第 0 欄是日期
 
         const labels = [];
         const data = [];
         const bgColors = [];
 
-        // 從第 2 欄開始 (跳過 日期、星期)
+        // 從第 2 欄開始 (0=日期, 1=星期)
         for (let i = 2; i < rawData.headers.length; i++) {
             let val = parseFloat(latestRow[i]);
             let label = rawData.headers[i];
             
-            // 過濾掉空值或標題
             if (!isNaN(val) && label) {
                 labels.push(label);
                 data.push(val);
@@ -138,17 +143,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let idx = context.dataIndex;
-                                // 嘗試找到對應的單位 (labels 索引可能跟 rawData 索引偏移，需校正)
-                                // 這裡簡單顯示數值
-                                return context.raw;
-                            }
-                        }
-                    }
+                    legend: { display: false }
                 },
                 scales: { y: { beginAtZero: true } }
             }
@@ -158,7 +153,8 @@
     // --- 2. 趨勢圖 ---
     function initDropdown() {
         const select = document.getElementById('chartParam');
-        // 從第 2 欄開始加入選項
+        if (select.options.length > 0) return;
+
         for (let i = 2; i < rawData.headers.length; i++) {
             let header = rawData.headers[i];
             if (header) {
@@ -171,7 +167,7 @@
         const colIdx = parseInt(document.getElementById('chartParam').value);
         const labelName = rawData.headers[colIdx];
         const unit = rawData.units[colIdx] || "";
-        const limit = parseFloat(rawData.limits[colIdx]);
+        const limit = parseFloat(rawData.limits[colIdx]); // 上限值
 
         const labels = [];
         const values = [];
@@ -195,7 +191,7 @@
             tension: 0.1
         }];
 
-        // 如果有上限值，畫紅線
+        // 畫上限紅線
         if (!isNaN(limit)) {
             datasets.push({
                 label: '上限 (' + limit + ')',

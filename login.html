@@ -9,9 +9,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
         h1 { color: #2c3e50; margin-bottom: 1.5rem; font-size: 1.5rem; }
-        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; }
+        h3 { margin: 10px 0; color: #555; }
+        input, select { width: 90%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; }
         button { width: 100%; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px; transition: 0.3s; }
         .btn-google { background: #db4437; color: white; } .btn-google:hover { background: #c53929; }
         .btn-submit { background: #007bff; color: white; } .btn-submit:hover { background: #0056b3; }
@@ -19,10 +20,18 @@
         .hidden { display: none; }
         .status-msg { margin: 20px 0; padding: 10px; background: #fff3cd; color: #856404; border-radius: 5px; }
         
-        /* 管理員列表 */
-        #admin-panel { text-align: left; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
-        .user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .approve-btn { width: auto; padding: 5px 10px; background: #28a745; color: white; font-size: 0.8rem; margin: 0; }
+        /* 管理員列表優化 */
+        #admin-panel { text-align: left; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; max-height: 400px; overflow-y: auto; }
+        .user-item { background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #eee; }
+        .user-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .user-role-row { display: flex; gap: 5px; align-items: center; margin-top: 5px; }
+        .role-select { padding: 5px; font-size: 0.85rem; width: auto; flex: 1; }
+        .approve-btn { width: auto; padding: 5px 15px; background: #28a745; color: white; font-size: 0.85rem; margin: 0; }
+        .approve-btn:hover { background: #218838; }
+        .del-btn { width: auto; padding: 5px 10px; background: #dc3545; color: white; font-size: 0.85rem; margin-left: 5px; }
+        
+        .tag { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: #e9ecef; color: #555; }
+        .tag-admin { background: #cce5ff; color: #004085; }
     </style>
 </head>
 <body>
@@ -36,24 +45,31 @@
 
     <div id="register-view" class="hidden">
         <h3>初次登入請填寫資料</h3>
-        <input type="text" id="reg-name" placeholder="姓名 (例如：王大明)">
         <input type="text" id="reg-dept" placeholder="部門 (例如：環保課)">
+        <input type="text" id="reg-title" placeholder="職稱 (例如：課長)">
+        <input type="text" id="reg-name" placeholder="姓名 (例如：王大明)">
         <button class="btn-submit" onclick="submitReg()">送出審核</button>
     </div>
 
     <div id="pending-view" class="hidden">
         <div class="status-msg">⏳ 帳號審核中...<br>請通知管理員開通權限</div>
+        <div style="font-size:0.9rem; color:#666;">您的 ID: <span id="my-uid">...</span></div>
         <button class="btn-logout" onclick="logout()">登出</button>
     </div>
 
     <div id="admin-view" class="hidden">
         <h3>管理員後台</h3>
-        <p>您已核准進入系統。</p>
-        <button class="btn-submit" onclick="location.href='index.html'">前往 廢油水監控</button>
-        <button class="btn-submit" style="background:#6f42c1" onclick="location.href='cems.html'">前往 CEMS 監測</button>
+        <p>您已登入為超級管理員。</p>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
+            <button class="btn-submit" onclick="location.href='index.html'">廢油水</button>
+            <button class="btn-submit" style="background:#28a745" onclick="location.href='cems.html'">CEMS</button>
+            <button class="btn-submit" style="background:#6f42c1" onclick="location.href='oil.html'">滑油報告</button>
+            <button class="btn-submit" style="background:#fd7e14" onclick="location.href='urea.html'">尿素分析</button>
+        </div>
         
         <div id="admin-panel">
-            <h4>待審核名單</h4>
+            <h4 style="margin-top:0;">人員權限管理</h4>
             <div id="user-list">載入中...</div>
         </div>
         <button class="btn-logout" onclick="logout()">登出</button>
@@ -61,7 +77,9 @@
 </div>
 
 <script>
-    // ▼▼▼ 請在此貼上您的 Firebase Config ▼▼▼
+    // ============================================================
+    // 1. Firebase 設定 (請務必填入)
+    // ============================================================
     const firebaseConfig = {
   apiKey: "AIzaSyA58DOYplXhmo7HDYN_2Hgu-wo4ceYmINA",
   authDomain: "tpc-monitor.firebaseapp.com",
@@ -70,12 +88,14 @@
   messagingSenderId: "1066125366380",
   appId: "1:1066125366380:web:836d5898c051226669f449"
     };
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
+    
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // ============================================================
+    // 2. 權限邏輯
+    // ============================================================
     auth.onAuthStateChanged(async (user) => {
         document.querySelectorAll('.card > div').forEach(el => el.classList.add('hidden'));
         
@@ -85,17 +105,23 @@
                 document.getElementById('register-view').classList.remove('hidden');
             } else {
                 const data = doc.data();
-                if (data.isApproved) {
-                    // 如果不是管理員，直接跳轉到廢水首頁
-                    if (!data.isAdmin) {
-                        location.href = 'index.html'; 
-                    } else {
-                        // 管理員留在這裡審核人
-                        document.getElementById('admin-view').classList.remove('hidden');
-                        loadUserList();
-                    }
-                } else {
+                
+                // 超級管理員 (直接在資料庫把 isAdmin 設為 true 的人)
+                if (data.isAdmin) {
+                    document.getElementById('admin-view').classList.remove('hidden');
+                    loadUserList();
+                } 
+                // 一般已核准用戶
+                else if (data.isApproved) {
+                    // 根據權限自動跳轉到適合的首頁
+                    if(data.role === 'mech') location.href = 'oil.html'; // 機械組 -> 滑油
+                    else if(data.role === 'ops') location.href = 'cems.html'; // 運轉組 -> CEMS
+                    else location.href = 'index.html'; // 環化或其他 -> 廢水
+                } 
+                // 未核准
+                else {
                     document.getElementById('pending-view').classList.remove('hidden');
+                    document.getElementById('my-uid').innerText = user.uid.substring(0,6)+"...";
                 }
             }
         } else {
@@ -112,35 +138,77 @@
         const user = auth.currentUser;
         const name = document.getElementById('reg-name').value;
         const dept = document.getElementById('reg-dept').value;
-        if(!name || !dept) return alert("請填寫完整");
+        const title = document.getElementById('reg-title').value; // 新增職稱
+        
+        if(!name || !dept || !title) return alert("請填寫完整資料");
         
         db.collection('users').doc(user.uid).set({
-            name, dept, email: user.email, isApproved: false, isAdmin: false, createdAt: new Date()
+            name, dept, title, email: user.email, 
+            isApproved: false, 
+            isAdmin: false, 
+            role: 'guest', // 預設權限
+            createdAt: new Date()
         }).then(() => location.reload());
     }
 
     function logout() { auth.signOut(); }
 
-    // 管理員功能
+    // ============================================================
+    // 3. 管理員後台邏輯
+    // ============================================================
     async function loadUserList() {
         const listDiv = document.getElementById('user-list');
         const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
         let html = '';
+        
         snap.forEach(doc => {
             const u = doc.data();
-            if (!u.isApproved) { // 只顯示未核准的
-                html += `
-                <div class="user-item">
-                    <div><b>${u.name}</b> (${u.dept})</div>
-                    <button class="approve-btn" onclick="approveUser('${doc.id}')">核准</button>
-                </div>`;
-            }
+            // 如果是自己 (管理員)，就不顯示操作按鈕，避免誤刪自己
+            const isSelf = (auth.currentUser.uid === doc.id);
+            
+            const roleOptions = `
+                <option value="guest" ${u.role==='guest'?'selected':''}>訪客 (無權限)</option>
+                <option value="env" ${u.role==='env'?'selected':''}>環化課 (全開)</option>
+                <option value="mech" ${u.role==='mech'?'selected':''}>機械組 (僅滑油)</option>
+                <option value="ops" ${u.role==='ops'?'selected':''}>運轉組 (CEMS+滑油)</option>
+                <option value="admin" ${u.role==='admin'?'selected':''}>管理員 (全開+後台)</option>
+            `;
+
+            html += `
+            <div class="user-item">
+                <div class="user-info-row">
+                    <div>
+                        <strong>${u.name}</strong> <span class="tag">${u.dept} ${u.title}</span>
+                        ${u.isAdmin ? '<span class="tag tag-admin">Admin</span>' : ''}
+                    </div>
+                    <div style="font-size:0.8rem; color:#888;">${u.email}</div>
+                </div>
+                <div class="user-role-row">
+                    ${isSelf ? '<span>超級管理員</span>' : `
+                        <select class="role-select" id="role-${doc.id}">
+                            ${roleOptions}
+                        </select>
+                        <button class="approve-btn" onclick="updateUser('${doc.id}')">更新</button>
+                        `}
+                </div>
+            </div>`;
         });
-        listDiv.innerHTML = html || '目前無待審核人員';
+        listDiv.innerHTML = html || '暫無人員';
     }
 
-    function approveUser(uid) {
-        db.collection('users').doc(uid).update({ isApproved: true }).then(() => loadUserList());
+    function updateUser(uid) {
+        const newRole = document.getElementById(`role-${uid}`).value;
+        const isApproved = (newRole !== 'guest'); // 只要不是 guest 就算核准
+        const isAdmin = (newRole === 'admin');    // 只有 admin 才有後台權限
+
+        db.collection('users').doc(uid).update({ 
+            role: newRole, 
+            isApproved: isApproved,
+            isAdmin: isAdmin
+        }).then(() => {
+            alert("權限已更新！");
+            loadUserList();
+        });
     }
 </script>
 </body>

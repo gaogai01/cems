@@ -12,19 +12,56 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --border-color: #e0e0e0; --primary: #007bff; }
-        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --border-color: #333; }
+        :root { 
+            --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666666; --text-value: #2c3e50;
+            --border-color: #e0e0e0; --primary: #007bff; 
+            --gauge-val: #29b6f6; /* 亮藍 */
+            --gauge-bg: #0d47a1;  /* 深藍 */
+        }
+        [data-theme="dark"] { 
+            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaaaaa; --text-value: #ffffff;
+            --border-color: #333; 
+        }
         
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
         .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
         
-        .card {
-            background: var(--bg-card); border-radius: 10px; padding: 20px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;
-            border: 1px solid var(--border-color);
+        h2 { margin: 20px 0 15px 0; font-size: 1.2rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; }
+
+        /* --- 最新數據卡片網格 --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* 自動調整欄數 */
+            gap: 15px;
+            margin-bottom: 30px;
         }
-        h2 { margin: 0 0 15px 0; font-size: 1.2rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; }
+
+        .card {
+            background: var(--bg-card); border-radius: 10px; padding: 15px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
+            border-top: 4px solid var(--primary);
+            position: relative;
+        }
+
+        .card h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--text-sub); text-transform: uppercase; font-weight: bold; display: flex; justify-content: space-between; }
         
+        .data-row { display: flex; justify-content: center; align-items: baseline; gap: 5px; margin-bottom: 8px; }
+        .value { font-size: 1.8rem; font-weight: 800; color: var(--text-value); line-height: 1; }
+        .unit { font-size: 0.8rem; color: var(--text-sub); }
+
+        /* --- 儀表板條 (Gauge) --- */
+        .gauge-container { 
+            height: 8px; width: 100%; background: var(--gauge-bg); /* 深藍底 */
+            border-radius: 4px; position: relative; overflow: hidden; 
+        }
+        .gauge-bar { 
+            height: 100%; width: 0%; background: var(--gauge-val); /* 亮藍進度 */
+            border-radius: 4px; transition: width 0.5s ease-out; 
+        }
+        .limit-text { font-size: 0.75rem; color: var(--text-sub); text-align: right; margin-top: 2px; }
+
+        /* 歷史趨勢圖 */
+        .chart-card { background: var(--bg-card); border-radius: 10px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
         .chart-controls { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
         select { padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); }
         
@@ -39,14 +76,11 @@
 <div class="container">
     <div id="loading">資料載入中...</div>
 
-    <div class="card" id="barSection" style="display:none;">
-        <h2>最新數據總覽 <span style="font-size:0.8rem; color:#888; font-weight:normal;" id="lastDate">...</span></h2>
-        <div class="chart-container">
-            <canvas id="barChart"></canvas>
+    <h2>最新數據總覽 <span style="font-size:0.8rem; color:var(--text-sub); font-weight:normal;" id="lastDate">...</span></h2>
+    <div id="dashboardGrid" class="dashboard-grid">
         </div>
-    </div>
 
-    <div class="card" id="lineSection" style="display:none;">
+    <div class="chart-card" id="lineSection" style="display:none;">
         <h2>歷史趨勢分析</h2>
         <div class="chart-controls">
             <label>選擇項目：</label>
@@ -65,7 +99,6 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec"; 
     
     let rawData = null;
-    let barChart = null;
     let lineChart = null;
 
     // 由 common.js 呼叫
@@ -75,6 +108,7 @@
 
     async function fetchData() {
         try {
+            // 呼叫 daily 模式
             const res = await fetch(API_URL + "?mode=daily");
             const json = await res.json();
             
@@ -86,10 +120,9 @@
             if (json.data && json.data.length > 0) {
                 rawData = json;
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('barSection').style.display = 'block';
                 document.getElementById('lineSection').style.display = 'block';
                 
-                renderBarChart();
+                renderDashboard();
                 initDropdown();
                 updateLineChart();
             } else {
@@ -101,98 +134,58 @@
         }
     }
 
-    // --- 1. 長條圖 (指定欄位 + 雙色顯示) ---
-    function renderBarChart() {
-        const ctx = document.getElementById('barChart').getContext('2d');
+    // --- 1. 渲染儀表板卡片 (核心修改) ---
+    function renderDashboard() {
+        const grid = document.getElementById('dashboardGrid');
+        grid.innerHTML = ""; // 清空
+
         const latestRow = rawData.data[rawData.data.length - 1];
-        
-        // 日期在第 0 欄
-        document.getElementById('lastDate').innerText = "更新日期: " + latestRow[0]; 
+        document.getElementById('lastDate').innerText = "更新時間: " + latestRow[0];
 
         // 指定要顯示的欄位名稱
         const targetFields = [
-            "回收水量", 
-            "1號機造水量", 
-            "2號機造水量", 
-            "15000公秉儲水位", 
-            "用水量", 
-            "尿素比重", 
-            "尿素用量", 
-            "尿素庫存", 
-            "1號機海水壓力", 
-            "2號機海水壓力"
+            "回收水量", "1號機造水量", "2號機造水量", "15000公秉儲水位", "用水量", 
+            "尿素比重", "尿素用量", "尿素庫存", "1號機海水壓力", "2號機海水壓力"
         ];
 
-        const labels = [];
-        const currentValues = [];
-        const limitValues = [];
-
-        // 遍歷 headers 尋找對應欄位
         for (let i = 0; i < rawData.headers.length; i++) {
             const headerName = rawData.headers[i];
+            // 只顯示指定欄位
             if (targetFields.includes(headerName)) {
-                labels.push(headerName);
-                currentValues.push(parseFloat(latestRow[i]) || 0);
-                limitValues.push(parseFloat(rawData.limits[i]) || 0);
+                const val = parseFloat(latestRow[i]);
+                const max = parseFloat(rawData.limits[i]) || 100; // 如果沒有上限，預設100 (避免分母為0)
+                const unit = rawData.units[i] || "";
+                
+                let displayVal = isNaN(val) ? "--" : val;
+                let pct = isNaN(val) ? 0 : (val / max) * 100;
+                if (pct > 100) pct = 100;
+
+                // 生成卡片 HTML
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <h3>${headerName}</h3>
+                    <div class="data-row">
+                        <span class="value">${displayVal}</span>
+                        <span class="unit">${unit}</span>
+                    </div>
+                    <div class="gauge-container">
+                        <div class="gauge-bar" style="width: ${pct}%"></div>
+                    </div>
+                    <div class="limit-text">上限: ${max}</div>
+                `;
+                grid.appendChild(card);
             }
         }
-
-        if (barChart) barChart.destroy();
-
-        barChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: '目前數據',
-                        data: currentValues,
-                        backgroundColor: '#29b6f6', // 亮藍色
-                        borderColor: '#29b6f6',
-                        borderWidth: 1
-                    },
-                    {
-                        label: '上限值',
-                        data: limitValues,
-                        backgroundColor: '#0d47a1', // 深藍色
-                        borderColor: '#0d47a1',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                plugins: { 
-                    legend: { position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ": " + context.raw;
-                            }
-                        }
-                    }
-                },
-                scales: { 
-                    x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } },
-                    y: { beginAtZero: true } 
-                }
-            }
-        });
     }
 
-    // --- 2. 趨勢圖 (下拉選單) ---
+    // --- 2. 趨勢圖 ---
     function initDropdown() {
         const select = document.getElementById('chartParam');
         if (select.options.length > 0) return;
 
         for (let i = 2; i < rawData.headers.length; i++) {
             let header = rawData.headers[i];
-            // 只把有名字的欄位加進去
             if (header) {
                 select.innerHTML += `<option value="${i}">${header}</option>`;
             }
@@ -203,7 +196,7 @@
         const colIdx = parseInt(document.getElementById('chartParam').value);
         const labelName = rawData.headers[colIdx];
         const unit = rawData.units[colIdx] || "";
-        const limit = parseFloat(rawData.limits[colIdx]); // 上限值
+        const limit = parseFloat(rawData.limits[colIdx]);
 
         const labels = [];
         const values = [];

@@ -13,130 +13,148 @@
 
     <style>
         :root { 
-            --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666666; --text-value: #2c3e50;
+            --bg-body: #f4f7f6; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666; --text-value: #2c3e50;
             --border-color: #e0e0e0; --primary: #007bff; 
-            --gauge-val: #29b6f6; --gauge-bg: #0d47a1; 
+            --gauge-val: #29b6f6; --gauge-bg: #0d47a1; /* 亮藍 vs 深藍 */
         }
         [data-theme="dark"] { 
-            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaaaaa; --text-value: #ffffff;
+            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaa; --text-value: #ffffff;
             --border-color: #333; 
         }
         
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; overflow-x: hidden; }
         
-        /* 分區樣式 */
-        .system-group { margin-bottom: 25px; }
-        .system-title { 
-            font-size: 1.1rem; color: var(--text-main); margin-bottom: 10px; 
-            padding-left: 10px; border-left: 4px solid #555; font-weight: bold; 
+        /* 全螢幕容器 */
+        .full-screen-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 60px); /* 扣除導航列高度 */
+            box-sizing: border-box;
         }
 
-        /* 分區顏色 */
-        .group-recycle .system-title { border-left-color: #007bff; } /* 藍 */
-        .group-desalt .system-title  { border-left-color: #17a2b8; } /* 青 */
-        .group-storage .system-title { border-left-color: #28a745; } /* 綠 */
-        .group-urea .system-title    { border-left-color: #6f42c1; } /* 紫 */
+        /* 左側：最新數據 (40%) */
+        .panel-left {
+            flex: 4;
+            min-width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto; /* 內容多時可捲動 */
+        }
 
-        /* 卡片網格 */
+        /* 右側：歷史圖表 (60%) */
+        .panel-right {
+            flex: 6;
+            min-width: 500px;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            height: 100%; /* 填滿高度 */
+        }
+
+        /* --- 標題樣式 --- */
+        h2 { margin: 0 0 10px 0; font-size: 1.1rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .update-time { font-size: 0.8rem; color: var(--text-sub); font-weight: normal; }
+
+        /* --- 卡片網格 (左側) --- */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
         }
 
         .card {
-            background: var(--bg-card); border-radius: 10px; padding: 15px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
-            border-top: 4px solid #ccc; position: relative;
+            background: var(--bg-card); border-radius: 8px; padding: 10px 12px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
+            border-top: 3px solid var(--primary);
+            position: relative;
         }
-        /* 卡片頂部顏色跟隨分區 */
-        .group-recycle .card { border-top-color: #007bff; }
-        .group-desalt .card  { border-top-color: #17a2b8; }
-        .group-storage .card { border-top-color: #28a745; }
-        .group-urea .card    { border-top-color: #6f42c1; }
 
-        .card h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--text-sub); font-weight: bold; display: flex; justify-content: space-between; }
+        .card h3 { margin: 0 0 5px 0; font-size: 0.85rem; color: var(--text-sub); font-weight: bold; display: flex; justify-content: space-between; }
         
-        .data-row { display: flex; justify-content: center; align-items: baseline; gap: 5px; margin-bottom: 5px; }
-        .value { font-size: 1.8rem; font-weight: 800; color: var(--text-value); line-height: 1; }
-        .unit { font-size: 0.8rem; color: var(--text-sub); }
+        .data-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+        .value { font-size: 1.6rem; font-weight: 800; color: var(--text-value); line-height: 1; }
+        .unit { font-size: 0.75rem; color: var(--text-sub); }
 
-        /* 儀表板條 */
-        .gauge-container { height: 6px; width: 100%; background: var(--gauge-bg); border-radius: 3px; position: relative; overflow: hidden; margin-top: 8px; }
-        .gauge-bar { height: 100%; width: 0%; background: var(--gauge-val); border-radius: 3px; transition: width 0.5s ease-out; }
-        
-        .info-text { 
-            font-size: 0.75rem; color: var(--text-sub); margin-top: 8px; 
-            background: rgba(0,0,0,0.03); padding: 4px; border-radius: 4px; text-align: center;
+        /* 儀表板條 (深藍底/亮藍條) */
+        .gauge-container { 
+            height: 6px; width: 100%; background: var(--gauge-bg); 
+            border-radius: 3px; position: relative; overflow: hidden; 
         }
-        .info-highlight { color: var(--primary); font-weight: bold; }
+        .gauge-bar { 
+            height: 100%; width: 0%; background: var(--gauge-val); 
+            border-radius: 3px; transition: width 0.5s ease-out; 
+        }
+        .limit-text { font-size: 0.7rem; color: var(--text-sub); text-align: right; margin-top: 2px; }
 
-        /* 歷史趨勢圖 */
-        .chart-card { background: var(--bg-card); border-radius: 10px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-top: 30px; }
-        .chart-header h2 { margin: 0; font-size: 1.2rem; border-left: 5px solid var(--primary); padding-left: 10px; }
-        .chart-controls { margin: 15px 0; display: flex; gap: 10px; align-items: center; }
-        select { padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); }
+        /* --- 圖表控制區 (右側) --- */
+        .chart-controls { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; background: rgba(0,0,0,0.02); padding: 5px; border-radius: 5px; }
+        select { padding: 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.9rem; }
         
-        #loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #888; }
-        .chart-container { position: relative; height: 400px; width: 100%; }
+        .chart-box { flex: 1; position: relative; width: 100%; min-height: 300px; }
+        
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; color: #888; }
+
+        /* RWD: 手機版變回上下排列 */
+        @media (max-width: 900px) {
+            .full-screen-container { height: auto; flex-direction: column; }
+            .panel-left, .panel-right { width: 100%; height: auto; min-height: 400px; }
+        }
     </style>
 </head>
 <body>
 
 <div id="navbar-placeholder"></div>
 
-<div class="container">
-    <div id="loading">資料載入中...</div>
+<div id="loading">資料載入中...</div>
+
+<div class="full-screen-container" id="mainApp" style="display:none;">
     
-    <div id="mainContent" style="display:none;">
-        <div style="margin-bottom:20px; font-size:0.9rem; color:var(--text-sub); text-align:right;">
-            資料更新時間: <span id="lastDate" style="font-weight:bold; color:var(--text-main);">...</span>
-        </div>
-
-        <div class="system-group group-recycle">
-            <div class="system-title">放流水系統</div>
-            <div class="dashboard-grid" id="gridRecycle"></div>
-        </div>
-
-        <div class="system-group group-desalt">
-            <div class="system-title">海淡機組</div>
-            <div class="dashboard-grid" id="gridDesalt"></div>
-        </div>
-
-        <div class="system-group group-storage">
-            <div class="system-title">儲水與用水管理</div>
-            <div class="dashboard-grid" id="gridStorage"></div>
-        </div>
-
-        <div class="system-group group-urea">
-            <div class="system-title">尿素管理</div>
-            <div class="dashboard-grid" id="gridUrea"></div>
-        </div>
-
-        <div class="chart-card">
-            <div class="chart-header"><h2>歷史趨勢分析</h2></div>
-            <div class="chart-controls">
-                <label>選擇項目：</label>
-                <select id="chartParam" onchange="updateLineChart()"></select>
+    <div class="panel-left">
+        <h2>
+            最新數據
+            <span class="update-time" id="lastDate">...</span>
+        </h2>
+        <div id="dashboardGrid" class="dashboard-grid">
             </div>
-            <div class="chart-container">
-                <canvas id="lineChart"></canvas>
-            </div>
+    </div>
+
+    <div class="panel-right">
+        <h2>歷史趨勢分析</h2>
+        <div class="chart-controls">
+            <select id="chartParam" onchange="updateLineChart()"></select>
+            <select id="timeRange" onchange="updateLineChart()">
+                <option value="24">過去 24 小時</option>
+                <option value="168">過去 7 天</option>
+                <option value="720">過去 30 天</option>
+            </select>
+        </div>
+        <div class="chart-box">
+            <canvas id="lineChart"></canvas>
         </div>
     </div>
+
 </div>
 
 <script src="common.js"></script>
 
 <script>
+    // Apps Script 網址
     const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec"; 
     
     let rawData = null;
     let lineChart = null;
 
+    // Common.js 呼叫入口
     function startApp() {
         fetchData();
+        setInterval(fetchData, 60000); // 每分鐘更新
     }
 
     async function fetchData() {
@@ -144,50 +162,57 @@
             const res = await fetch(API_URL + "?mode=daily");
             const json = await res.json();
             
-            if (json.error) { document.getElementById('loading').innerText = "錯誤: " + json.error; return; }
+            if (json.error) { 
+                console.error(json.error); 
+                return; 
+            }
 
             if (json.data && json.data.length > 0) {
                 rawData = json;
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
+                document.getElementById('mainApp').style.display = 'flex';
                 
-                renderDashboards();
+                renderDashboard();
                 initDropdown();
                 updateLineChart();
-            } else {
-                document.getElementById('loading').innerText = "無資料";
             }
         } catch (e) {
             console.error("Error:", e);
-            document.getElementById('loading').innerText = "載入失敗";
         }
     }
 
-    // --- 核心：渲染儀表板 ---
-    function renderDashboards() {
-        const latestRow = rawData.data[rawData.data.length - 1];
-        document.getElementById('lastDate').innerText = latestRow[0]; // 日期
+    // --- 渲染卡片 ---
+    function renderDashboard() {
+        const grid = document.getElementById('dashboardGrid');
+        grid.innerHTML = "";
 
-        // 建立欄位索引 Map，方便查找
+        // 找最新一筆有效資料
+        let latestRow = rawData.data[rawData.data.length - 1];
+        // 如果最新這筆全空，往前找
+        for (let i = rawData.data.length - 1; i >= 0; i--) {
+            if (rawData.data[i][0] && rawData.data[i][2]) { // 檢查日期和數據是否存在
+                latestRow = rawData.data[i];
+                break;
+            }
+        }
+        
+        // 更新時間顯示
+        let dateStr = latestRow[0];
+        if(dateStr.includes('T')) dateStr = dateStr.split('T')[0];
+        document.getElementById('lastDate').innerText = "更新: " + dateStr;
+
+        const targetFields = [
+            "回收水量", "1號機造水量", "2號機造水量", "15000公秉儲水位", "用水量", 
+            "尿素比重", "尿素用量", "尿素庫存", "1號機海水壓力", "2號機海水壓力"
+        ];
+
+        // 建立欄位映射 Map (去除空白防呆)
         const headerMap = {};
-        rawData.headers.forEach((h, i) => headerMap[h.trim()] = i);
+        rawData.headers.forEach((h, i) => { if(h) headerMap[h.trim()] = i; });
 
-        // 定義各區塊內容
-        const groups = {
-            "gridRecycle": ["回收水量"],
-            "gridDesalt":  ["1號機造水量", "2號機造水量", "1號機海水壓力", "2號機海水壓力"],
-            "gridStorage": ["15000公秉儲水位", "用水量"],
-            "gridUrea":    ["尿素比重", "尿素用量", "尿素庫存"]
-        };
-
-        for (const [gridId, fields] of Object.entries(groups)) {
-            const container = document.getElementById(gridId);
-            container.innerHTML = "";
-
-            fields.forEach(field => {
-                const idx = headerMap[field];
-                if (idx === undefined) return;
-
+        targetFields.forEach(field => {
+            const idx = headerMap[field];
+            if (idx !== undefined) {
                 const val = parseFloat(latestRow[idx]);
                 const max = parseFloat(rawData.limits[idx]) || 100; 
                 const unit = rawData.units[idx] || "";
@@ -196,41 +221,10 @@
                 let pct = isNaN(val) ? 0 : (val / max) * 100;
                 if (pct > 100) pct = 100;
 
-                // --- 特殊計算邏輯 ---
-                let extraInfo = "";
-                
-                // 1. 儲水位 -> 換算公秉
-                if (field === "15000公秉儲水位" && !isNaN(val)) {
-                    // 公式：水位(m) * 2950 = 公秉
-                    // 假設 val 是公尺 (如果資料來源是cm，請改 val/100)
-                    let volume = (val * 2950).toLocaleString(undefined, {maximumFractionDigits: 0});
-                    extraInfo = `換算庫存: <span class="info-highlight">${volume}</span> 公秉`;
-                }
-
-                // 2. 用水量 -> 30日平均
-                if (field === "用水量") {
-                    let stats = calcHistoryStats(idx, 30);
-                    extraInfo = `近30日平均: <span class="info-highlight">${stats.avg.toFixed(1)}</span>`;
-                }
-
-                // 3. 尿素比重 -> 濃度換算
-                if (field === "尿素比重" && !isNaN(val)) {
-                    // 公式: (SG - 1) * 1000 / 2.78
-                    let conc = ((val - 1) * 1000 / 2.78).toFixed(1);
-                    extraInfo = `推算濃度: <span class="info-highlight">${conc}%</span>`;
-                }
-
-                // 4. 尿素用量 -> 30日合計
-                if (field === "尿素用量") {
-                    let stats = calcHistoryStats(idx, 30);
-                    extraInfo = `近30日合計: <span class="info-highlight">${stats.sum.toFixed(0)}</span>`;
-                }
-
-                // 產生卡片 HTML
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <h3>${field} <small style="font-weight:normal; font-size:0.7em">上限:${max}</small></h3>
+                    <h3>${field}</h3>
                     <div class="data-row">
                         <span class="value">${displayVal}</span>
                         <span class="unit">${unit}</span>
@@ -238,38 +232,29 @@
                     <div class="gauge-container">
                         <div class="gauge-bar" style="width: ${pct}%"></div>
                     </div>
-                    ${extraInfo ? `<div class="info-text">${extraInfo}</div>` : ''}
+                    <div class="limit-text">上限: ${max}</div>
                 `;
-                container.appendChild(card);
-            });
-        }
-    }
-
-    // --- 輔助函式：計算歷史統計 (Sum & Avg) ---
-    function calcHistoryStats(colIdx, days) {
-        let sum = 0;
-        let count = 0;
-        // 從最後一筆往前抓 N 筆
-        let totalRows = rawData.data.length;
-        let start = Math.max(0, totalRows - days);
-        
-        for (let i = start; i < totalRows; i++) {
-            let v = parseFloat(rawData.data[i][colIdx]);
-            if (!isNaN(v)) {
-                sum += v;
-                count++;
+                grid.appendChild(card);
             }
-        }
-        return { sum: sum, avg: count > 0 ? sum / count : 0 };
+        });
     }
 
-    // --- 趨勢圖 (維持原樣) ---
+    // --- 圖表功能 ---
     function initDropdown() {
         const select = document.getElementById('chartParam');
         if (select.options.length > 0) return;
+
+        // 只顯示我們關注的那 10 個欄位
+        const targetFields = [
+            "回收水量", "1號機造水量", "2號機造水量", "15000公秉儲水位", "用水量", 
+            "尿素比重", "尿素用量", "尿素庫存", "1號機海水壓力", "2號機海水壓力"
+        ];
+
         for (let i = 2; i < rawData.headers.length; i++) {
-            let header = rawData.headers[i];
-            if (header) select.innerHTML += `<option value="${i}">${header}</option>`;
+            let header = rawData.headers[i].trim();
+            if (targetFields.includes(header)) {
+                select.innerHTML += `<option value="${i}">${header}</option>`;
+            }
         }
     }
 
@@ -278,12 +263,25 @@
         const labelName = rawData.headers[colIdx];
         const unit = rawData.units[colIdx] || "";
         const limit = parseFloat(rawData.limits[colIdx]);
+        const rangeHours = parseInt(document.getElementById('timeRange').value);
+
+        // 時間過濾
+        const now = new Date();
+        const startTime = new Date(now.getTime() - rangeHours * 60 * 60 * 1000);
+        
         const labels = [];
         const values = [];
 
         rawData.data.forEach(row => {
-            labels.push(row[0]); 
-            values.push(parseFloat(row[colIdx]) || null);
+            let d = new Date(row[0]);
+            if (d >= startTime) {
+                // 格式化時間顯示 (MM/dd HH:mm)
+                let timeLabel = (d.getMonth()+1) + "/" + d.getDate();
+                if (rangeHours <= 24) timeLabel += " " + d.getHours() + ":00";
+
+                labels.push(timeLabel); 
+                values.push(parseFloat(row[colIdx]) || null);
+            }
         });
 
         const ctx = document.getElementById('lineChart').getContext('2d');
@@ -295,7 +293,7 @@
             borderColor: '#007bff',
             backgroundColor: 'rgba(0, 123, 255, 0.1)',
             borderWidth: 2,
-            pointRadius: 0,
+            pointRadius: (rangeHours > 168) ? 0 : 3, // 資料多時隱藏點
             fill: true,
             tension: 0.1
         }];

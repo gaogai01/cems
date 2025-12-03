@@ -10,7 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
-        /* --- CSS 變數 --- */
+        /* --- CSS 變數定義 --- */
         :root { 
             --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #888; 
             --border-color: #e0e0e0; --primary: #607d8b; --danger: #dc3545; 
@@ -24,59 +24,35 @@
         }
 
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
-        
-        /* 導航列佔位 */
-        #navbar-placeholder { margin-bottom: 20px; }
-
         .container { max-width: 98%; margin: 0 auto; padding: 0 10px; }
         
         h2 { margin: 20px 0 15px 0; font-size: 1.3rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; align-items: center;}
         h3.section-title { margin: 25px 0 10px 0; font-size: 1.1rem; color: var(--text-main); border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
         .btn-theme { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
 
-        /* 篩選控制區 */
         .table-controls { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: var(--bg-card); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
         .table-controls label { font-weight: bold; font-size: 0.9rem; color: var(--text-main); }
         select { padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.9rem; background: var(--bg-card); color: var(--text-main); }
 
-        /* --- 表格樣式 (支援橫向捲動) --- */
-        .table-container { 
-            width: 100%; overflow-x: auto; background: var(--bg-card); 
-            border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-            border: 1px solid var(--border-color); margin-bottom: 30px; 
-            max-height: 80vh; 
-            -webkit-overflow-scrolling: touch; /* 手機滑動優化 */
-        }
+        .table-container { width: 100%; overflow-x: auto; background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 30px; max-height: 80vh; }
+        
+        /* 表格樣式 */
         .overview-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem; white-space: nowrap; }
         .overview-table th, .overview-table td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); text-align: center; vertical-align: middle; }
-        
         .overview-table thead th { background: var(--table-head-bg); color: var(--text-main); font-weight: bold; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border-color); }
-        
-        /* 凍結首欄 */
-        .overview-table th:first-child, .overview-table td:first-child { 
-            position: sticky; left: 0; z-index: 11; background-color: var(--sticky-bg); 
-            border-right: 2px solid var(--border-color); font-weight: bold; min-width: 90px; 
-            text-align: left; padding-left: 10px;
-        }
+        .overview-table th:first-child, .overview-table td:first-child { position: sticky; left: 0; z-index: 11; background-color: var(--sticky-bg); border-right: 2px solid var(--border-color); font-weight: bold; min-width: 80px; }
         .overview-table thead th:first-child { z-index: 12; background-color: var(--table-head-bg); }
-        
         .overview-table tbody tr:nth-child(even) td { background-color: var(--table-stripe); }
         .overview-table tbody tr:nth-child(even) td:first-child { background-color: var(--sticky-bg); filter: brightness(0.97); } 
         .overview-table tbody tr:hover td { background-color: var(--table-hover); cursor: pointer; }
         
-        /* 數值與建議 */
         .val-limit { color: var(--danger); font-weight: 900; background-color: rgba(220, 53, 69, 0.1); }
         .unit-small { font-size: 0.75rem; color: var(--text-sub); font-weight: normal; display: block; }
         .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
         .dot-ok { background-color: #28a745; } .dot-err { background-color: #dc3545; box-shadow: 0 0 5px #dc3545; }
         
-        /* 建議文字樣式 */
-        .diagnosis-text { 
-            display: block; font-size: 0.75rem; color: var(--danger); 
-            margin-top: 4px; font-weight: normal; line-height: 1.2; 
-            white-space: normal; /* 允許換行 */
-            max-width: 150px; /* 限制寬度 */
-        }
+        /* 建議文字 */
+        .diagnosis-text { display: block; font-size: 0.75rem; color: var(--danger); margin-top: 4px; font-weight: normal; line-height: 1.2; white-space: normal; max-width: 150px; }
 
         /* 圖表區 */
         .chart-section { background: var(--bg-card); padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 50px; }
@@ -188,10 +164,10 @@
 <script src="common.js"></script>
 
 <script>
+    // 請填入您的 Apps Script 網址
     const API_URL = "https://script.google.com/macros/s/AKfycbwqP_rRkI8xyVYFvo8nWY9pq4i1OLlvrLfAMxmleSAh-XDbMQN3yGk3eF0j5OdDDVMYxw/exec";
 
-    // 資料結構包含 dg 和 eg 的完整資訊
-    let rawData = { dg: null, eg: null }; 
+    let rawData = { headers: [], cnHeaders: [], units: [], dgLimits: { upper: [], lower: [] }, egLimits: { upper: [], lower: [] }, data: [] };
     let chartInstance = null;
     const LINE_COLORS = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'];
 
@@ -203,7 +179,21 @@
     async function fetchData() {
         try {
             const res = await fetch(API_URL + "?mode=oil");
-            rawData = await res.json();
+            const json = await res.json();
+            
+            // 處理資料結構
+            if(json.dgLimits && json.egLimits) {
+                rawData = json;
+            } else {
+                // 舊版相容
+                rawData.headers = json.headers || [];
+                rawData.cnHeaders = json.cnHeaders || [];
+                rawData.units = json.units || [];
+                rawData.data = json.data || [];
+                rawData.dgLimits = { upper: json.upperLimits || [], lower: json.lowerLimits || [] };
+                rawData.egLimits = { upper: json.upperLimits || [], lower: json.lowerLimits || [] };
+            }
+
             document.getElementById('loading').style.display = 'none';
             initControls(); 
             renderOverviewTables(); 
@@ -221,50 +211,53 @@
         if(chartInstance) updateChart();
     }
 
-    // --- 狀態檢查 (根據 source 傳入正確的 limits) ---
-    function checkStatus(val, colIdx, sourceData) {
+    // --- 狀態檢查 ---
+    function checkStatus(val, colIdx, isEG) {
         if (val === "" || val === undefined) return true; 
         let num = parseFloat(val);
         if (isNaN(num)) return true; 
         
-        const lower = sourceData.lower[colIdx];
-        const upper = sourceData.upper[colIdx];
+        const limits = isEG ? rawData.egLimits : rawData.dgLimits;
+        if (!limits || !limits.lower || !limits.upper) return true;
+
+        const lower = limits.lower[colIdx];
+        const upper = limits.upper[colIdx];
 
         if (lower !== "" && num < parseFloat(lower)) return false;
         if (upper !== "" && num > parseFloat(upper)) return false;
         return true;
     }
 
-    function getLimitText(colIdx, sourceData) {
-        const lower = sourceData.lower[colIdx];
-        const upper = sourceData.upper[colIdx];
+    function getLimitText(colIdx, isEG) {
+        const limits = isEG ? rawData.egLimits : rawData.dgLimits;
+        if (!limits || !limits.lower || !limits.upper) return "-";
+
+        const lower = limits.lower[colIdx];
+        const upper = limits.upper[colIdx];
         if(lower !== "" && upper !== "") return `${lower}~${upper}`;
         if(lower !== "") return `>${lower}`;
         if(upper !== "") return `<${upper}`;
         return "-";
     }
 
-    // --- 整合資料來源 (DG+EG) 用於圖表選單 ---
+    // --- 整合資料來源 ---
     function getAllMachines() {
         let machines = [];
-        if (rawData.dg && rawData.dg.data) machines = machines.concat(rawData.dg.data.map(r => r[1]));
-        if (rawData.eg && rawData.eg.data) machines = machines.concat(rawData.eg.data.map(r => r[1]));
+        if (rawData.data) machines = rawData.data.map(r => r[1]);
         return [...new Set(machines)].sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
     }
 
     function initControls() {
         const machines = getAllMachines();
         const years = new Set();
-        
-        [rawData.dg, rawData.eg].forEach(src => {
-            if(src && src.data) {
-                src.data.forEach(r => { 
-                    if(r[0]) { const y = r[0].substring(0, 4); if(y) years.add(y); }
-                });
+        rawData.data.forEach(r => { 
+            if(r[0]) {
+                const y = r[0].substring(0, 4); 
+                if(y) years.add(y); 
             }
         });
-        
         const sortedYears = [...years].sort().reverse();
+
         const tYearSelect = document.getElementById('tableYear');
         sortedYears.forEach(y => tYearSelect.innerHTML += `<option value="${y}">${y}年</option>`);
 
@@ -278,50 +271,46 @@
             mBox.innerHTML += `<label class="checkbox-item"><input type="checkbox" value="${m}" ${checked} onchange="updateChart()"> ${m}</label>`;
         });
         
-        // 測項選單 (優先使用 DG 的標題，因為較完整)
         const pSelect = document.getElementById('chartParam');
-        const headers = rawData.dg ? rawData.dg.headers : rawData.eg.headers;
-        const cnHeaders = rawData.dg ? rawData.dg.cnHeaders : rawData.eg.cnHeaders;
-        
-        // 跳過前 2 欄 (Date, ID) 和 最後 1 欄 (Diagnosis)
-        for(let i=2; i<headers.length - 1; i++) {
-            const name = cnHeaders[i] || headers[i];
-            pSelect.innerHTML += `<option value="${headers[i]}">${name}</option>`; // 存英文Key方便對照
+        for(let i=2; i<rawData.headers.length - 1; i++) { // 減1排除 Diagnosis
+            const name = rawData.cnHeaders[i] || rawData.headers[i];
+            pSelect.innerHTML += `<option value="${rawData.headers[i]}">${name}</option>`;
         }
         updateChart();
     }
 
-    // --- 渲染兩個表格 ---
+    // --- 渲染表格 ---
     function renderOverviewTables() {
+        document.getElementById('dgTable').innerHTML = "";
+        document.getElementById('egTable').innerHTML = "";
         const selectedYear = document.getElementById('tableYear').value;
         const selectedMonth = document.getElementById('tableMonth').value;
-        
-        if(rawData.dg) generateTable('dgTable', rawData.dg, selectedYear, selectedMonth);
-        if(rawData.eg) generateTable('egTable', rawData.eg, selectedYear, selectedMonth);
-    }
 
-    function generateTable(tableId, sourceData, selectedYear, selectedMonth) {
-        const table = document.getElementById(tableId);
-        table.innerHTML = "";
-        
-        // 1. 整理數據
         const machineGroups = {}; 
-        sourceData.data.forEach(row => {
+        rawData.data.forEach(row => {
             const mId = row[1]; 
             if (!machineGroups[mId]) machineGroups[mId] = [];
             machineGroups[mId].push(row);
         });
-        const sortedKeys = Object.keys(machineGroups).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
 
-        // 2. 表頭 (排除 Diagnosis)
+        const allKeys = Object.keys(machineGroups);
+        const dgKeys = allKeys.filter(k => !k.toUpperCase().includes('EG')).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+        const egKeys = allKeys.filter(k => k.toUpperCase().includes('EG')).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+
+        generateTable('dgTable', dgKeys, machineGroups, selectedYear, selectedMonth, false);
+        generateTable('egTable', egKeys, machineGroups, selectedYear, selectedMonth, true);
+    }
+
+    function generateTable(tableId, keys, machineGroups, selectedYear, selectedMonth, isEG) {
+        const table = document.getElementById(tableId);
+        if(keys.length === 0) { table.innerHTML = "<tbody><tr><td>無資料</td></tr></tbody>"; return; }
+
         let thead = document.createElement('thead');
         let trHead = document.createElement('tr');
         trHead.innerHTML = `<th>機組</th><th>檢驗日期</th>`;
-        
-        // header 長度減 1，排除 Diagnosis
-        for (let i = 2; i < sourceData.headers.length - 1; i++) {
-            const cnName = sourceData.cnHeaders[i] || sourceData.headers[i];
-            const unit = sourceData.units[i] ? `<span class="unit-small">(${sourceData.units[i]})</span>` : '';
+        for (let i = 2; i < rawData.headers.length - 1; i++) { // 減1排除 Diagnosis
+            const cnName = rawData.cnHeaders[i] || rawData.headers[i];
+            const unit = rawData.units[i] ? `<span class="unit-small">(${rawData.units[i]})</span>` : '';
             const th = document.createElement('th');
             th.innerHTML = `${cnName} ${unit}`;
             trHead.appendChild(th);
@@ -329,12 +318,10 @@
         thead.appendChild(trHead);
         table.appendChild(thead);
 
-        // 3. 內容
         let tbody = document.createElement('tbody');
-        sortedKeys.forEach(key => {
+        keys.forEach(key => {
             const history = machineGroups[key].sort((a, b) => new Date(b[0]) - new Date(a[0]));
             let targetRow = null;
-            
             if (selectedYear === 'latest') {
                 targetRow = history[0];
             } else {
@@ -350,28 +337,24 @@
             if (!targetRow) {
                 let tr = document.createElement('tr');
                 tr.innerHTML = `<td>${key}</td><td style="color:#ccc">無數據</td>`;
-                // 補空位
-                for(let k=2; k<sourceData.headers.length-1; k++) tr.innerHTML += `<td>-</td>`;
+                for(let k=2; k<rawData.headers.length - 1; k++) tr.innerHTML += `<td>-</td>`;
                 tbody.appendChild(tr);
                 return;
             }
 
             const dateStr = targetRow[0].split('T')[0];
-            
-            // 處理建議 (Diagnosis) - 假設它是最後一欄
-            const diagIdx = sourceData.headers.length - 1;
+            const diagIdx = rawData.headers.length - 1;
             const diagText = targetRow[diagIdx];
             
             let tr = document.createElement('tr');
-            tr.onclick = () => openModal(key, history.slice(0, 3), sourceData);
+            tr.onclick = () => openModal(key, history.slice(0, 3), isEG);
 
             let hasError = false;
-            for (let i = 2; i < sourceData.headers.length - 1; i++) {
-                if (!checkStatus(targetRow[i], i, sourceData)) { hasError = true; break; }
+            for (let i = 2; i < rawData.headers.length - 1; i++) {
+                if (!checkStatus(targetRow[i], i, isEG)) { hasError = true; break; }
             }
             const dotClass = hasError ? "dot-err" : "dot-ok";
 
-            // 機組名稱 + 建議小字
             let tdName = document.createElement('td');
             tdName.innerHTML = `<span class="status-dot ${dotClass}"></span>${key}`;
             if (diagText && diagText.trim() !== "") {
@@ -383,12 +366,12 @@
             tdDate.innerText = dateStr;
             tr.appendChild(tdDate);
 
-            for (let i = 2; i < sourceData.headers.length - 1; i++) {
+            for (let i = 2; i < rawData.headers.length - 1; i++) {
                 let td = document.createElement('td');
                 let val = targetRow[i];
-                if (!checkStatus(val, i, sourceData)) {
+                if (!checkStatus(val, i, isEG)) {
                     td.className = "val-limit";
-                    td.title = `標準: ${getLimitText(i, sourceData)}`;
+                    td.title = `標準: ${getLimitText(i, isEG)}`;
                 }
                 td.innerText = val;
                 tr.appendChild(td);
@@ -398,7 +381,8 @@
         table.appendChild(tbody);
     }
 
-    function openModal(machineId, historyRows, sourceData) {
+    // --- Modal ---
+    function openModal(machineId, historyRows, isEG) {
         const modal = document.getElementById('detailModal');
         const theadRow = document.getElementById('modalHeaderRow');
         const tbody = document.getElementById('detailTableBody');
@@ -413,18 +397,17 @@
         theadRow.innerHTML = headerHtml;
 
         tbody.innerHTML = "";
-        // 排除最後一欄 Diagnosis
-        for(let i=2; i<sourceData.headers.length - 1; i++) {
-            const cnName = sourceData.cnHeaders[i] || sourceData.headers[i];
-            const unit = sourceData.units[i] || "";
-            let limitText = getLimitText(i, sourceData);
+        for(let i=2; i<rawData.headers.length - 1; i++) {
+            const cnName = rawData.cnHeaders[i] || rawData.headers[i];
+            const unit = rawData.units[i] || "";
+            let limitText = getLimitText(i, isEG);
             
             let rowHtml = `<tr><td>${cnName} <span style="color:#999;font-size:0.8em">(${unit})</span></td><td style="color:#666;font-size:0.85em">${limitText}</td>`;
             for(let j=0; j<3; j++) {
                 const isLatest = (j === 0) ? 'col-latest' : '';
                 if (j < historyRows.length) {
                     const val = historyRows[j][i];
-                    const valClass = checkStatus(val, i, sourceData) ? "" : "val-limit";
+                    const valClass = checkStatus(val, i, isEG) ? "" : "val-limit";
                     rowHtml += `<td class="${isLatest} ${valClass}">${val}</td>`;
                 } else { rowHtml += `<td class="${isLatest}">-</td>`; }
             }
@@ -432,8 +415,7 @@
             tbody.innerHTML += rowHtml;
         }
         
-        // 額外顯示建議 (如果有)
-        const diagIdx = sourceData.headers.length - 1;
+        const diagIdx = rawData.headers.length - 1;
         const latestDiag = historyRows[0][diagIdx];
         if(latestDiag) {
             tbody.innerHTML += `<tr><td colspan="5" style="text-align:left; color:#d32f2f; padding:10px; background:#fff5f5;"><b>💡 最新建議：</b> ${latestDiag}</td></tr>`;
@@ -444,11 +426,12 @@
     function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
     window.onclick = function(event) { if (event.target == document.getElementById('detailModal')) closeModal(); }
 
+    // --- 圖表更新 ---
     function updateChart() {
         const checkboxes = document.querySelectorAll('#machineCheckboxes input:checked');
         const selectedMachines = Array.from(checkboxes).map(cb => cb.value);
         const year = document.getElementById('chartYear').value;
-        const pKey = document.getElementById('chartParam').value; // 這裡是英文 key
+        const pKey = document.getElementById('chartParam').value;
 
         if (selectedMachines.length === 0) {
             if(chartInstance) chartInstance.data.datasets = []; chartInstance.update(); return;
@@ -456,38 +439,26 @@
 
         let datasets = [];
         let allLabels = new Set();
-        
-        // 混合 DG 和 EG 數據
-        const allData = [].concat(rawData.dg ? rawData.dg.data : [], rawData.eg ? rawData.eg.data : []);
-        // 找到 DG/EG 中該 key 對應的 index (可能不同)
-        const dgIdx = rawData.dg ? rawData.dg.headers.indexOf(pKey) : -1;
-        const egIdx = rawData.eg ? rawData.eg.headers.indexOf(pKey) : -1;
-        
-        // 取得上下限 (優先用 DG，若無則用 EG)
-        const dgSource = rawData.dg;
-        const limitSource = (dgIdx !== -1 && dgSource) ? dgSource : rawData.eg;
-        const limitIdx = (dgIdx !== -1) ? dgIdx : egIdx;
-        const lower = limitSource ? parseFloat(limitSource.lower[limitIdx]) : NaN;
-        const upper = limitSource ? parseFloat(limitSource.upper[limitIdx]) : NaN;
+        const pIdx = rawData.headers.indexOf(pKey);
+
+        // 取得上下限 (優先用 DG)
+        const isAllEG = selectedMachines.every(m => m.includes('EG'));
+        const limits = isAllEG ? rawData.egLimits : rawData.dgLimits;
+        const lower = limits ? parseFloat(limits.lower[pIdx]) : NaN;
+        const upper = limits ? parseFloat(limits.upper[pIdx]) : NaN;
 
         selectedMachines.forEach((mId, index) => {
-            // 判斷是 DG 還是 EG
-            const isEG = mId.toUpperCase().includes('EG');
-            const colIdx = isEG ? egIdx : dgIdx;
-            const source = isEG ? rawData.eg : rawData.dg;
-
-            if (colIdx === -1 || !source) return; // 該機組沒有這個測項
-
-            const filteredData = source.data.filter(r => {
+            const filteredData = rawData.data.filter(r => {
                 const isMachineMatch = (r[1] === mId);
                 const isYearMatch = (year === 'all') || (r[0].startsWith(year));
                 return isMachineMatch && isYearMatch;
             }).sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
+            filteredData.forEach(r => allLabels.add(r[0].split('T')[0]));
+
             const dataPoints = filteredData.map(r => {
                 const d = r[0].split('T')[0];
-                allLabels.add(d);
-                return { x: d, y: parseFloat(r[colIdx]) || null };
+                return { x: d, y: parseFloat(r[pIdx]) || null };
             });
 
             datasets.push({
@@ -495,17 +466,13 @@
                 data: dataPoints,
                 borderColor: LINE_COLORS[index % LINE_COLORS.length],
                 backgroundColor: LINE_COLORS[index % LINE_COLORS.length],
-                borderWidth: 2,
-                pointRadius: 0,
-                fill: false,
-                tension: 0.1,
-                spanGaps: true
+                borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.1, spanGaps: true
             });
         });
 
         const sortedLabels = Array.from(allLabels).sort();
         
-        // 對齊數據點
+        // 對齊數據
         datasets.forEach(ds => {
              const newData = sortedLabels.map(lbl => {
                  const pt = ds.data.find(p => p.x === lbl);

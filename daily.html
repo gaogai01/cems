@@ -56,6 +56,14 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; white-space: nowrap;
         }
         .btn-report:hover { background: #138496; transform: translateY(-2px); }
+        
+        /* Excel 按鈕 (綠色) */
+        .btn-excel {
+            background: #20c997; color: white; border: none; padding: 8px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; white-space: nowrap;
+        }
+        .btn-excel:hover { background: #198754; transform: translateY(-2px); }
 
         /* --- 4個群組一列顯示 --- */
         .group-container {
@@ -107,15 +115,15 @@
         
         /* Modal & 報表樣式 */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
-        .modal-content { background-color: var(--bg-card); margin: 2% auto; padding: 20px; border-radius: 10px; width: 95%; max-width: 1200px; max-height: 95vh; display:flex; flex-direction:column; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
+        .modal-content { background-color: var(--bg-card); margin: 2% auto; padding: 20px; border-radius: 10px; width: 95%; max-width: 1100px; max-height: 95vh; display:flex; flex-direction:column; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
         .modal-body { overflow-y: auto; padding: 10px; flex:1; }
         .modal-body textarea { width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 1rem; background: var(--bg-body); color: var(--text-main); }
-        .log-controls { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
+        .log-controls { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
         .close-btn { font-size: 1.5rem; cursor: pointer; color: var(--text-sub); }
 
         /* 月報表專用表格樣式 */
-        .report-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; color: #000; background: #fff; }
+        .report-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #000; background: #fff; }
         .report-table th, .report-table td { border: 1px solid #333; padding: 4px; text-align: center; white-space: nowrap; }
         .report-table th { background-color: #f0f0f0; font-weight: bold; }
         .report-title { font-size: 1.5rem; font-weight: bold; text-align: center; margin-bottom: 5px; color: #000; }
@@ -131,7 +139,7 @@
             .chart-controls { flex-direction: column; align-items: stretch; }
             .chart-box { height: 300px; }
             .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-            .btn-group { width: 100%; justify-content: space-between; }
+            .btn-group { width: 100%; justify-content: space-between; flex-wrap: wrap; }
             .inner-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
@@ -222,7 +230,8 @@
             <label style="color:var(--text-main)">選擇月份：</label>
             <input type="month" id="reportMonth" style="padding:5px;">
             <button class="btn-report" onclick="generateReport()">生成報表</button>
-            <button class="btn-log" style="background:#6c757d;" onclick="printReport()">🖨️ 列印/存PDF</button>
+            <button class="btn-excel" onclick="exportExcel()">📥 匯出 Excel</button>
+            <button class="btn-log" style="background:#6c757d;" onclick="printReport()">🖨️ 列印/PDF</button>
         </div>
         <div class="modal-body" id="reportContainer" style="background:white; color:black; padding:20px;">
             <div style="text-align:center; color:#888;">請選擇月份並點擊生成</div>
@@ -352,7 +361,7 @@
         return { sum: sum, avg: count > 0 ? sum / count : 0 };
     }
 
-    // --- 月報表產生器 (更新欄位與四捨五入) ---
+    // --- 月報表產生器 ---
     function openReportModal() { document.getElementById('reportModal').style.display = 'block'; }
     function closeReportModal() { document.getElementById('reportModal').style.display = 'none'; }
     
@@ -441,7 +450,6 @@
             const stFlowAM = getRaw(row, "上午蒸氣流量");
             const stFlowPM = getRaw(row, "下午蒸氣流量");
             
-            // 海水入口壓力 (取 max)
             const seaP1 = getVal(row, "1號機海水壓力");
             const seaP2 = getVal(row, "2號機海水壓力");
             const seaMax = Math.max(seaP1, seaP2);
@@ -478,7 +486,6 @@
             `;
         });
 
-        // 頁尾統計 (四捨五入到小數點第一位)
         html += `
                 <tr style="background:#f9f9f9; font-weight:bold;">
                     <td colspan="2">總計</td>
@@ -498,29 +505,52 @@
                 </tr>
             </tbody>
         </table>
-        
-        <div class="report-footer">
-            <div>經辦: </div>
-            <div>課長: </div>
-            <div>運轉組: </div>
-            <div>副廠長: </div>
-            <div>廠長: </div>
-        </div>
         `;
-
         container.innerHTML = html;
     }
 
     function printReport() {
         const content = document.getElementById('reportContainer').innerHTML;
         const printWindow = window.open('', '', 'height=600,width=800');
-        printWindow.document.write('<html><head><title>月報表列印</title>');
-        printWindow.document.write('<style>table{width:100%;border-collapse:collapse;} th,td{border:1px solid black;padding:4px;text-align:center;font-size:12px;} .report-title{text-align:center;font-size:18px;font-weight:bold;} .report-footer{display:flex;justify-content:space-between;margin-top:20px;}</style>');
-        printWindow.document.write('</head><body>');
+        printWindow.document.write('<html><head><title>月報表</title><style>table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;} th,td{border:1px solid black;padding:4px;text-align:center;font-size:12px;} .report-title{text-align:center;font-size:18px;font-weight:bold;margin-bottom:5px;} .report-subtitle{text-align:center;margin-bottom:15px;}</style></head><body>');
         printWindow.document.write(content);
         printWindow.document.write('</body></html>');
         printWindow.document.close();
         printWindow.print();
+    }
+
+    // 新增：匯出 Excel 功能
+    function exportExcel() {
+        const table = document.querySelector('.report-table');
+        if (!table) { alert("請先生成報表！"); return; }
+        
+        const monthStr = document.getElementById('reportMonth').value;
+        const filename = `海淡造水量月報表_${monthStr}.xls`;
+        
+        const template = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    table { border-collapse: collapse; }
+                    th, td { border: 1px solid black; text-align: center; }
+                    .num { mso-number-format:General; }
+                    .text { mso-number-format:"\@"; }
+                </style>
+            </head>
+            <body>
+                <h3>尖山發電廠海水淡化廠造水量統計表 (${monthStr})</h3>
+                ${table.outerHTML}
+            </body>
+            </html>`;
+
+        const blob = new Blob([template], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // --- 日誌與圖表 (同前) ---

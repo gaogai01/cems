@@ -19,7 +19,7 @@ const db = firebase.firestore();
 // ============================================================
 const ROLE_ACCESS = {
     'admin': ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','admin.html'], // Admin 多了 admin.html
-    'env':   ['index.html', 'cems.html', 'urea.html', 'oil.html'],
+    'env':   ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html'],
     'mech':  ['oil.html'],
     'ops':   ['cems.html', 'oil.html'],
     'guest': []

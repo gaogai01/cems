@@ -15,9 +15,7 @@
         :root { 
             --bg-body: #f4f7f6; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666; --text-value: #2c3e50;
             --border-color: #e0e0e0; --primary: #007bff; 
-            /* 長條圖配色：黃綠漸層 */
-            --gauge-grad: linear-gradient(90deg, #ffeb3b, #4caf50); 
-            --gauge-bg: #e9ecef;
+            --gauge-grad: linear-gradient(90deg, #ffeb3b, #4caf50); --gauge-bg: #e9ecef;
         }
         [data-theme="dark"] { 
             --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaa; --text-value: #ffffff;
@@ -43,28 +41,30 @@
         }
         .date-note { font-size: 0.7rem; opacity: 0.8; font-weight: normal; margin-left: 5px; }
 
+        /* 按鈕群組 */
+        .btn-group { display: flex; gap: 10px; }
         .btn-log { 
             background: #28a745; color: white; border: none; padding: 8px 16px; 
             border-radius: 6px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; white-space: nowrap;
         }
         .btn-log:hover { background: #218838; transform: translateY(-2px); }
+        
+        .btn-report {
+            background: #17a2b8; color: white; border: none; padding: 8px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; white-space: nowrap;
+        }
+        .btn-report:hover { background: #138496; transform: translateY(-2px); }
 
         /* --- 4個群組一列顯示 --- */
         .group-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 15px;
-            margin-bottom: 30px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px;
         }
-        
         .system-group {
-            background: var(--bg-card); border: 2px solid var(--border-color);
-            border-radius: 10px; padding: 15px;
-            display: flex; flex-direction: column; gap: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 10px; padding: 15px;
+            display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-
         .group-header { 
             font-size: 1.1rem; font-weight: bold; padding-bottom: 8px; margin-bottom: 5px;
             border-bottom: 3px solid; color: var(--text-main); text-align: center;
@@ -74,7 +74,6 @@
         .group-storage { border-bottom-color: #28a745; color: #28a745; }
         .group-urea    { border-bottom-color: #6f42c1; color: #6f42c1; }
 
-        /* --- 群組內一列兩張卡片 --- */
         .inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
         .card {
@@ -90,10 +89,8 @@
         .data-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
         .value { font-size: 1.4rem; font-weight: 800; color: var(--text-value); line-height: 1; }
         .unit { font-size: 0.75rem; color: var(--text-sub); }
-
         .gauge-container { height: 8px; width: 100%; background: var(--gauge-bg); border-radius: 4px; position: relative; overflow: hidden; }
         .gauge-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #ffeb3b, #4caf50); border-radius: 4px; transition: width 0.5s ease-out; }
-        
         .info-text { 
             font-size: 0.75rem; color: var(--text-sub); margin-top: 6px; 
             background: rgba(0,0,0,0.05); padding: 3px 5px; border-radius: 4px; text-align: center;
@@ -101,35 +98,40 @@
         }
         .info-highlight { font-weight: bold; color: var(--text-main); }
 
-        /* 歷史趨勢圖 */
-        .chart-card { 
-            background: var(--bg-card); border-radius: 12px; padding: 20px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border-color); 
-            width: 100%; box-sizing: border-box;
-        }
+        /* 圖表 */
+        .chart-card { background: var(--bg-card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border-color); width: 100%; box-sizing: border-box; }
         .chart-header { margin-bottom: 15px; border-left: 5px solid #666; padding-left: 10px; font-size: 1.2rem; font-weight: bold; }
         .chart-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         select { padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 0.9rem; }
         .chart-box { position: relative; height: 400px; width: 100%; }
         
-        /* Modal */
+        /* Modal & 報表樣式 */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
-        .modal-content { background-color: var(--bg-card); margin: 5% auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
+        .modal-content { background-color: var(--bg-card); margin: 2% auto; padding: 20px; border-radius: 10px; width: 95%; max-width: 1100px; max-height: 95vh; display:flex; flex-direction:column; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        .modal-body textarea { width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 1rem; background: var(--bg-body); color: var(--text-main); resize: vertical; line-height: 1.6; }
+        .modal-body { overflow-y: auto; padding: 10px; flex:1; }
+        .modal-body textarea { width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 1rem; background: var(--bg-body); color: var(--text-main); }
         .log-controls { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
         .close-btn { font-size: 1.5rem; cursor: pointer; color: var(--text-sub); }
 
+        /* 月報表專用表格樣式 */
+        .report-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #000; background: #fff; }
+        .report-table th, .report-table td { border: 1px solid #333; padding: 4px; text-align: center; white-space: nowrap; }
+        .report-table th { background-color: #f0f0f0; font-weight: bold; }
+        .report-title { font-size: 1.5rem; font-weight: bold; text-align: center; margin-bottom: 5px; color: #000; }
+        .report-subtitle { font-size: 1rem; text-align: center; margin-bottom: 15px; color: #000; }
+        .report-footer { margin-top: 20px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; font-size: 0.9rem; color: #000; }
+
         #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; color: #888; }
 
-        /* RWD: 手機版 */
+        /* RWD */
         @media (max-width: 1200px) { .group-container { grid-template-columns: 1fr 1fr; } }
         @media (max-width: 768px) {
             .group-container { grid-template-columns: 1fr; } 
             .chart-controls { flex-direction: column; align-items: stretch; }
             .chart-box { height: 300px; }
             .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-            .btn-log { width: 100%; justify-content: center; }
+            .btn-group { width: 100%; justify-content: space-between; }
             .inner-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
@@ -147,31 +149,29 @@
             <h2>最新數據總覽</h2>
             <span class="date-pill" id="lastDatePill">...</span>
         </div>
-        <button class="btn-log" onclick="openLogModal()">📋 產生工作日誌</button>
+        <div class="btn-group">
+            <button class="btn-report" onclick="openReportModal()">📊 產生月報表</button>
+            <button class="btn-log" onclick="openLogModal()">📋 產生工作日誌</button>
+        </div>
     </div>
     
     <div class="group-container">
-        
         <div class="system-group">
             <div class="group-header group-recycle">放流水系統</div>
             <div id="gridRecycle" class="inner-grid"></div>
         </div>
-
         <div class="system-group">
             <div class="group-header group-desalt">海淡機組</div>
             <div id="gridDesalt" class="inner-grid"></div>
         </div>
-
         <div class="system-group">
             <div class="group-header group-storage">儲水管理</div>
             <div id="gridStorage" class="inner-grid"></div>
         </div>
-
         <div class="system-group">
             <div class="group-header group-urea">尿素管理</div>
             <div id="gridUrea" class="inner-grid"></div>
         </div>
-        
     </div>
 
     <div class="chart-card">
@@ -193,7 +193,7 @@
 </div>
 
 <div id="logModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width:600px;">
         <div class="modal-header">
             <h3 style="margin:0; color:var(--text-main);">工作日誌產生器</h3>
             <span class="close-btn" onclick="closeLogModal()">&times;</span>
@@ -212,6 +212,24 @@
     </div>
 </div>
 
+<div id="reportModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin:0; color:var(--text-main);">海淡造水量月報表</h3>
+            <span class="close-btn" onclick="closeReportModal()">&times;</span>
+        </div>
+        <div class="log-controls" style="padding: 0 10px;">
+            <label style="color:var(--text-main)">選擇月份：</label>
+            <input type="month" id="reportMonth" style="padding:5px;">
+            <button class="btn-report" onclick="generateReport()">生成報表</button>
+            <button class="btn-log" style="background:#6c757d;" onclick="printReport()">🖨️ 列印/存PDF</button>
+        </div>
+        <div class="modal-body" id="reportContainer" style="background:white; color:black; padding:20px;">
+            <div style="text-align:center; color:#888;">請選擇月份並點擊生成</div>
+        </div>
+    </div>
+</div>
+
 <script src="common.js"></script>
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec"; 
@@ -223,6 +241,7 @@
         fetchData();
         setInterval(fetchData, 60000);
         document.getElementById('logDate').valueAsDate = new Date();
+        document.getElementById('reportMonth').value = new Date().toISOString().slice(0, 7); // 預設當月
     }
 
     async function fetchData() {
@@ -244,10 +263,8 @@
 
     function renderAllGroups() {
         let latestRow = null;
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
+        const today = new Date(); today.setHours(23, 59, 59, 999);
 
-        // 智慧尋找最新有效數據
         for (let i = rawData.data.length - 1; i >= 0; i--) {
             const rowDateStr = rawData.data[i][0];
             const rowDataVal = rawData.data[i][2];
@@ -290,7 +307,6 @@
                 if (pct > 100) pct = 100;
 
                 let extraInfo = "";
-                
                 if (field === "15000公秉儲水位" && !isNaN(val)) {
                     let volume = (val * 2950).toLocaleString(undefined, {maximumFractionDigits: 0});
                     extraInfo = `換算: <span class="info-highlight">${volume}</span> 公秉`;
@@ -329,19 +345,177 @@
         let sum = 0, count = 0;
         let validData = rawData.data.filter(row => row[0] && row[colIdx] && !isNaN(parseFloat(row[colIdx])));
         let start = Math.max(0, validData.length - days);
-        
         for (let i = start; i < validData.length; i++) {
             let v = parseFloat(validData[i][colIdx]);
-            sum += v;
-            count++;
+            sum += v; count++;
         }
         return { sum: sum, avg: count > 0 ? sum / count : 0 };
     }
 
-    // --- 日誌產生器 (更新：讀取新欄位) ---
-    function openLogModal() { document.getElementById('logModal').style.display = 'block'; }
-    function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
+    // --- 月報表產生器 ---
+    function openReportModal() { document.getElementById('reportModal').style.display = 'block'; }
+    function closeReportModal() { document.getElementById('reportModal').style.display = 'none'; }
     
+    function generateReport() {
+        const monthStr = document.getElementById('reportMonth').value; // YYYY-MM
+        if (!monthStr) return alert("請選擇月份");
+        
+        const [year, month] = monthStr.split('-');
+        const container = document.getElementById('reportContainer');
+        container.innerHTML = "報表生成中...";
+
+        // 1. 建立欄位 Map
+        const hMap = {}; rawData.headers.forEach((h, i) => { if(h) hMap[h.trim()] = i; });
+        const getVal = (row, name) => { let v = parseFloat(row[hMap[name]]); return isNaN(v) ? 0 : v; };
+        const getRaw = (row, name) => row[hMap[name]] || "";
+
+        // 2. 篩選當月資料
+        const monthData = rawData.data.filter(row => {
+            let d = row[0].replace(/\//g, '-');
+            return d.startsWith(monthStr);
+        }).sort((a,b) => a[0].localeCompare(b[0]));
+
+        if (monthData.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:20px;">無 ${year}年${month}月 資料</div>`;
+            return;
+        }
+
+        // 3. 建立表格 HTML
+        let html = `
+            <div class="report-title">尖山發電廠海水淡化廠造水量統計表</div>
+            <div class="report-subtitle">月份: ${year}年${month}月</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th rowspan="3">日期</th>
+                        <th rowspan="3">星期</th>
+                        <th colspan="3">海淡造水量(噸)</th>
+                        <th rowspan="3">當日<br>用水量<br>(噸)</th>
+                        <th colspan="3">15000噸儲水槽</th>
+                        <th colspan="2">蒸氣</th>
+                        <th colspan="2">運轉機組數</th>
+                    </tr>
+                    <tr>
+                        <th>#1機</th>
+                        <th>#2機</th>
+                        <th>總計</th>
+                        <th>液位<br>(m)</th>
+                        <th>增減<br>(m)</th>
+                        <th>儲水量<br>(噸)</th>
+                        <th>溫度<br>(℃)</th>
+                        <th>壓力<br>(bar)</th>
+                        <th>上午</th>
+                        <th>下午</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let total1=0, total2=0, totalAll=0, totalUse=0;
+        let count = 0;
+        let prevLevel = null;
+
+        // 嘗試抓上個月底的水位當作初始值 (往前找一筆)
+        const firstDayIndex = rawData.data.indexOf(monthData[0]);
+        if (firstDayIndex > 0) {
+            let prevRow = rawData.data[firstDayIndex - 1];
+            prevLevel = parseFloat(prevRow[hMap["15000公秉儲水位"]]);
+        }
+
+        monthData.forEach(row => {
+            const dateObj = new Date(row[0]);
+            const day = dateObj.getDate();
+            const weekDay = row[1]; // 假設第2欄是星期，或是自己算
+            
+            const v1 = getVal(row, "1號機造水量");
+            const v2 = getVal(row, "2號機造水量");
+            const vTotal = v1 + v2;
+            const vUse = getVal(row, "用水量");
+            const vLevel = getVal(row, "15000公秉儲水位");
+            const vStock = (vLevel * 2950).toFixed(0);
+            
+            // 蒸氣相關
+            const stTemp = getRaw(row, "蒸氣溫度");
+            const stPress = getRaw(row, "蒸氣壓力");
+            // 鍋爐數 (只顯示數字)
+            const boilerAM = getRaw(row, "上午鍋爐數").split('、').length || 0;
+            const boilerPM = getRaw(row, "下午鍋爐數").split('、').length || 0;
+
+            let diff = 0;
+            if (prevLevel !== null && !isNaN(prevLevel)) {
+                diff = vLevel - prevLevel;
+            }
+            prevLevel = vLevel; // 更新昨日水位
+
+            // 累加
+            total1 += v1; total2 += v2; totalAll += vTotal; totalUse += vUse;
+            count++;
+
+            html += `
+                <tr>
+                    <td>${month}月${day}日</td>
+                    <td>${weekDay}</td>
+                    <td>${v1}</td>
+                    <td>${v2}</td>
+                    <td>${vTotal}</td>
+                    <td>${vUse}</td>
+                    <td>${vLevel}</td>
+                    <td style="color:${diff<0?'red':'black'}">${diff.toFixed(2)}</td>
+                    <td>${Number(vStock).toLocaleString()}</td>
+                    <td>${stTemp}</td>
+                    <td>${stPress}</td>
+                    <td>${boilerAM}</td>
+                    <td>${boilerPM}</td>
+                </tr>
+            `;
+        });
+
+        // 頁尾統計
+        html += `
+                <tr style="background:#f9f9f9; font-weight:bold;">
+                    <td colspan="2">總計</td>
+                    <td>${total1}</td>
+                    <td>${total2}</td>
+                    <td>${totalAll}</td>
+                    <td>${totalUse}</td>
+                    <td colspan="7"></td>
+                </tr>
+                <tr style="background:#f9f9f9; font-weight:bold;">
+                    <td colspan="2">平均</td>
+                    <td>${(total1/count).toFixed(1)}</td>
+                    <td>${(total2/count).toFixed(1)}</td>
+                    <td>${(totalAll/count).toFixed(1)}</td>
+                    <td>${(totalUse/count).toFixed(1)}</td>
+                    <td colspan="7"></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="report-footer">
+            <div>經辦: </div>
+            <div>課長: </div>
+            <div>運轉組: </div>
+            <div>副廠長: </div>
+            <div>廠長: </div>
+        </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    function printReport() {
+        const content = document.getElementById('reportContainer').innerHTML;
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write('<html><head><title>月報表列印</title>');
+        printWindow.document.write('<style>table{width:100%;border-collapse:collapse;} th,td{border:1px solid black;padding:4px;text-align:center;font-size:12px;} .report-title{text-align:center;font-size:18px;font-weight:bold;} .report-footer{display:flex;justify-content:space-between;margin-top:20px;}</style>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write(content);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    // --- 日誌與圖表 (同前) ---
     async function generateLog() {
         const dateStr = document.getElementById('logDate').value;
         if (!dateStr) return alert("請選擇日期");
@@ -355,60 +529,38 @@
             let d = rawData.data[i][0].split(' ')[0].replace(/\//g, '-');
             if (d === targetYMD) { targetRow = rawData.data[i]; if (i > 0) prevRow = rawData.data[i-1]; break; }
         }
-        if (!targetRow) { document.getElementById('logResult').value = "查無此日期資料。"; return; }
+        if (!targetRow) { document.getElementById('logResult').value = "查無資料。"; return; }
 
         const hMap = {}; rawData.headers.forEach((h, i) => { if(h) hMap[h.trim()] = i; });
-        const getVal = (name) => { 
-            let val = targetRow[hMap[name]]; 
-            return (val === "" || val === undefined) ? 0 : val; // 保持原始字串或數字
-        };
+        const getVal = (name) => { let val = targetRow[hMap[name]]; return (val===""||val===undefined)?0:val; };
 
-        const desalt1 = parseFloat(getVal("1號機造水量")) || 0; 
-        const desalt2 = parseFloat(getVal("2號機造水量")) || 0;
-        const totalDesalt = desalt1 + desalt2; 
-        const waterUsed = getVal("用水量");
-        
+        const desalt1 = parseFloat(getVal("1號機造水量"))||0; const desalt2 = parseFloat(getVal("2號機造水量"))||0;
+        const totalDesalt = desalt1 + desalt2; const waterUsed = getVal("用水量");
         const level = parseFloat(getVal("15000公秉儲水位"));
         const prevLevel = prevRow ? parseFloat(prevRow[hMap["15000公秉儲水位"]]) : level;
         const levelDiff = (level - prevLevel).toFixed(2);
         const levelTrend = levelDiff >= 0 ? "上升" : "下降";
         const realStock = (level * 2950).toFixed(1);
-        
-        const press1 = getVal("1號機海水壓力"); 
-        const press2 = getVal("2號機海水壓力");
+        const press1 = getVal("1號機海水壓力"); const press2 = getVal("2號機海水壓力");
+        const amFlow = getVal("上午蒸氣流量"); const pmFlow = getVal("下午蒸氣流量");
+        const amUnits = getVal("上午鍋爐數"); const pmUnits = getVal("下午鍋爐數"); 
+        const amCount = amUnits ? amUnits.toString().split('、').length : 0;
+        const pmCount = pmUnits ? pmUnits.toString().split('、').length : 0;
 
-        // --- 新增欄位讀取 ---
-        const amFlow = getVal("上午蒸氣流量");
-        const pmFlow = getVal("下午蒸氣流量");
-        const amUnits = getVal("上午鍋爐數"); // 字串: "1、2、3、5"
-        const pmUnits = getVal("下午鍋爐數"); 
-        
-        // 計算機組數量 (依逗號分隔計算)
-        const countUnits = (str) => {
-            if(!str || str == 0) return 0;
-            return str.toString().split('、').length;
-        };
-        const amCount = countUnits(amUnits);
-        const pmCount = countUnits(pmUnits);
-
-        // 組合文字
         let logText = `工作日期:${dateDisplay}。造水設備操作，#1海淡${desalt1>0?'運轉':'停機'}：造水量${desalt1}公噸;#2海淡${desalt2>0?'運轉':'停機'}：造水量${desalt2}公噸;當日總造水量${totalDesalt}公噸，當日用水量${waterUsed}公噸;15,000噸儲水槽水位${level}公尺，水位${levelTrend}${Math.abs(levelDiff)}公尺，實際儲水量${realStock}公噸，上午08:30蒸氣流量${amFlow}公噸/小時，下午13:30蒸氣流量${pmFlow}公噸/小時。`;
-        
         logText += `\n上午機組鍋爐運轉${amCount}部(${amUnits}號機)，下午機組鍋爐運轉${pmCount}部(${pmUnits}號機)，`;
         logText += `\n${dateDisplay}上午海水進水壓力#1:${press1}、#2:${press2}bar。R.O純水系統保養維護，純水輸送至各供水槽使用。`;
-        
         document.getElementById('logResult').value = logText;
     }
 
-    function copyLog() {
-        const textArea = document.getElementById('logResult');
-        textArea.select();
-        document.execCommand('copy');
-        alert("已複製！");
+    function copyLog() { const t = document.getElementById('logResult'); t.select(); document.execCommand('copy'); alert("已複製！"); }
+    function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
+    function openLogModal() { document.getElementById('logModal').style.display = 'block'; }
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('logModal')) closeLogModal();
+        if (event.target == document.getElementById('reportModal')) closeReportModal();
     }
-    window.onclick = function(event) { if (event.target == document.getElementById('logModal')) closeLogModal(); }
 
-    // --- 趨勢圖 ---
     function initDropdown() {
         const select = document.getElementById('chartParam');
         if (select.options.length > 0) return;
@@ -425,46 +577,26 @@
         const unit = rawData.units[colIdx] || "";
         const limit = parseFloat(rawData.limits[colIdx]);
         const rangeHours = parseInt(document.getElementById('timeRange').value);
-        
-        const now = new Date();
-        const startTime = new Date(now.getTime() - rangeHours * 60 * 60 * 1000);
+        const now = new Date(); const startTime = new Date(now.getTime() - rangeHours * 60 * 60 * 1000);
         const labels = []; const values = [];
-        
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
+        const today = new Date(); today.setHours(23, 59, 59, 999);
 
         rawData.data.forEach(row => {
             let d = new Date(row[0]);
             if (d >= startTime && d <= today) {
                 let timeLabel = (d.getMonth()+1) + "/" + d.getDate();
-                labels.push(timeLabel); 
-                values.push(parseFloat(row[colIdx]) || null);
+                labels.push(timeLabel); values.push(parseFloat(row[colIdx]) || null);
             }
         });
 
         const ctx = document.getElementById('lineChart').getContext('2d');
         if (lineChart) lineChart.destroy();
-
-        const datasets = [{
-            label: labelName, data: values,
-            borderColor: '#007bff', backgroundColor: 'rgba(0, 123, 255, 0.1)',
-            borderWidth: 2, pointRadius: 2, fill: true, tension: 0.1
-        }];
-
-        if (!isNaN(limit)) {
-            datasets.push({
-                label: '上限', data: new Array(labels.length).fill(limit),
-                borderColor: '#dc3545', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false
-            });
-        }
+        const datasets = [{ label: labelName, data: values, borderColor: '#007bff', backgroundColor: 'rgba(0, 123, 255, 0.1)', borderWidth: 2, pointRadius: 2, fill: true, tension: 0.1 }];
+        if (!isNaN(limit)) datasets.push({ label: '上限', data: new Array(labels.length).fill(limit), borderColor: '#dc3545', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false });
 
         lineChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: labels, datasets: datasets },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, title: {display: true, text: unit} } }
-            }
+            type: 'line', data: { labels: labels, datasets: datasets },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: {display: true, text: unit} } } }
         });
     }
 </script>

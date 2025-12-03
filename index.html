@@ -164,7 +164,7 @@
     }
 
     function fetchData() { 
-        fetch(API_URL + "?mode=read&t=" + new Date().getTime()).then(response => response.json()).then(data => { 
+        fetch(API_URL + "?mode=read&t=" + new Date().getTime()).then(data => { 
             if(data.timestamp) document.getElementById('last-update').innerText = data.timestamp.split(' ')[1]; 
             let htmlContent = ''; 
             DASHBOARD_CONFIG.forEach(group => { 

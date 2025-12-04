@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每月環化紀錄 - 尖山發電廠</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root { --bg-body: #f4f7f6; --bg-card: #ffffff; --text-main: #2c3e50; --primary: #007bff; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; }
+        
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
+
+        /* 標題 */
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        h2 { margin: 0; font-size: 1.5rem; border-left: 5px solid var(--primary); padding-left: 10px; }
+
+        /* 卡片網格 */
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        
+        .card {
+            background: var(--bg-card); border-radius: 10px; padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee;
+            position: relative; overflow: hidden;
+        }
+        .card-title { font-size: 0.9rem; color: #666; margin-bottom: 5px; font-weight: bold; }
+        .card-value { font-size: 1.8rem; font-weight: bold; color: #333; margin-bottom: 5px; }
+        .card-sub { font-size: 0.8rem; color: #888; display: flex; align-items: center; gap: 5px; }
+        
+        /* 漲跌樣式 */
+        .trend-up { color: #dc3545; font-weight: bold; }   /* 紅色表示增加 */
+        .trend-down { color: #28a745; font-weight: bold; } /* 綠色表示減少 */
+        .trend-flat { color: #666; }
+
+        /* 圖表區 */
+        .chart-section { background: var(--bg-card); padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .chart-controls { margin-bottom: 15px; }
+        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 1rem; }
+        .chart-box { position: relative; height: 400px; }
+
+        #loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #888; }
+    </style>
+</head>
+<body>
+
+<div id="navbar-placeholder"></div>
+
+<div class="container">
+    <div class="page-header">
+        <h2>每月環化紀錄 <span style="font-size:0.8rem; color:#666; font-weight:normal;" id="dataMonth">...</span></h2>
+    </div>
+
+    <div id="loading">資料載入中...</div>
+
+    <div id="cards" class="grid-container"></div>
+
+    <div class="chart-section" id="chartSection" style="display:none;">
+        <div class="chart-controls">
+            <label>比較項目：</label>
+            <select id="chartParam" onchange="updateChart()"></select>
+        </div>
+        <div class="chart-box">
+            <canvas id="comparisonChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwXoH46dO4rlR2XhZ2PFflCTeRooroVBPADiRltxTa-Jp05uZc9sk2OsGKKSzN92ryxtg/exec"; 
+    
+    let allRecords = [];
+    let chartInstance = null;
+    
+    // 需要顯示在卡片和圖表中的欄位 (請根據試算表標題修改)
+    const TARGET_FIELDS = [
+        "純水15000噸導電率", "純水300噸導電率", "純水海水淡化導電率", 
+        "次氯酸鈉進口餘氯", "尿素用量", "尿素單價", "尿素強度",
+        "發電量", "CEMS當月平均NOx", "CWMS進口海水溫度", "CWMS溫差"
+    ];
+
+    function startApp() {
+        fetchData();
+    }
+
+    async function fetchData() {
+        try {
+            const res = await fetch(API_URL + "?mode=monthly");
+            const json = await res.json();
+            
+            if (json.error) { alert(json.error); return; }
+            
+            allRecords = json;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('chartSection').style.display = 'block';
+            
+            renderCards();
+            initDropdown();
+            updateChart();
+            
+        } catch (e) {
+            console.error(e);
+            document.getElementById('loading').innerText = "載入失敗";
+        }
+    }
+
+    function renderCards() {
+        // 1. 找到最新月份 (假設資料按時間排序，或是最後一筆)
+        // 您的資料是 113年, 114年...
+        // 我們先對資料進行排序 (年度 -> 月份)
+        allRecords.sort((a, b) => {
+            if (parseInt(a['年度']) !== parseInt(b['年度'])) return parseInt(a['年度']) - parseInt(b['年度']);
+            return parseInt(a['月份']) - parseInt(b['月份']);
+        });
+
+        const latest = allRecords[allRecords.length - 1];
+        const currentYear = parseInt(latest['年度']);
+        const currentMonth = parseInt(latest['月份']);
+        
+        document.getElementById('dataMonth').innerText = `資料月份: ${currentYear}年 ${currentMonth}月`;
+
+        // 2. 找到去年同月
+        const prevYearRecord = allRecords.find(r => 
+            parseInt(r['年度']) === (currentYear - 1) && 
+            parseInt(r['月份']) === currentMonth
+        );
+
+        // 3. 生成卡片
+        const container = document.getElementById('cards');
+        container.innerHTML = "";
+
+        TARGET_FIELDS.forEach(field => {
+            // 從資料中找對應的 key (因為 key 可能包含換行符號，我們在 GAS 已處理移除)
+            // 這裡做模糊比對以防萬一
+            const valNow = parseFloat(latest[field]) || 0;
+            const valPrev = prevYearRecord ? (parseFloat(prevYearRecord[field]) || 0) : 0;
+            
+            // 計算增減
+            let diff = valNow - valPrev;
+            let diffPct = valPrev !== 0 ? (diff / valPrev) * 100 : 0;
+            
+            let trendClass = "trend-flat";
+            let trendIcon = "-";
+            if (diff > 0) { trendClass = "trend-up"; trendIcon = "⬆"; }
+            if (diff < 0) { trendClass = "trend-down"; trendIcon = "⬇"; }
+
+            // 處理顯示文字
+            let subText = prevYearRecord ? 
+                `去年: ${valPrev} <span class="${trendClass}">${trendIcon} ${Math.abs(diffPct).toFixed(1)}%</span>` : 
+                "無去年資料";
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-title">${field}</div>
+                <div class="card-value">${valNow.toLocaleString()}</div>
+                <div class="card-sub">${subText}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function initDropdown() {
+        const select = document.getElementById('chartParam');
+        TARGET_FIELDS.forEach(field => {
+            select.innerHTML += `<option value="${field}">${field}</option>`;
+        });
+    }
+
+    function updateChart() {
+        const field = document.getElementById('chartParam').value;
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        
+        // 整理數據：今年 vs 去年
+        // 假設我們要比對的是「最新的兩個年度」
+        const years = [...new Set(allRecords.map(r => r['年度']))].sort().reverse();
+        const year1 = years[0]; // 今年 (114)
+        const year2 = years[1]; // 去年 (113)
+
+        const data1 = new Array(12).fill(null);
+        const data2 = new Array(12).fill(null);
+
+        allRecords.forEach(r => {
+            const m = parseInt(r['月份']) - 1; // 0-11
+            if (r['年度'] == year1) data1[m] = parseFloat(r[field]);
+            if (r['年度'] == year2) data2[m] = parseFloat(r[field]);
+        });
+
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
+                datasets: [
+                    {
+                        label: `${year1}年`,
+                        data: data1,
+                        backgroundColor: '#007bff',
+                        borderRadius: 4
+                    },
+                    {
+                        label: `${year2}年`,
+                        data: data2,
+                        backgroundColor: '#ced4da',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: {
+                    title: { display: true, text: `${field} - 年度比較` }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

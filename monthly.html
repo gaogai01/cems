@@ -17,7 +17,7 @@
             --trend-up: #dc3545;   /* 紅色 */
             --trend-down: #28a745; /* 綠色 */
             --gauge-bg: #e9ecef;
-            --gauge-grad: linear-gradient(90deg, #ffeb3b, #4caf50); /* 黃綠漸層 */
+            --gauge-grad: linear-gradient(90deg, #ffeb3b, #4caf50); 
         }
         [data-theme="dark"] { 
             --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaa;
@@ -56,7 +56,6 @@
         
         .inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         
-        /* 卡片樣式 (升級版) */
         .card { 
             background: var(--bg-body); border-radius: 8px; padding: 10px; 
             border: 1px solid var(--border-color); position: relative; 
@@ -66,11 +65,8 @@
         .card-value-row { display: flex; align-items: baseline; gap: 5px; margin-bottom: 5px; }
         .card-value { font-size: 1.4rem; font-weight: 800; color: var(--text-main); line-height: 1.2; }
         .card-unit { font-size: 0.75rem; color: var(--text-sub); }
-        
-        /* 儀表板條 */
         .gauge-container { height: 6px; width: 100%; background: var(--gauge-bg); border-radius: 3px; position: relative; overflow: hidden; margin-bottom: 5px; }
         .gauge-bar { height: 100%; width: 0%; background: var(--gauge-grad); border-radius: 3px; transition: width 0.5s ease-out; }
-        
         .card-sub { font-size: 0.75rem; color: var(--text-sub); display: flex; align-items: center; justify-content: space-between; gap: 5px; background: rgba(0,0,0,0.03); padding: 4px; border-radius: 4px; }
         .card-limit { font-size: 0.7rem; color: #999; font-weight: normal; }
 
@@ -78,24 +74,20 @@
         .trend-down { color: var(--trend-down); font-weight: bold; }
         .trend-flat { color: var(--text-sub); }
 
-        /* 圖表區 */
         .chart-section { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-top: 30px; }
         .chart-header { margin-bottom: 15px; border-left: 5px solid #666; padding-left: 10px; font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
         .chart-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         select { padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 0.9rem; }
         .chart-box { position: relative; height: 400px; width: 100%; }
 
-        /* Modal */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
         .modal-content { background-color: var(--bg-card); margin: 2% auto; padding: 20px; border-radius: 10px; width: 95%; max-width: 900px; max-height: 95vh; display:flex; flex-direction:column; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
         .modal-body { overflow-y: auto; padding: 20px; flex:1; background: white; color: black; }
         .close-btn { font-size: 1.5rem; cursor: pointer; color: var(--text-sub); }
         .btn-toolbar { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 10px; flex-wrap: wrap; }
-        
         .report-controls { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; border: 1px solid #ddd; }
 
-        /* 廠務會議報告專用樣式 */
         .report-doc { font-family: "BiauKai", "DFKai-SB", serif; line-height: 1.5; color: #000; }
         .report-h1 { font-size: 18pt; font-weight: bold; margin-bottom: 15px; }
         .report-h2 { font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #000; display: inline-block; padding-bottom: 2px; }
@@ -185,7 +177,7 @@
 
 <script src="common.js"></script>
 <script>
-    // ▼ 請填入獨立版 Monthly GS 網址
+    // ▼ 這裡填入您獨立部署的每月紀錄 API URL (確保是讀取每月環化紀錄表的 GS)
     const API_URL = "https://script.google.com/macros/s/AKfycbwXoH46dO4rlR2XhZ2PFflCTeRooroVBPADiRltxTa-Jp05uZc9sk2OsGKKSzN92ryxtg/exec"; 
     
     let apiData = null; 
@@ -207,65 +199,52 @@
             document.getElementById('chartSection').style.display = 'block';
             
             initDateControls();
-            
-            // 1. 自動鎖定「最新且數據完整」的月份
-            selectLatestCompleteMonth();
-            
+            selectLatestCompleteMonth(); // 自動選到最新完整月份
             renderGroupedCards();
             initDropdown();
             updateChart();
             
         } catch (e) {
             console.error(e);
-            document.getElementById('loading').innerText = "載入失敗 (請檢查網址或試算表權限)";
+            document.getElementById('loading').innerText = "載入失敗";
         }
     }
 
     function initDateControls() {
         const records = apiData.data;
         const years = [...new Set(records.map(r => r['年度']))].sort().reverse();
-        
         const selYear = document.getElementById('selYear');
         const reportYear = document.getElementById('reportYear');
         selYear.innerHTML = "";
         reportYear.innerHTML = "";
-        
         years.forEach(y => {
             selYear.innerHTML += `<option value="${y}">${y}年</option>`;
             reportYear.innerHTML += `<option value="${y}">${y}年</option>`;
         });
     }
 
-    // --- 核心：尋找最新完整數據的月份 ---
+    // --- 尋找最新完整數據月份 ---
     function selectLatestCompleteMonth() {
         const records = apiData.data;
         if (records.length === 0) return;
 
-        // 從最後一筆往回找
+        // 從最後一筆往回找，直到找到關鍵欄位有值的
         for (let i = records.length - 1; i >= 0; i--) {
             const row = records[i];
-            // 檢查關鍵欄位是否有值 (假設 '純水15000噸導電率' 和 '尿素用量' 必填)
-            // 您可以根據實際情況調整這裡的檢查邏輯
-            if (row['純水15000噸導電率'] && row['尿素用量']) {
+            // 檢查關鍵欄位 (尿素用量)
+            if (row['尿素用量'] && row['尿素用量'] !== "") {
                 document.getElementById('selYear').value = row['年度'];
                 document.getElementById('selMonth').value = parseInt(row['月份']);
-                // 同步更新報告選單
                 document.getElementById('reportYear').value = row['年度'];
                 document.getElementById('reportMonth').value = parseInt(row['月份']);
                 return;
             }
         }
-        
-        // 如果都找不到，就選最後一筆
-        const last = records[records.length - 1];
-        document.getElementById('selYear').value = last['年度'];
-        document.getElementById('selMonth').value = parseInt(last['月份']);
     }
 
     function renderGroupedCards() {
         const targetYear = document.getElementById('selYear').value;
         const targetMonth = document.getElementById('selMonth').value;
-        
         const targetRecord = apiData.data.find(r => r['年度'] == targetYear && parseInt(r['月份']) == targetMonth);
         const prevYearRecord = apiData.data.find(r => r['年度'] == (parseInt(targetYear) - 1) && parseInt(r['月份']) == targetMonth);
 
@@ -274,7 +253,6 @@
         const units = apiData.meta.units;
         const uppers = apiData.meta.upper;
         
-        // 分組
         const groups = {};
         
         headers.forEach((headerName, index) => {
@@ -318,7 +296,6 @@
                 const displayNow = !isNaN(valNow) ? valNow.toLocaleString() : "--";
                 const valPrev = prevYearRecord ? parseFloat(prevYearRecord[key]) : NaN;
                 
-                // 計算漲跌
                 let subText = "";
                 if (!isNaN(valNow) && !isNaN(valPrev) && valPrev !== 0) {
                     let diff = valNow - valPrev;
@@ -332,16 +309,11 @@
                     subText = "無去年資料";
                 }
 
-                // 儀表條
                 let gaugeHtml = "";
                 let limitText = "";
                 if (!isNaN(valNow) && !isNaN(limit) && limit > 0) {
                     let pct = Math.min((valNow / limit) * 100, 100);
-                    gaugeHtml = `
-                        <div class="gauge-container">
-                            <div class="gauge-bar" style="width: ${pct}%"></div>
-                        </div>
-                    `;
+                    gaugeHtml = `<div class="gauge-container"><div class="gauge-bar" style="width: ${pct}%"></div></div>`;
                     limitText = `<span class="card-limit">上限: ${limit}</span>`;
                 }
 
@@ -381,10 +353,9 @@
         const fieldKey = document.getElementById('chartParam').value;
         const ctx = document.getElementById('comparisonChart').getContext('2d');
         const records = apiData.data;
-        const years = [...new Set(records.map(r => r['年度']))].sort().reverse();
-        
-        const year1 = document.getElementById('selYear').value;
-        const year2 = (parseInt(year1) - 1).toString();
+        const selectedYear = document.getElementById('selYear').value;
+        const year1 = selectedYear; 
+        const year2 = (parseInt(selectedYear) - 1).toString();
 
         const data1 = new Array(12).fill(null);
         const data2 = new Array(12).fill(null);
@@ -396,7 +367,6 @@
             if (r['年度'] == year2) data2[m] = isNaN(val) ? null : val;
         });
 
-        // 取得上限值
         let limitValue = NaN;
         const headerIndex = apiData.headers.findIndex(h => h.replace(/\n/g, "").trim() === fieldKey);
         if (headerIndex !== -1) { limitValue = parseFloat(apiData.meta.upper[headerIndex]); }
@@ -418,10 +388,9 @@
         });
     }
 
-    // --- 專業版廠務報告生成器 ---
+    // --- 報告生成器 ---
     function openFactoryReport() {
         document.getElementById('reportModal').style.display = 'block';
-        // 同步外部的選擇到內部
         document.getElementById('reportYear').value = document.getElementById('selYear').value;
         document.getElementById('reportMonth').value = document.getElementById('selMonth').value;
         generateReportContent();
@@ -445,106 +414,67 @@
         const v = (record, key) => record ? (parseFloat(record[key])||0) : 0;
         const fmt = (val) => val.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1});
 
-        // 1. 重點摘要 (專業判斷：主管最在意的指標)
-        // 邏輯：檢查關鍵指標是否異常
+        // 重點摘要生成
         let summaryHtml = "<ul>";
-        
-        // 檢查尿素單耗 (假設 < 9.5 為優)
         const ureaIntensity = v(curr, "尿素強度");
         if(ureaIntensity > 0) {
-            summaryHtml += `<li>本月尿素強度為 <b>${ureaIntensity}</b> 公斤/千度電，`;
+            summaryHtml += `<li>本月尿素強度為 <b>${ureaIntensity}</b> kg/kwh，`;
             if (prev && ureaIntensity < v(prev, "尿素強度")) summaryHtml += "較上月<span class='text-green'>下降 (改善)</span>。";
             else if (prev) summaryHtml += "較上月<span class='text-red'>上升</span>。";
             summaryHtml += "</li>";
         }
-
-        // 檢查發電量
-        const powerGen = v(curr, "發電量");
-        if(powerGen > 0) {
-            summaryHtml += `<li>本月總發電量 <b>${fmt(powerGen)}</b> KWH。</li>`;
-        }
-        
+        const nox = v(curr, "當月平均NOx");
+        if(nox > 0) summaryHtml += `<li>CEMS當月平均 NOx 為 <b>${nox}</b> ppm。</li>`;
         summaryHtml += "</ul>";
 
-        // 2. 表格生成
         const buildTable = (fields) => {
             let rows = fields.map(f => {
                 const valCurr = v(curr, f.key);
                 const valPrev = v(prev, f.key);
                 const valLastY = v(lastYear, f.key);
-                
-                // 計算月增率
-                let mom = 0;
-                if(valPrev !== 0) mom = ((valCurr - valPrev) / valPrev) * 100;
-                let momColor = mom > 0 ? "red" : (mom < 0 ? "green" : "black"); // 假設數值增加標紅(如成本/汙染)，需視項目而定
-                
-                return `
-                <tr>
-                    <td class="text-left">${f.name}</td>
-                    <td>${fmt(valCurr)}</td>
-                    <td>${fmt(valPrev)}</td>
-                    <td style="color:${momColor}">${mom > 0 ? '+' : ''}${mom.toFixed(1)}%</td>
-                    <td>${fmt(valLastY)}</td>
-                </tr>
-            `}).join("");
-            
-            return `
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th style="width:30%">項目</th>
-                            <th style="width:15%">本月<br>(${targetYear}/${targetMonth})</th>
-                            <th style="width:15%">上月<br>(${lastMonthY}/${lastMonthM})</th>
-                            <th style="width:15%">月增減%</th>
-                            <th style="width:15%">去年同月<br>(${parseInt(targetYear)-1}/${targetMonth})</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            `;
+                let mom = 0; if(valPrev !== 0) mom = ((valCurr - valPrev) / valPrev) * 100;
+                let momColor = mom > 0 ? "red" : (mom < 0 ? "green" : "black");
+                return `<tr><td class="text-left">${f.name}</td><td>${fmt(valCurr)}</td><td>${fmt(valPrev)}</td><td style="color:${momColor}">${mom > 0 ? '+' : ''}${mom.toFixed(1)}%</td><td>${fmt(valLastY)}</td></tr>`;
+            }).join("");
+            return `<table class="report-table"><thead><tr><th style="width:30%">項目</th><th style="width:15%">本月</th><th style="width:15%">上月</th><th style="width:15%">月增減</th><th style="width:15%">去年同月</th></tr></thead><tbody>${rows}</tbody></table>`;
         };
 
         const fields71 = [
-            { key: "純水15000噸導電率", name: "15000噸儲槽導電率 (μS/cm)" },
-            { key: "純水300噸導電率", name: "300噸儲槽導電率 (μS/cm)" },
-            { key: "純水海水淡化導電率", name: "海淡產水導電率 (μS/cm)" },
-            { key: "次氯酸鈉進口餘氯", name: "次氯酸鈉進口餘氯 (ppm)" }
+            { key: "15000噸導電率", name: "15000噸儲槽導電率 (μS/cm)" },
+            { key: "300噸導電率", name: "300噸儲槽導電率 (μS/cm)" },
+            { key: "海水淡化導電率", name: "海淡產水導電率 (μS/cm)" },
+            { key: "RO水導電率", name: "RO水導電率 (μS/cm)" },
+            { key: "海水進口餘氯", name: "海水進口餘氯 (ppm)" },
+            { key: "電流", name: "次氯酸鈉電流 (A)" }
         ];
 
         const fields72 = [
             { key: "尿素用量", name: "尿素用量 (噸)" },
             { key: "尿素強度", name: "尿素強度 (公斤/千度電)" },
-            { key: "CEMS當月平均NOx", name: "CEMS平均NOx (ppm)" },
+            { key: "當月平均NOx", name: "CEMS平均NOx (ppm)" },
+            { key: "累積月平均NOx", name: "CEMS累積平均NOx (ppm)" },
+            { key: "進口海水溫度", name: "CWMS進口水溫 (℃)" },
+            { key: "出口海水溫度", name: "CWMS出口水溫 (℃)" },
+            { key: "溫差", name: "溫差 (℃)" },
             { key: "發電量", name: "總發電量 (KWH)" }
         ];
 
         const html = `
             <div class="report-doc">
                 <div class="report-h1">(七)環保化學課高振凱課長報告：</div>
-                
-                <div class="report-summary">
-                    <b>📊 本月營運摘要：</b>
-                    ${summaryHtml}
-                </div>
-
+                <div class="report-summary"><b>📊 本月摘要：</b>${summaryHtml}</div>
                 <div class="report-h2">7-1、海水淡化、RO水及海水電解</div>
                 ${buildTable(fields71)}
-                
                 <div class="report-h2">7-2、尿素、CEMS、CWMS溫排水</div>
                 ${buildTable(fields72)}
-                
-                <div style="margin-top:20px; font-size:10pt; color:#666;">
-                    * 報表生成時間：${new Date().toLocaleString()}
-                </div>
-            </div>
-        `;
-
+                <div style="margin-top:20px; font-size:10pt; color:#666;">製表日期：${new Date().toLocaleDateString()}</div>
+            </div>`;
         document.getElementById('reportPreview').innerHTML = html;
     }
 
     function exportToWord() {
         const content = document.getElementById('reportPreview').innerHTML;
-        const filename = `廠務會議報告.doc`;
+        const filename = `廠務會議報告_${document.getElementById('reportMonth').value}月.doc`;
         const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'></head><body>";
         const footer = "</body></html>";
         const sourceHTML = header + content + footer;
@@ -560,15 +490,7 @@
     function printReport() {
         const content = document.getElementById('reportPreview').innerHTML;
         const printWindow = window.open('', '', 'height=600,width=800');
-        printWindow.document.write('<html><head><title>列印報告</title>');
-        printWindow.document.write('<style>');
-        printWindow.document.write('.report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12pt; }');
-        printWindow.document.write('.report-table th, .report-table td { border: 1px solid black; padding: 4px 8px; text-align: center; }');
-        printWindow.document.write('.report-h1 { font-size: 18pt; font-weight: bold; margin-bottom: 15px; }');
-        printWindow.document.write('.report-h2 { font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #000; display: inline-block; }');
-        printWindow.document.write('.report-summary { border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; }');
-        printWindow.document.write('.text-left { text-align: left !important; } .text-red { color: red; } .text-green { color: green; }');
-        printWindow.document.write('</style></head><body>');
+        printWindow.document.write('<html><head><title>列印報告</title><style>.report-table{width:100%;border-collapse:collapse;font-size:12pt;} .report-table th, .report-table td{border:1px solid black;padding:4px;text-align:center;} .report-h1{font-size:18pt;font-weight:bold;margin-bottom:15px;} .report-h2{font-size:14pt;font-weight:bold;margin-top:20px;margin-bottom:10px;} .text-left{text-align:left!important;} .text-red{color:red;} .text-green{color:green;}</style></head><body>');
         printWindow.document.write(content);
         printWindow.document.write('</body></html>');
         printWindow.document.close();

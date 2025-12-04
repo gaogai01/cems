@@ -11,88 +11,74 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
+        /* (樣式保持不變，為節省篇幅省略，請直接使用下面的完整代碼) */
         :root { 
-            --bg-body: #f4f7f6; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666; --primary: #007bff; 
-            --border-color: #e0e0e0;
+            --bg-body: #f4f7f6; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666; --text-value: #2c3e50;
+            --border-color: #e0e0e0; --primary: #007bff; 
             --trend-up: #dc3545; --trend-down: #28a745;
             --gauge-bg: #e9ecef; --gauge-grad: linear-gradient(90deg, #ffeb3b, #4caf50);
         }
         [data-theme="dark"] { 
-            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaa;
+            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaa; --text-value: #ffffff;
             --border-color: #333; --gauge-bg: #333;
         }
-        
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; overflow-x: hidden; }
+        .container { max-width: 100%; padding: 10px 15px; margin: 0 auto; }
 
         .page-header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px;
-            flex-wrap: wrap; gap: 10px;
+            background: var(--bg-card); padding: 10px 15px; border-radius: 8px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; 
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+            border-left: 5px solid var(--primary);
         }
-        .header-left { display: flex; align-items: center; gap: 15px; }
-        h2 { margin: 0; font-size: 1.4rem; border-left: 6px solid var(--primary); padding-left: 12px; }
+        h1 { color: var(--text-main); margin: 0; font-size: 1.2rem; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .date-pill { background: #4a5568; color: white; padding: 4px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-        .date-pill {
-            background: #4a5568; color: white; padding: 5px 12px; border-radius: 50px;
-            font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; gap: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .date-note { font-size: 0.7rem; opacity: 0.8; font-weight: normal; margin-left: 5px; }
+        .filter-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        select { padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.9rem; cursor: pointer; }
+        .btn-action { color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: opacity 0.2s; }
+        .btn-action:hover { opacity: 0.9; }
+        .btn-report { background: #17a2b8; } .btn-word { background: #2b579a; } .btn-print { background: #6c757d; }
 
-        .filter-group { display: flex; gap: 10px; align-items: center; }
-        select { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 1rem; cursor: pointer; }
+        .group-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; align-items: start; }
+        .system-group { background: var(--bg-card); border-radius: 10px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }
+        .system-title { font-size: 0.95rem; color: #fff; padding: 6px 15px; border-radius: 50px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 5px; }
+        .system-title span { background: rgba(255,255,255,0.25); color: #fff; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
 
-        .btn-report { background: #6f42c1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-        .btn-word { background: #2b579a; } .btn-print { background: #6c757d; }
+        .group-recycle .system-title { background: linear-gradient(135deg, #007bff, #0056b3); }
+        .group-desalt .system-title  { background: linear-gradient(135deg, #17a2b8, #117a8b); }
+        .group-storage .system-title { background: linear-gradient(135deg, #20c997, #198754); }
+        .group-urea .system-title    { background: linear-gradient(135deg, #6f42c1, #59359a); }
+        .group-other .system-title   { background: linear-gradient(135deg, #6c757d, #495057); }
 
-        .group-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .system-group { background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 10px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px; }
-        .group-header { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; padding-bottom: 8px; border-bottom: 3px solid var(--primary); color: var(--text-main); text-align: center; }
-        
-        .inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        
-        /* 卡片樣式 */
-        .card { 
-            background: var(--bg-body); border-radius: 8px; padding: 10px; 
-            border: 1px solid var(--border-color); position: relative; 
-            overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; 
-        }
-        .card-title { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 2px; font-weight: bold; min-height: 2.4em; display: flex; align-items: center; justify-content: space-between; }
-        .card-value-row { display: flex; align-items: baseline; gap: 5px; margin-bottom: 5px; }
-        .card-value { font-size: 1.4rem; font-weight: 800; color: var(--text-main); line-height: 1.2; }
-        .card-unit { font-size: 0.75rem; color: var(--text-sub); }
-        
-        /* 迷你曲線圖容器 */
-        .card-sparkline {
-            height: 40px; /* 固定高度 */
-            width: 100%;
-            margin-bottom: 5px;
-        }
+        .inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .card { background: var(--bg-body); border-radius: 6px; padding: 8px 10px; border: 1px solid var(--border-color); border-top: 3px solid #ccc; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+        .group-recycle .card { border-top-color: #007bff; } .group-desalt .card { border-top-color: #17a2b8; }
+        .group-storage .card { border-top-color: #20c997; } .group-urea .card { border-top-color: #6f42c1; }
+        .group-other .card { border-top-color: #6c757d; }
 
+        .card-header { margin-bottom: 4px; display: flex; justify-content: space-between; align-items: start; }
+        .tag-name { font-size: 0.8rem; color: var(--text-sub); font-weight: bold; line-height: 1.2; }
+        .limit-badge { font-size: 0.65rem; background: rgba(0,0,0,0.05); color: #999; padding: 1px 4px; border-radius: 3px; }
+        .data-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
+        .value { font-size: 1.3rem; font-weight: 800; color: var(--text-value); font-family: 'Arial', sans-serif; line-height: 1; }
+        .unit { font-size: 0.7rem; color: var(--text-sub); margin-left: 2px; }
         .gauge-container { height: 4px; width: 100%; background: var(--gauge-bg); border-radius: 2px; position: relative; overflow: hidden; margin-bottom: 5px; }
         .gauge-bar { height: 100%; width: 0%; background: var(--gauge-grad); border-radius: 2px; transition: width 0.5s ease-out; }
-        .card-sub { font-size: 0.75rem; color: var(--text-sub); display: flex; align-items: center; justify-content: space-between; gap: 5px; background: rgba(0,0,0,0.03); padding: 4px; border-radius: 4px; }
-        .card-limit { font-size: 0.7rem; color: #999; font-weight: normal; }
+        .compare-text { font-size: 0.7rem; color: var(--text-sub); text-align: right; background: rgba(0,0,0,0.03); padding: 2px 5px; border-radius: 3px; }
+        .trend-up { color: var(--trend-up); font-weight: bold; } .trend-down { color: var(--trend-down); font-weight: bold; }
 
-        .trend-up { color: var(--trend-up); font-weight: bold; }
-        .trend-down { color: var(--trend-down); font-weight: bold; }
-        .trend-flat { color: var(--text-sub); }
+        .chart-section { background: var(--bg-card); padding: 15px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-top: 20px; }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
+        .chart-title { font-size: 1.1rem; font-weight: bold; border-left: 4px solid #666; padding-left: 10px; color: var(--text-main); }
+        .chart-box { position: relative; height: 350px; width: 100%; }
 
-        /* 圖表區 */
-        .chart-section { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-top: 30px; }
-        .chart-header { margin-bottom: 15px; border-left: 5px solid #666; padding-left: 10px; font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
-        .chart-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
-        select { padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 0.9rem; }
-        .chart-box { position: relative; height: 400px; width: 100%; }
-
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
         .modal-content { background-color: var(--bg-card); margin: 2% auto; padding: 20px; border-radius: 10px; width: 95%; max-width: 900px; max-height: 95vh; display:flex; flex-direction:column; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid var(--border-color); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        .modal-body { overflow-y: auto; padding: 20px; flex:1; background: white; color: black; }
-        .report-controls { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; border: 1px solid #ddd; }
+        .modal-body { overflow-y: auto; padding: 10px; flex:1; background: white; color: black; }
         .close-btn { font-size: 1.5rem; cursor: pointer; color: var(--text-sub); }
-
+        
         .report-doc { font-family: "BiauKai", "DFKai-SB", serif; line-height: 1.5; color: #000; }
         .report-h1 { font-size: 18pt; font-weight: bold; margin-bottom: 15px; }
         .report-h2 { font-size: 14pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #000; display: inline-block; padding-bottom: 2px; }
@@ -105,26 +91,23 @@
 
         #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; color: #888; }
 
-        @media (max-width: 768px) {
-            .group-container { grid-template-columns: 1fr; }
-            .page-header { flex-direction: column; align-items: flex-start; }
-            .chart-controls { flex-direction: column; align-items: stretch; }
-            .report-controls { flex-direction: column; align-items: stretch; }
-        }
+        @media (max-width: 1200px) { .group-container { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 768px) { .group-container { grid-template-columns: 1fr; } .page-header { flex-direction: column; align-items: stretch; } .filter-group { justify-content: space-between; } }
     </style>
 </head>
 <body>
 
 <div id="navbar-placeholder"></div>
+<div id="loading">資料載入中...</div>
 
-<div class="container">
+<div class="container" id="mainApp" style="display:none;">
     <div class="page-header">
-        <div class="header-left">
-            <h2>每月環化紀錄</h2>
+        <h1>
+            每月環化紀錄
             <span class="date-pill" id="lastDatePill">...</span>
-        </div>
+        </h1>
         <div class="filter-group">
-            <button class="btn-report" onclick="openFactoryReport()">📝 產生廠務會議報告</button>
+            <button class="btn-action btn-report" onclick="openFactoryReport()">📝 廠務報告</button>
             <select id="selYear" onchange="renderGroupedCards()"></select>
             <select id="selMonth" onchange="renderGroupedCards()">
                 <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
@@ -135,19 +118,16 @@
         </div>
     </div>
 
-    <div id="loading">資料載入中...</div>
-
     <div id="groupContainer" class="group-container"></div>
 
-    <div class="chart-section" id="chartSection" style="display:none;">
-        <div class="chart-header">年度比較分析</div>
-        <div class="chart-controls">
-            <label style="color:var(--text-main)">比較項目：</label>
-            <select id="chartParam" onchange="updateChart()"></select>
+    <div class="chart-section">
+        <div class="chart-header">
+            <div class="chart-title">年度趨勢比較</div>
+            <div class="filter-group">
+                <select id="chartParam" onchange="updateChart()"></select>
+            </div>
         </div>
-        <div class="chart-box">
-            <canvas id="comparisonChart"></canvas>
-        </div>
+        <div class="chart-box"><canvas id="comparisonChart"></canvas></div>
     </div>
 </div>
 
@@ -158,18 +138,17 @@
             <span class="close-btn" onclick="closeReportModal()">&times;</span>
         </div>
         
-        <div class="report-controls">
-            <label style="color:#333; font-weight:bold;">選擇報告月份：</label>
-            <select id="reportYear" style="padding:5px;"></select>
-            <select id="reportMonth" style="padding:5px;">
+        <div class="filter-group" style="margin-bottom:10px; justify-content:flex-end; padding:10px;">
+            <select id="reportYear"></select>
+            <select id="reportMonth">
                 <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
                 <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
                 <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
                 <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
             </select>
-            <button class="btn-report" onclick="generateReportContent()">🔄 更新預覽</button>
-            <button class="btn-report btn-word" onclick="exportToWord()">📄 下載 Word</button>
-            <button class="btn-report btn-print" onclick="printReport()">🖨️ 列印 / 存 PDF</button>
+            <button class="btn-action btn-report" onclick="generateReportContent()">🔄 更新預覽</button>
+            <button class="btn-action btn-word" onclick="exportToWord()">📄 下載 Word</button>
+            <button class="btn-action btn-print" onclick="printReport()">🖨️ 列印 / 存 PDF</button>
         </div>
         
         <div class="modal-body" id="reportPreview"></div>
@@ -178,12 +157,11 @@
 
 <script src="common.js"></script>
 <script>
-    // ▼ 請填入獨立版 Monthly GS 網址
+    // ▼ 請填入您的獨立版 Monthly GS 網址
     const API_URL = "https://script.google.com/macros/s/AKfycbwXoH46dO4rlR2XhZ2PFflCTeRooroVBPADiRltxTa-Jp05uZc9sk2OsGKKSzN92ryxtg/exec"; 
     
     let apiData = null; 
     let chartInstance = null;
-    let sparklineInstances = []; // 存放小圖表的實例，方便切換時清除
 
     function startApp() {
         fetchData();
@@ -198,7 +176,7 @@
             
             apiData = json;
             document.getElementById('loading').style.display = 'none';
-            document.getElementById('chartSection').style.display = 'block';
+            document.getElementById('mainApp').style.display = 'block';
             
             initDateControls();
             selectLatestCompleteMonth();
@@ -215,9 +193,12 @@
     function initDateControls() {
         const records = apiData.data;
         const years = [...new Set(records.map(r => r['年度']))].sort().reverse();
+        
         const selYear = document.getElementById('selYear');
         const reportYear = document.getElementById('reportYear');
-        selYear.innerHTML = ""; reportYear.innerHTML = "";
+        selYear.innerHTML = "";
+        reportYear.innerHTML = "";
+        
         years.forEach(y => {
             selYear.innerHTML += `<option value="${y}">${y}年</option>`;
             reportYear.innerHTML += `<option value="${y}">${y}年</option>`;
@@ -240,12 +221,9 @@
     }
 
     function renderGroupedCards() {
-        // 清除舊的小圖表
-        sparklineInstances.forEach(chart => chart.destroy());
-        sparklineInstances = [];
-
         const targetYear = document.getElementById('selYear').value;
         const targetMonth = document.getElementById('selMonth').value;
+        
         const targetRecord = apiData.data.find(r => r['年度'] == targetYear && parseInt(r['月份']) == targetMonth);
         const prevYearRecord = apiData.data.find(r => r['年度'] == (parseInt(targetYear) - 1) && parseInt(r['月份']) == targetMonth);
 
@@ -254,6 +232,7 @@
         const units = apiData.meta.units;
         const uppers = apiData.meta.upper;
 
+        // 更新標題藥丸
         document.getElementById('lastDatePill').innerText = `${targetYear}年 ${targetMonth}月`;
         
         const groups = {};
@@ -280,19 +259,20 @@
             return;
         }
 
-        // 定義群組樣式與顏色 (用於曲線圖顏色)
-        const groupColorMap = {
-            "純水": "#007bff", "次氯酸鈉": "#007bff",
-            "海水淡化": "#17a2b8", "運轉": "#17a2b8",
-            "尿素": "#6f42c1", "CEMS": "#6f42c1",
-            "CWMS": "#28a745"
+        // 定義群組樣式
+        const groupClassMap = {
+            "純水": "group-recycle", "次氯酸鈉": "group-recycle",
+            "海水淡化": "group-desalt", "運轉": "group-desalt",
+            "尿素": "group-urea", "CEMS": "group-urea",
+            "CWMS": "group-storage" 
         };
 
         for (const [groupName, fields] of Object.entries(groups)) {
-            const groupColor = groupColorMap[groupName] || "#6c757d";
+            const groupClass = groupClassMap[groupName] || "group-other";
             const groupDiv = document.createElement('div');
-            groupDiv.className = 'system-group';
-            groupDiv.innerHTML = `<div class="group-header" style="border-bottom-color:${groupColor}; color:#2c3e50;">${groupName}</div>`;
+            groupDiv.className = `system-group ${groupClass}`;
+            
+            groupDiv.innerHTML = `<div class="system-title">${groupName} <span>${fields.length}</span></div>`;
             
             const innerGrid = document.createElement('div');
             innerGrid.className = 'inner-grid';
@@ -304,14 +284,17 @@
                 const limit = parseFloat(field.limit);
                 
                 const valNow = parseFloat(targetRecord[key]);
+                
+                // 修正重點：直接顯示數值，不除以1000
                 const displayNow = !isNaN(valNow) ? valNow.toLocaleString(undefined, {maximumFractionDigits: 2}) : "--";
+                
                 const valPrev = prevYearRecord ? parseFloat(prevYearRecord[key]) : NaN;
                 
                 let subText = "";
                 if (!isNaN(valNow) && !isNaN(valPrev) && valPrev !== 0) {
                     let diffPct = ((valNow - valPrev) / valPrev) * 100;
-                    let trendClass = diffPct > 0 ? "trend-up" : (diffPct < 0 ? "trend-down" : "trend-flat");
-                    let trendIcon = diffPct > 0 ? "▲" : (diffPct < 0 ? "▼" : "-");
+                    let trendClass = diffPct > 0 ? "trend-up" : (diffPct < 0 ? "trend-down" : "");
+                    let trendIcon = diffPct > 0 ? "▲" : (diffPct < 0 ? "▼" : "");
                     subText = `去年 ${valPrev.toLocaleString()} <span class="${trendClass}">${trendIcon} ${Math.abs(diffPct).toFixed(1)}%</span>`;
                 } else if (prevYearRecord) {
                     subText = `去年 ${isNaN(valPrev) ? "-" : valPrev.toLocaleString()}`;
@@ -320,88 +303,28 @@
                 }
 
                 let gaugeHtml = "";
-                let limitText = "";
+                let limitBadge = "";
                 if (!isNaN(limit) && limit > 0) {
-                    let pct = !isNaN(valNow) ? Math.min((valNow / limit) * 100, 100) : 0;
-                    gaugeHtml = `<div class="gauge-container"><div class="gauge-bar" style="width: ${pct}%"></div></div>`;
-                    limitText = `<span class="card-limit">上限: ${limit}</span>`;
+                    limitBadge = `<span class="limit-badge">上限 ${limit}</span>`;
+                    if(!isNaN(valNow)) {
+                        let pct = Math.min((valNow / limit) * 100, 100);
+                        gaugeHtml = `<div class="gauge-container"><div class="gauge-bar" style="width: ${pct}%"></div></div>`;
+                    }
                 }
 
-                // 生成卡片
                 const card = document.createElement('div');
                 card.className = 'card';
-                // 為了畫圖，給 canvas 一個 ID
-                const canvasId = `spark-${key}-${Date.now()}`;
-                
                 card.innerHTML = `
-                    <div class="card-title">${name} ${limitText}</div>
-                    <div class="card-value-row"><span class="card-value">${displayNow}</span><span class="card-unit">${unit}</span></div>
-                    
+                    <div class="card-header"><span class="tag-name">${name}</span>${limitBadge}</div>
+                    <div class="data-row"><span class="value">${displayNow}</span><span class="unit">${unit}</span></div>
                     ${gaugeHtml}
-                    
-                    <div class="card-sparkline">
-                        <canvas id="${canvasId}"></canvas>
-                    </div>
-
-                    <div class="card-sub">${subText}</div>
+                    <div class="compare-text">${subText}</div>
                 `;
                 innerGrid.appendChild(card);
             });
-
             groupDiv.appendChild(innerGrid);
             container.appendChild(groupDiv);
-
-            // 渲染該群組內所有卡片的曲線圖
-            fields.forEach(field => {
-                const canvasId = card.querySelector('canvas').id; // 糟糕，這裡 card 變數只在 loop 內，修正：
-                // 我們需要在 appendChild 之後立即繪圖
-            });
         }
-
-        // --- 修正後的繪圖邏輯：在 DOM 建立後立即繪製 ---
-        // 為了簡單，我們重新遍歷一次剛剛建立的卡片
-        // 或者在上面的 loop 裡直接繪製。這裡採用後者修正法：
-        const cardCanvases = document.querySelectorAll('.card-sparkline canvas');
-        cardCanvases.forEach(canvas => {
-            const key = canvas.id.split('-')[1]; // 從 ID 取回 key
-            const groupTitle = canvas.closest('.system-group').querySelector('.group-header').innerText;
-            const lineColor = groupColorMap[groupTitle] || "#6c757d";
-            
-            // 準備數據：該年度 1~12 月
-            const sparkData = [];
-            for(let m=1; m<=12; m++) {
-                const r = apiData.data.find(d => d.年度 == targetYear && parseInt(d.月份) == m);
-                sparkData.push(r ? parseFloat(r[key]) : null);
-            }
-
-            const sparkCtx = canvas.getContext('2d');
-            const newSpark = new Chart(sparkCtx, {
-                type: 'line',
-                data: {
-                    labels: [1,2,3,4,5,6,7,8,9,10,11,12],
-                    datasets: [{
-                        data: sparkData,
-                        borderColor: lineColor,
-                        borderWidth: 2,
-                        pointRadius: 0, // 不顯示點，保持乾淨
-                        pointHoverRadius: 4,
-                        fill: false,
-                        tension: 0.4 // 平滑曲線
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: true, intersect: false } },
-                    scales: {
-                        x: { display: false }, // 隱藏軸線
-                        y: { display: false }
-                    },
-                    layout: { padding: 0 }
-                }
-            });
-            sparklineInstances.push(newSpark);
-        });
     }
 
     function initDropdown() {
@@ -426,6 +349,7 @@
         records.forEach(r => {
             const m = parseInt(r['月份']) - 1; 
             const val = parseFloat(r[fieldKey]);
+            // 修正：圖表數據也不再除以 1000
             if (r['年度'] == year1) data1[m] = isNaN(val) ? null : val;
             if (r['年度'] == year2) data2[m] = isNaN(val) ? null : val;
         });
@@ -451,7 +375,6 @@
         });
     }
 
-    // --- 廠務會議報告 (邏輯不變) ---
     function openFactoryReport() {
         document.getElementById('reportModal').style.display = 'block';
         document.getElementById('reportYear').value = document.getElementById('selYear').value;
@@ -471,6 +394,7 @@
         const prev = apiData.data.find(r => r['年度'] == lastMonthY && parseInt(r['月份']) == lastMonthM);
         const lastYear = apiData.data.find(r => r['年度'] == (parseInt(targetYear)-1) && parseInt(r['月份']) == targetMonth);
 
+        // 修正：報表數值也不再除以 1000
         const v = (record, key) => record ? (parseFloat(record[key])||0) : 0;
         const fmt = (val) => val.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1});
 

@@ -25,19 +25,26 @@
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
         .container { max-width: 1200px; margin: 0 auto; padding: 15px; }
 
-        /* 標題 */
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        /* 標題與篩選區 */
+        .page-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px;
+            flex-wrap: wrap; gap: 10px;
+        }
+        .header-left { display: flex; align-items: center; gap: 15px; }
         h2 { margin: 0; font-size: 1.4rem; border-left: 6px solid var(--primary); padding-left: 12px; }
 
-        /* --- 群組容器 (外層) --- */
+        .filter-group { display: flex; gap: 10px; align-items: center; }
+        .filter-group select { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 1rem; cursor: pointer; }
+
+        /* --- 群組容器 --- */
         .group-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* 自動調整欄數 */
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
 
-        /* --- 單一群組區塊 --- */
         .system-group {
             background: var(--bg-card);
             border: 2px solid var(--border-color);
@@ -53,14 +60,13 @@
             color: var(--text-main); text-align: center;
         }
 
-        /* --- 群組內卡片網格 (一列兩欄) --- */
+        /* --- 卡片網格 (一列兩欄) --- */
         .inner-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* 強制兩欄 */
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
 
-        /* 卡片樣式 */
         .card {
             background: var(--bg-body); 
             border-radius: 8px; padding: 10px;
@@ -69,28 +75,26 @@
             display: flex; flex-direction: column; justify-content: space-between;
         }
         
-        .card-title { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 5px; font-weight: bold; min-height: 2.4em; } /* 預留兩行高度 */
+        .card-title { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 5px; font-weight: bold; min-height: 2.4em; display: flex; align-items: center; }
         .card-value { font-size: 1.4rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-bottom: 5px; }
         .card-sub { font-size: 0.75rem; color: var(--text-sub); display: flex; align-items: center; justify-content: space-between; gap: 5px; background: rgba(0,0,0,0.03); padding: 4px; border-radius: 4px; }
         
-        /* 漲跌樣式 */
         .trend-up { color: var(--trend-up); font-weight: bold; }
         .trend-down { color: var(--trend-down); font-weight: bold; }
         .trend-flat { color: var(--text-sub); }
 
         /* 圖表區 */
-        .chart-section { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
-        .chart-header { margin-bottom: 15px; border-left: 5px solid #666; padding-left: 10px; font-size: 1.2rem; font-weight: bold; }
+        .chart-section { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-top: 30px; }
+        .chart-header { margin-bottom: 15px; border-left: 5px solid #666; padding-left: 10px; font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
         .chart-controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
         select { padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main); font-size: 0.9rem; }
         .chart-box { position: relative; height: 400px; width: 100%; }
 
         #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; color: #888; }
 
-        /* RWD */
         @media (max-width: 768px) {
-            .group-container { grid-template-columns: 1fr; } /* 手機版單欄堆疊 */
-            .inner-grid { grid-template-columns: 1fr 1fr; } /* 手機內層維持兩欄 (卡片夠小) */
+            .group-container { grid-template-columns: 1fr; }
+            .page-header { flex-direction: column; align-items: flex-start; }
             .chart-controls { flex-direction: column; align-items: stretch; }
         }
     </style>
@@ -101,7 +105,18 @@
 
 <div class="container">
     <div class="page-header">
-        <h2>每月環化紀錄 <span style="font-size:0.8rem; color:var(--text-sub); font-weight:normal;" id="dataMonth">...</span></h2>
+        <div class="header-left">
+            <h2>每月環化紀錄</h2>
+        </div>
+        <div class="filter-group">
+            <select id="selYear" onchange="renderGroupedCards()"></select>
+            <select id="selMonth" onchange="renderGroupedCards()">
+                <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+                <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+            </select>
+        </div>
     </div>
 
     <div id="loading">資料載入中...</div>
@@ -111,7 +126,7 @@
     <div class="chart-section" id="chartSection" style="display:none;">
         <div class="chart-header">年度比較分析</div>
         <div class="chart-controls">
-            <label>比較項目：</label>
+            <label style="color:var(--text-main)">比較項目：</label>
             <select id="chartParam" onchange="updateChart()"></select>
         </div>
         <div class="chart-box">
@@ -122,10 +137,11 @@
 
 <script src="common.js"></script>
 <script>
-    // ▼ 請確認這是您「每月環化紀錄表」專用的 Apps Script 網址 (獨立版)
+    // 獨立版 Monthly GS 網址
+    // 請填入您上一部部署的「每月紀錄」Apps Script 網址
     const API_URL = "https://script.google.com/macros/s/AKfycbwXoH46dO4rlR2XhZ2PFflCTeRooroVBPADiRltxTa-Jp05uZc9sk2OsGKKSzN92ryxtg/exec"; 
     
-    let apiData = null; // 存放完整 JSON (meta, headers, data)
+    let apiData = null; 
     let chartInstance = null;
 
     function startApp() {
@@ -143,74 +159,79 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('chartSection').style.display = 'block';
             
+            initDateControls(); // 初始化日期選單
             renderGroupedCards();
             initDropdown();
             updateChart();
             
         } catch (e) {
             console.error(e);
-            document.getElementById('loading').innerText = "載入失敗 (請檢查網址或試算表權限)";
+            document.getElementById('loading').innerText = "載入失敗 (請檢查網址)";
+        }
+    }
+
+    // --- 1. 初始化日期選單 ---
+    function initDateControls() {
+        const records = apiData.data;
+        const years = [...new Set(records.map(r => r['年度']))].sort().reverse();
+        
+        const selYear = document.getElementById('selYear');
+        selYear.innerHTML = "";
+        years.forEach(y => {
+            selYear.innerHTML += `<option value="${y}">${y}年</option>`;
+        });
+
+        // 預設選中最新的年月
+        if (records.length > 0) {
+            // 找出最後一筆資料 (假設已排序或取最後)
+            const latest = records[records.length - 1];
+            selYear.value = latest['年度'];
+            document.getElementById('selMonth').value = parseInt(latest['月份']);
         }
     }
 
     function renderGroupedCards() {
-        const records = apiData.data;
-        if (records.length === 0) return;
-
-        // 1. 找到最新月份
-        // 假設資料最後一筆是最新，或根據年度月份排序
-        records.sort((a, b) => {
-            if (parseInt(a['年度']) !== parseInt(b['年度'])) return parseInt(a['年度']) - parseInt(b['年度']);
-            return parseInt(a['月份']) - parseInt(b['月份']);
-        });
-
-        const latest = records[records.length - 1];
-        const currentYear = parseInt(latest['年度']);
-        const currentMonth = parseInt(latest['月份']);
+        const targetYear = document.getElementById('selYear').value;
+        const targetMonth = document.getElementById('selMonth').value;
         
-        document.getElementById('dataMonth').innerText = `資料月份: ${currentYear}年 ${currentMonth}月`;
-
-        // 2. 找到去年同月
-        const prevYearRecord = records.find(r => 
-            parseInt(r['年度']) === (currentYear - 1) && 
-            parseInt(r['月份']) === currentMonth
+        // 1. 找到目標月份資料
+        const targetRecord = apiData.data.find(r => 
+            r['年度'] == targetYear && parseInt(r['月份']) == targetMonth
         );
 
-        // 3. 根據「類別」分組 (Row 4 -> meta.categories)
-        const categories = apiData.meta.categories; // 類別陣列
-        const headers = apiData.headers;            // 中文名稱陣列
+        // 2. 找到去年同月資料
+        const prevYearRecord = apiData.data.find(r => 
+            r['年度'] == (parseInt(targetYear) - 1) && parseInt(r['月份']) == targetMonth
+        );
+
+        const categories = apiData.meta.categories; 
+        const headers = apiData.headers;            
         
-        // 建立群組 Map: { "純水": ["15000噸導電率", "300噸..."], "尿素": [...] }
+        // 分組
         const groups = {};
-        
         headers.forEach((headerName, index) => {
-            // 略過 "年度" 和 "月份" 欄位
             if (headerName === "年度" || headerName === "月份") return;
-
-            let cat = categories[index] || "其他";
-            cat = cat.trim();
+            let cat = categories[index] ? categories[index].trim() : "其他";
             if (cat === "") cat = "其他";
-
             if (!groups[cat]) groups[cat] = [];
-            
-            // 找出對應的 Key (GAS 已移除換行符號)
             const key = headerName.replace(/\n/g, "").trim();
-            groups[cat].push({ key: key, name: headerName });
+            groups[cat].push({ key: key, name: headerName, index: index }); // 存 index 方便找上限
         });
 
-        // 4. 渲染群組 HTML
+        // 渲染 HTML
         const container = document.getElementById('groupContainer');
         container.innerHTML = "";
 
+        if (!targetRecord) {
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px; color:#888;">${targetYear}年${targetMonth}月 無資料</div>`;
+            return; // 圖表還是可以畫，所以不 return 整個函式? 不，卡片沒資料就停
+        }
+
         for (const [groupName, fields] of Object.entries(groups)) {
-            // 建立群組區塊
             const groupDiv = document.createElement('div');
             groupDiv.className = 'system-group';
-            
-            // 群組標題
             groupDiv.innerHTML = `<div class="group-header">${groupName}</div>`;
             
-            // 內部網格 (一列兩欄)
             const innerGrid = document.createElement('div');
             innerGrid.className = 'inner-grid';
 
@@ -218,12 +239,11 @@
                 const key = field.key;
                 const name = field.name;
                 
-                const valNow = parseFloat(latest[key]);
+                const valNow = parseFloat(targetRecord[key]);
                 const displayNow = !isNaN(valNow) ? valNow.toLocaleString() : "--";
-                
                 const valPrev = prevYearRecord ? parseFloat(prevYearRecord[key]) : NaN;
                 
-                // 計算增減
+                // 漲跌顯示
                 let subText = "";
                 if (!isNaN(valNow) && !isNaN(valPrev) && valPrev !== 0) {
                     let diff = valNow - valPrev;
@@ -237,7 +257,6 @@
                     subText = "無去年資料";
                 }
 
-                // 卡片 HTML
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
@@ -256,7 +275,6 @@
     function initDropdown() {
         const select = document.getElementById('chartParam');
         const headers = apiData.headers;
-        
         headers.forEach(h => {
             if (h === "年度" || h === "月份") return;
             const key = h.replace(/\n/g, "").trim();
@@ -270,9 +288,11 @@
         
         const records = apiData.data;
         const years = [...new Set(records.map(r => r['年度']))].sort().reverse();
-        // 取最近兩年比較
-        const year1 = years[0]; 
-        const year2 = years[1]; 
+        // 取選單選中的年度 + 去年 (或者預設最新兩年)
+        // 這裡為了邏輯簡單，我們顯示「目前篩選的年度」vs 「去年」
+        const selectedYear = document.getElementById('selYear').value;
+        const year1 = selectedYear; 
+        const year2 = (parseInt(selectedYear) - 1).toString();
 
         const data1 = new Array(12).fill(null);
         const data2 = new Array(12).fill(null);
@@ -284,33 +304,64 @@
             if (r['年度'] == year2) data2[m] = isNaN(val) ? null : val;
         });
 
+        // --- 新增：取得上限值 ---
+        // 1. 找到 fieldKey 對應的原始 header index
+        let limitValue = NaN;
+        const headerIndex = apiData.headers.findIndex(h => h.replace(/\n/g, "").trim() === fieldKey);
+        
+        if (headerIndex !== -1) {
+            // apiData.meta.upper 是 Row 1
+            const rawLimit = apiData.meta.upper[headerIndex];
+            limitValue = parseFloat(rawLimit);
+        }
+
+        const chartDatasets = [
+            {
+                label: `${year1}年`,
+                data: data1,
+                backgroundColor: '#007bff',
+                borderRadius: 4,
+                order: 2
+            },
+            {
+                label: `${year2}年`,
+                data: data2,
+                backgroundColor: '#ced4da',
+                borderRadius: 4,
+                order: 3
+            }
+        ];
+
+        // 如果有上限，加入紅線 Dataset
+        if (!isNaN(limitValue)) {
+            chartDatasets.push({
+                type: 'line',
+                label: `上限 (${limitValue})`,
+                data: new Array(12).fill(limitValue),
+                borderColor: '#dc3545',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false,
+                order: 1 // 確保線在最上層
+            });
+        }
+
         if (chartInstance) chartInstance.destroy();
 
         chartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
-                datasets: [
-                    {
-                        label: `${year1}年`,
-                        data: data1,
-                        backgroundColor: '#007bff',
-                        borderRadius: 4
-                    },
-                    {
-                        label: `${year2}年`,
-                        data: data2,
-                        backgroundColor: '#ced4da',
-                        borderRadius: 4
-                    }
-                ]
+                datasets: chartDatasets
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true } },
                 plugins: {
-                    title: { display: true, text: `${fieldKey} - 年度比較` }
+                    title: { display: true, text: `${fieldKey} - 年度比較` },
+                    tooltip: { mode: 'index', intersect: false }
                 }
             }
         });

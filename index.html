@@ -306,7 +306,7 @@
             const html = `
                 <div style="font-family:BiauKai;">
                 <h2 style="text-align:center; font-size:18pt; margin-bottom:5px;">尖山電廠放流水水質紀錄表</h2>
-                <div style="text-align:center; font-size:0.8em; margin-top:0px;">表格：CS-WI-CX-22-F2</div>
+                
                 <div style="text-align:right; margin-bottom:5px;">日期：${targetY - 1911}年 ${targetM}月</div>
                 <table class="report-table">
                     <thead>
@@ -320,9 +320,10 @@
                     <tbody>${rows}</tbody>
                 </table>
                 <div class="report-footer" style="display:flex; justify-content:center; gap:80px; margin-top:20px;">
-                    <div>紀錄:</div><div>經辦:</div><div>課長:</div>
+                    <div>紀錄:　　　　經辦:　　　　課長:</div>
                 </div>
                 </div>
+                <div style="text-align:center; font-size:0.8em; margin-top:0px;">表格：CS-WI-CX-22-F2</div>
             `;
             document.getElementById('waterReportPreview').innerHTML = html;
 

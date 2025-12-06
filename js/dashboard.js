@@ -27,6 +27,17 @@ function initDashboard() {
     setInterval(fetchData, 10000); // 每 10 秒更新一次
 }
 
+function startApp() {
+    if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+    document.getElementById('themeBtn').innerText = localStorage.getItem('theme') === 'dark' ? "☀️" : "🌓";
+    
+    // 初始化日期預設為當月
+    document.getElementById('waterReportMonth').value = new Date().toISOString().slice(0, 7);
+
+    setInterval(fetchData, 5000);
+    fetchData();
+}
+
 /**
  * 從後端 API 抓取即時數據
  */

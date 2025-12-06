@@ -1,5 +1,3 @@
-// js/charts.js
-
 // 全域變數 (用於儲存歷史數據與圖表實例)
 let historyData = null;
 let myChart = null;

@@ -54,3 +54,49 @@ function toggleTheme() {
 }
 
 // ... 把 applyDisplayLimit, checkAlarm, getGaugeHTML 等輔助函式也搬過來 ...
+    function applyDisplayLimit(colName, value) {
+        let val = parseFloat(value); if (isNaN(val)) return value;
+        if (colName === "SS018_VAL0" && val > 27) return 27;
+        if (colName === "COD018_VAL0" && val > 90) return 90;
+        if (colName === "OFD018_VAL0" && val > 10) return 9;
+        return value;
+    }
+
+    function checkAlarm(colName, value) {
+        let val = parseFloat(value); if (isNaN(val)) return "";
+        if (colName.indexOf("PHI") !== -1) { if (val < 6 || val > 9) return "status-critical"; if (val < 6.5 || val > 8.5) return "status-warning"; return ""; }
+        const rule = ALARMS[colName];
+        if (rule) {
+            let isLowAlarm = rule.warn > rule.crit;
+            if (isLowAlarm) { if (val <= rule.crit) return "status-critical"; if (val <= rule.warn) return "status-warning"; }
+            else { if (val >= rule.crit) return "status-critical"; if (val >= rule.warn) return "status-warning"; }
+        }
+        if (DASHBOARD_CONFIG.some(g => g.items.some(i => i.col === colName && i.unit === "M3/Hr"))) {
+            if (val > 0) { if (!rule || (val < rule.warn)) return "status-running"; }
+        }
+        return "";
+    }
+
+    function getGaugeHTML(colName, value) {
+        let val = parseFloat(value); if (isNaN(val)) return "";
+        let rule = ALARMS[colName];
+        if (colName.indexOf("PHI") !== -1) {
+            let pct = (val / 14) * 100;
+            let colorVar = "var(--gauge-good)";
+            if (val < 6 || val > 9) colorVar = "var(--gauge-bad)"; else if (val < 6.5 || val > 8.5) colorVar = "var(--gauge-warn)";
+            return `<div class="gauge-container"><div style="width: ${pct}%; background-color: ${colorVar}; height:100%; border-radius:3px;"></div><div class="gauge-marker" style="left: ${pct}%"></div></div>`;
+        }
+        if (rule && rule.max) {
+            let max = rule.max;
+            let valPct = Math.min((val / max) * 100, 100);
+            let isLowAlarm = rule.warn > rule.crit;
+            if (isLowAlarm) {
+                let critPct = (rule.crit / max) * 100; let warnPct = (rule.warn / max) * 100;
+                return `<div class="gauge-container"><div class="gauge-seg seg-rev-poor" style="width: ${critPct}%"></div><div class="gauge-seg seg-rev-warn" style="width: ${warnPct - critPct}%"></div><div class="gauge-seg seg-rev-good" style="width: ${100 - warnPct}%"></div><div class="gauge-marker" style="left: ${valPct}%"></div></div>`;
+            } else {
+                let warnPct = (rule.warn / max) * 100; let critPct = (rule.crit / max) * 100;
+                return `<div class="gauge-container"><div class="gauge-seg seg-good" style="width: ${warnPct}%"></div><div class="gauge-seg seg-warn" style="width: ${critPct - warnPct}%"></div><div class="gauge-seg seg-poor" style="width: ${100 - critPct}%"></div><div class="gauge-marker" style="left: ${valPct}%"></div></div>`;
+            }
+        }
+        return "";
+    }

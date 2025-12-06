@@ -6,6 +6,7 @@
 // 這些變數宣告在這裡，讓 charts.js 和 reports.js 都能共用
 let historyData = null; // 儲存從後端抓回來的歷史數據
 let myChart = null;     // 儲存 Chart.js 的圖表實例
+let cachedHistory = null; // 報表用
 
 // ============================================================
 // 2. API 設定

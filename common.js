@@ -18,7 +18,7 @@ const db = firebase.firestore();
 // 2. 定義權限與選單
 // ============================================================
 const ROLE_ACCESS = {
-    'admin': ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html','admin.html'], //管理者
+    'admin': ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html','try.html''admin.html'], //管理者
     'env':   ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html'], //環化課
     'mech':  ['oil.html'], //機械組
     'ops':   ['cems.html', 'oil.html'], //運轉組
@@ -32,6 +32,7 @@ const ALL_PAGES = {
     'oil.html':   '滑油報告',
     'daily.html': '每日紀錄',
     'monthly.html': '每月紀錄',
+  'try.html': '測試'
     'admin.html': '後台管理' 
 };
 

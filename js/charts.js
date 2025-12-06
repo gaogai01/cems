@@ -271,3 +271,8 @@ function updateChart() {
         }
     });
 }
+// 點擊外部關閉視窗
+window.onclick = function(event) { 
+    if (event.target == document.getElementById('waterReportModal')) closeWaterReport(); 
+    if (event.target == document.getElementById('chartModal')) closeChartModal(); 
+}

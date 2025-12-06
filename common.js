@@ -32,7 +32,7 @@ const ALL_PAGES = {
     'oil.html':   '滑油報告',
     'daily.html': '每日紀錄',
     'monthly.html': '每月紀錄',
-  'try.html': '測試'
+    'try.html': '測試',
     'admin.html': '後台管理' 
 };
 

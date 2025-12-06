@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>尖山發電廠 - 廢油水監控系統</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <div id="navbar-placeholder"></div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>尖山發電廠 - 廢油水監控</h1>
+            <div class="header-right">
+                <button class="btn-ctrl btn-report" onclick="openWaterReport()">📊 產出水質紀錄表</button>
+                <button class="btn-ctrl" onclick="toggleTheme()" id="themeBtn">🌓</button>
+                <button class="btn-ctrl" onclick="openChartModal()">📊 趨勢</button>
+                <div class="status-box">更新: <span id="last-update">...</span></div>
+            </div>
+        </div>
+
+        <div id="app">
+            <div class="loading">正在驗證權限並載入數據...</div>
+        </div>
+    </div>
+
+    <div id="chartModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>歷史趨勢</h3><span class="close-btn" onclick="closeChartModal()">&times;</span></div>
+            <div class="chart-controls">
+                <select id="timeRange" onchange="updateChart()"><option value="24">24H</option><option value="168">7D</option></select>
+                <select id="categorySelect" onchange="renderCheckboxes()"><option value="level">液位</option><option value="flow">流量</option><option value="quality">水質</option><option value="temp">溫度</option></select>
+                <div id="tagCheckboxes" style="flex:1; max-height:60px; overflow-y:auto;"></div>
+            </div>
+            <div class="chart-container">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div id="waterReportModal" class="modal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <div class="modal-header"><h3>放流水水質紀錄表 (每日平均)</h3><span class="close-btn" onclick="closeWaterReport()">&times;</span></div>
+            <div class="chart-controls">
+                <label style="color:var(--text-main)">選擇月份：</label>
+                <input type="month" id="waterReportMonth" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
+                <button class="btn-ctrl btn-report" onclick="generateWaterReport()">🔄 更新預覽</button>
+                <button class="btn-ctrl btn-excel" onclick="exportWaterExcel()">📥 下載 Excel</button>
+                <button class="btn-ctrl btn-print" onclick="printWaterReport()">🖨️ 列印 / PDF</button>
+            </div>
+            <div class="modal-body" id="waterReportPreview" style="background:white; color:black; padding:20px;">
+                <div style="text-align:center; color:#888;">請選擇月份並點擊更新 (資料來源：廢水歷史數據庫)</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/config.js"></script>    <script src="js/dashboard.js"></script> <script src="js/charts.js"></script>    <script src="js/reports.js"></script>   <script>
+        // 啟動點：當 common.js 驗證通過後會呼叫此函式
+        function startApp() {
+            initDashboard(); // 來自 dashboard.js
+        }
+    </script>
+</body>
+</html>

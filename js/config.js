@@ -1,69 +1,130 @@
-//(存放 API_URL, ALARMS, DASHBOARD_CONFIG 設定)
+// js/config.js
+
+// ============================================================
+// 1. 全域變數 (Global Variables)
+// ============================================================
+// 這些變數宣告在這裡，讓 charts.js 和 reports.js 都能共用
+let historyData = null; // 儲存從後端抓回來的歷史數據
+let myChart = null;     // 儲存 Chart.js 的圖表實例
+
+// ============================================================
+// 2. API 設定
+// ============================================================
+// 請確認這是您最新的 Google Apps Script 網址 (需包含 exec)
 const API_URL = "https://script.google.com/macros/s/AKfycbz7e5iwN7g122fMywsZUVF3YyOUtQWsmYzz_rO-NuKW55zpUsNUOMgKnY5bBV-6k9KM/exec";
 
-const ALARMS = { "LI018_VAL0": {max:120,warn:90,crit:100}, 
-                "SS018_VAL0": {max:60,warn:20,crit:30}, 
-                "COD018_VAL0": {max:150,warn:80,crit:100}, 
-                "OFD018_VAL0": {max:20,warn:6,crit:10}, 
-                "NH3N018_VAL0": {max:80,warn:30,crit:60}, 
-                "LI021_VAL0": {max:500,warn:410,crit:430}, 
-                "LI012_VAL0": {max:300,warn:210,crit:230}, 
-                "LIT000_VAL0": {max:150,warn:90,crit:120}, 
-                "D02_TEMP": {max:50,warn:35,crit:38}, 
-                "LI003_VAL0": {max:120,warn:95,crit:100}, 
-                "LI022_VAL0": {max:250,warn:186,crit:196}, 
-                "LI011_VAL0": {max:250,warn:180,crit:200}, 
-                "LI043_VAL0": {max:100,warn:30,crit:20}, 
-                "LI044_VAL0": {max:100,warn:30,crit:20}, 
-                "LI048_VAL0": {max:100,warn:30,crit:20}, 
-                "LI049_VAL0": {max:100,warn:30,crit:20}, 
-                "FI000A_Q_VAL0_DAILY": {max:20,warn:18,crit:19}, 
-                "FI000B_Q_VAL0_DAILY": {max:20,warn:18,crit:19}, 
-                "FI003_Q_VAL0_DAILY": {max:20,warn:18,crit:19}, 
-                "FI012_Q_VAL0_DAILY": {max:24,warn:19,crit:22}, 
-                "FI018_Q_VAL0_DAILY": {max:40,warn:36,crit:38}, 
-                "FI018B_Q_VAL0_DAILY": {max:40,warn:36,crit:38},
-                "FI021W_Q_VAL0_DAILY": {max:16,warn:14,crit:15}, 
-                "FI031_Q_VAL0_DAILY": {max:20,warn:16,crit:18} };
-    const DASHBOARD_CONFIG = [ { id: "d01", title: "D01 放流水水質", className: "group-d01", items: [ { col: "SS018_VAL0", tag: "SS01-07", name: "懸浮固體", unit: "mg/L", cat: "quality" }, 
-                                                                                                { col: "COD018_VAL0", tag: "COD01-07", name: "化學需氧量", unit: "mg/L", cat: "quality" }, 
-                                                                                                { col: "OFD018_VAL0", tag: "OFD01-07", name: "油份濃度", unit: "mg/L", cat: "quality" }, 
-                                                                                                { col: "NH3N018_VAL0", tag: "NH3N01-07", name: "氨氮濃度", unit: "mg/L", cat: "quality" }, 
-                                                                                                { col: "PHI018_VAL0", tag: "PH01-07", name: "酸鹼值", unit: "", cat: "quality" }, 
-                                                                                                { col: "LI018_VAL0", tag: "LI01-07", name: "檢知槽液位", unit: "cm", cat: "level" } ] }, 
-                              { id: "d02", title: "D02 未接觸冷卻水", className: "group-d02", items: [ { col: "D02_TEMP", tag: "D02-Temp", name: "D02水溫", unit: "°C", cat: "temp" }, 
-                                                                                                { col: "D02_FLOW", tag: "D02-Flow", name: "D02水量", unit: "M3", cat: "flow" } ] }, 
-                              { id: "wm01", title: "WM01 事業廢水", className: "group-wm01", items: [ { col: "LI012_VAL0", tag: "LI01-01", name: "調勻槽液位", unit: "cm", cat: "level" }, 
-                                                                                                 { col: "FI012_VAL0", tag: "FIT01-01", name: "調勻槽出口", unit: "M3/Hr", cat: "flow" }, 
-                                                                                                 { col: "PHI013_VAL0", tag: "PH01-03", name: "第一酸鹼槽PH", unit: "", cat: "quality" }, 
-                                                                                                 { col: "PHI014_VAL0", tag: "PH01-04", name: "膠凝槽PH", unit: "", cat: "quality" }, 
-                                                                                                 { col: "PHI017_VAL0", tag: "PH01-06", name: "第二酸鹼槽PH", unit: "", cat: "quality" }, 
-                                                                                                 { col: "FI018_VAL0", tag: "FIT01-07", name: "D01流量", unit: "M3/Hr", cat: "flow" } ] }, 
-                              { id: "wm02", title: "WM02 生活污水", className: "group-wm02", items: [ { col: "LI021_VAL0", tag: "LI02-01", name: "生活污水儲槽", unit: "cm", cat: "level" }, 
-                                                                                                 { col: "FI021W_VAL0", tag: "FIT02-01", name: "出口流量", unit: "M3/Hr", cat: "flow" }, 
-                                                                                                 { col: "LI022_VAL0", tag: "LI02-02", name: "SBR液位", unit: "cm", cat: "level" }, 
-                                                                                                 { col: "FI018B_VAL0", tag: "FIT01-08", name: "回收水流量", unit: "M3/Hr", cat: "flow" }, 
-                                                                                                 { col: "LI011_VAL0", tag: "T02-04", name: "回收水槽液位", unit: "cm", cat: "level" } ] }, 
-                              { id: "wm05", title: "WM05 含油事業廢水", className: "group-wm05", items: [ { col: "FIT000B_VAL0", tag: "FIT05-01B", name: "API進口流量", unit: "M3/Hr", cat: "flow" }, 
-                                                                                                   { col: "LIT000_VAL0", tag: "LI05-01", name: "二段式API液位", unit: "cm", cat: "level" }, 
-                                                                                                   { col: "FIT000A_VAL0", tag: "FIT05-01A", name: "API出口流量", unit: "M3/Hr", cat: "flow" }, 
-                                                                                                   { col: "LI003_VAL0", tag: "LI05-04", name: "中間水槽液位", unit: "cm", cat: "level" },
-                                                                                                   { col: "FI003_VAL0", tag: "FIT05-04", name: "DAF進口流量", unit: "M3/Hr", cat: "flow" }, 
-                                                                                                   { col: "PHI015_VAL0", tag: "PH05-05", name: "靜態攪拌管PH", unit: "", cat: "quality" } ] },
-                              { id: "cds", title: "CDS 加藥系統", className: "group-cds", items: [ { col: "LI044_VAL0", tag: "LI044", name: "鹼槽液位", unit: "cm", cat: "level" }, 
-                                                                                              { col: "LI048_VAL0", tag: "LI048", name: "凝膠儲槽液位", unit: "cm", cat: "level" }, 
-                                                                                              { col: "LI049_VAL0", tag: "LI049", name: "PAC儲槽液位", unit: "cm", cat: "level" }, 
-                                                                                              { col: "LI043_VAL0", tag: "LI043", name: "酸槽液位", unit: "cm", cat: "level" } ] }, 
-                              { id: "acc", title: "ACC 每日累積流量 (今日 / 昨日)", className: "group-acc", items: [ { col: "FI000A_Q_VAL0", tag: "FI000A_Q", name: "API出口", unit: "M3", cat: "flow" }, 
-                                                                                                          { col: "FI000B_Q_VAL0", tag: "FI000B_Q", name: "API進口", unit: "M3", cat: "flow" }, 
-                                                                                                          { col: "FI003_Q_VAL0", tag: "FI003_Q", name: "DAF進口", unit: "M3", cat: "flow" }, 
-                                                                                                          { col: "FI012_Q_VAL0", tag: "FI012_Q", name: "調勻槽出", unit: "M3", cat: "flow" }, 
-                                                                                                          { col: "FI018_Q_VAL0", tag: "FI018_Q", name: "D01放流", unit: "M3", cat: "flow" }, 
-                                                                                                          { col: "FI018B_Q_VAL0", tag: "FI018B_Q", name: "回收水", unit: "M3", cat: "flow" }, 
-                                                                                                          { col: "FI021W_Q_VAL0", tag: "FI021W_Q", name: "生活污水", unit: "M3", cat: "flow" },
-                                                                                                          { col: "FI031_Q_VAL0", tag: "FI031_Q", name: "污泥槽出", unit: "M3", cat: "flow" } ] } ];
+// ============================================================
+// 3. 警報值設定 (ALARMS)
+// ============================================================
+// 格式： 欄位ID: { max: 最大值(用於儀表條), warn: 黃燈值, crit: 紅燈值 }
+// 邏輯：
+//   - 高警報 (越高越危險): val >= crit (紅), val >= warn (黃)
+//   - 低警報 (越低越危險): val <= crit (紅), val <= warn (黃) -> 程式會自動判斷 warn > crit
+const ALARMS = {
+    "LI018_VAL0":   { max: 120, warn: 90,  crit: 100 },
+    "SS018_VAL0":   { max: 60,  warn: 20,  crit: 30  },
+    "COD018_VAL0":  { max: 150, warn: 80,  crit: 100 },
+    "OFD018_VAL0":  { max: 20,  warn: 6,   crit: 10  },
+    "NH3N018_VAL0": { max: 80,  warn: 30,  crit: 60  },
+    "LI021_VAL0":   { max: 500, warn: 410, crit: 430 },
+    "LI012_VAL0":   { max: 300, warn: 210, crit: 230 },
+    "LIT000_VAL0":  { max: 150, warn: 90,  crit: 120 },
+    "D02_TEMP":     { max: 50,  warn: 35,  crit: 38  },
+    "LI003_VAL0":   { max: 120, warn: 95,  crit: 100 }, 
+    "LI022_VAL0":   { max: 250, warn: 186, crit: 196 }, 
+    "LI011_VAL0":   { max: 250, warn: 180, crit: 200 }, 
+    // 低液位警報 (注意 warn > crit)
+    "LI043_VAL0":   { max: 100, warn: 30,  crit: 20 },
+    "LI044_VAL0":   { max: 100, warn: 30,  crit: 20 },
+    "LI048_VAL0":   { max: 100, warn: 30,  crit: 20 },
+    "LI049_VAL0":   { max: 100, warn: 30,  crit: 20 },
+    // 每日累積流量警報
+    "FI000A_Q_VAL0_DAILY": { max: 20, warn: 18, crit: 19 }, 
+    "FI000B_Q_VAL0_DAILY": { max: 20, warn: 18, crit: 19 }, 
+    "FI003_Q_VAL0_DAILY":  { max: 20, warn: 18, crit: 19 }, 
+    "FI012_Q_VAL0_DAILY":  { max: 24, warn: 19, crit: 22 }, 
+    "FI018_Q_VAL0_DAILY":  { max: 40, warn: 36, crit: 38 }, 
+    "FI018B_Q_VAL0_DAILY": { max: 40, warn: 36, crit: 38 }, 
+    "FI021W_Q_VAL0_DAILY": { max: 16, warn: 14, crit: 15 }, 
+    "FI031_Q_VAL0_DAILY":  { max: 20, warn: 16, crit: 18 }
+};
 
-
-// 全域變數，讓其他檔案共用
-let historyData = null;
-let myChart = null;
+// ============================================================
+// 4. 儀表板版面配置 (DASHBOARD_CONFIG)
+// ============================================================
+// 定義主畫面上所有的卡片分組、順序、名稱與單位
+// cat (Category) 用於圖表篩選：'quality'(水質), 'level'(液位), 'flow'(流量), 'temp'(溫度)
+const DASHBOARD_CONFIG = [
+    {
+        id: "d01", title: "D01 放流水水質", className: "group-d01",
+        items: [
+            { col: "SS018_VAL0",   tag: "SS01-07",   name: "懸浮固體",       unit: "mg/L", cat: "quality" },
+            { col: "COD018_VAL0",  tag: "COD01-07",  name: "化學需氧量",     unit: "mg/L", cat: "quality" },
+            { col: "OFD018_VAL0",  tag: "OFD01-07",  name: "油份濃度",       unit: "mg/L", cat: "quality" },
+            { col: "NH3N018_VAL0", tag: "NH3N01-07", name: "氨氮濃度",       unit: "mg/L", cat: "quality" },
+            { col: "PHI018_VAL0",  tag: "PH01-07",   name: "酸鹼值",         unit: "",     cat: "quality" },
+            { col: "LI018_VAL0",   tag: "LI01-07",   name: "檢知槽液位",     unit: "cm",   cat: "level" }
+        ]
+    },
+    {
+        id: "d02", title: "D02 未接觸冷卻水", className: "group-d02",
+        items: [
+            { col: "D02_TEMP",     tag: "D02-Temp",  name: "D02水溫",       unit: "°C",   cat: "temp" },
+            { col: "D02_FLOW",     tag: "D02-Flow",  name: "D02水量",       unit: "M3",   cat: "flow" }
+        ]
+    },
+    {
+        id: "wm01", title: "WM01 事業廢水", className: "group-wm01",
+        items: [
+            { col: "LI012_VAL0",   tag: "LI01-01",   name: "調勻槽液位",     unit: "cm",   cat: "level" },
+            { col: "FI012_VAL0",   tag: "FIT01-01",  name: "調勻槽出口",     unit: "M3/Hr",cat: "flow" },
+            { col: "PHI013_VAL0",  tag: "PH01-03",   name: "第一酸鹼槽PH",   unit: "",     cat: "quality" },
+            { col: "PHI014_VAL0",  tag: "PH01-04",   name: "膠凝槽PH",       unit: "",     cat: "quality" },
+            { col: "PHI017_VAL0",  tag: "PH01-06",   name: "第二酸鹼槽PH",   unit: "",     cat: "quality" },
+            { col: "FI018_VAL0",   tag: "FIT01-07",  name: "D01流量",       unit: "M3/Hr",cat: "flow" }
+        ]
+    },
+    {
+        id: "wm02", title: "WM02 生活污水", className: "group-wm02",
+        items: [
+            { col: "LI021_VAL0",   tag: "LI02-01",   name: "生活污水儲槽",   unit: "cm",   cat: "level" },
+            { col: "FI021W_VAL0",  tag: "FIT02-01",  name: "出口流量",       unit: "M3/Hr",cat: "flow" },
+            { col: "LI022_VAL0",   tag: "LI02-02",   name: "SBR液位",        unit: "cm",   cat: "level" },
+            { col: "FI018B_VAL0",  tag: "FIT01-08",  name: "回收水流量",     unit: "M3/Hr",cat: "flow" },
+            { col: "LI011_VAL0",   tag: "T02-04",    name: "回收水槽液位",   unit: "cm",   cat: "level" }
+        ]
+    },
+    {
+        id: "wm05", title: "WM05 含油事業廢水", className: "group-wm05",
+        items: [
+            { col: "FIT000B_VAL0", tag: "FIT05-01B", name: "API進口流量",    unit: "M3/Hr",cat: "flow" },
+            { col: "LIT000_VAL0",  tag: "LI05-01",   name: "二段式API液位",  unit: "cm",   cat: "level" },
+            { col: "FIT000A_VAL0", tag: "FIT05-01A", name: "API出口流量",    unit: "M3/Hr",cat: "flow" },
+            { col: "LI003_VAL0",   tag: "LI05-04",   name: "中間水槽液位",   unit: "cm",   cat: "level" },
+            { col: "FI003_VAL0",   tag: "FIT05-04",  name: "DAF進口流量",    unit: "M3/Hr",cat: "flow" },
+            { col: "PHI015_VAL0",  tag: "PH05-05",   name: "靜態攪拌管PH",   unit: "",     cat: "quality" }
+        ]
+    },
+    {
+        id: "cds", title: "CDS 加藥系統", className: "group-cds",
+        items: [
+            { col: "LI044_VAL0",   tag: "LI044",     name: "鹼槽液位",       unit: "cm",   cat: "level" },
+            { col: "LI048_VAL0",   tag: "LI048",     name: "凝膠儲槽液位",   unit: "cm",   cat: "level" },
+            { col: "LI049_VAL0",   tag: "LI049",     name: "PAC儲槽液位",    unit: "cm",   cat: "level" },
+            { col: "LI043_VAL0",   tag: "LI043",     name: "酸槽液位",       unit: "cm",   cat: "level" }
+        ]
+    },
+    {
+        id: "acc", title: "ACC 每日累積流量 (今日 / 昨日)", className: "group-acc",
+        items: [
+            { col: "FI000A_Q_VAL0", tag: "FI000A_Q", name: "API出口", unit: "M3", cat: "flow" },
+            { col: "FI000B_Q_VAL0", tag: "FI000B_Q", name: "API進口", unit: "M3", cat: "flow" },
+            { col: "FI003_Q_VAL0",  tag: "FI003_Q",  name: "DAF進口", unit: "M3", cat: "flow" },
+            { col: "FI012_Q_VAL0",  tag: "FI012_Q",  name: "調勻槽出",unit: "M3", cat: "flow" },
+            { col: "FI018_Q_VAL0",  tag: "FI018_Q",  name: "D01放流", unit: "M3", cat: "flow" },
+            { col: "FI018B_Q_VAL0", tag: "FI018B_Q", name: "回收水",  unit: "M3", cat: "flow" },
+            { col: "FI021W_Q_VAL0", tag: "FI021W_Q", name: "生活污水",unit: "M3", cat: "flow" },
+            { col: "FI031_Q_VAL0",  tag: "FI031_Q",  name: "污泥槽出",unit: "M3", cat: "flow" }
+        ]
+    }
+];

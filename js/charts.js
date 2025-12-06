@@ -1,6 +1,6 @@
 // 全域變數 (用於儲存歷史數據與圖表實例)
-let historyData = null;
-let myChart = null;
+//let historyData = null;
+//let myChart = null;
 
 /**
  * 開啟圖表視窗

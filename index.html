@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>尖山發電廠 - 廢油水監控系統</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -11,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
+        /* --- CSS 變數定義 --- */
         :root {
             --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666666; --text-value: #2c3e50;
             --border-color: #e0e0e0; --shadow: rgba(0,0,0,0.05);
@@ -88,27 +90,27 @@
         
         /* Modal */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); }
-        .modal-content { background-color: var(--bg-card); color: var(--text-main); margin: 3% auto; padding: 15px; border-radius: 8px; width: 95%; max-width: 1100px; max-height: 95vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .modal-content { background-color: var(--bg-card); color: var(--text-main); margin: 2% auto; padding: 15px; border-radius: 8px; width: 95%; max-width: 1100px; max-height: 95vh; overflow-y: auto; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); }
         .close-btn { font-size: 1.5rem; cursor: pointer; color: var(--text-sub); }
         .chart-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; background: var(--bg-body); padding: 8px; border-radius: 5px; align-items: center; }
         .control-group { display: flex; flex-direction: column; min-width: 100px; flex: 1; }
         .control-group label { font-size: 0.75rem; color: var(--text-sub); margin-bottom: 3px; font-weight: bold; }
-        select { padding: 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; }
+        select, input[type="month"] { padding: 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; }
         .checkbox-list { max-height: 80px; overflow-y: auto; border: 1px solid var(--border-color); background: var(--bg-card); padding: 4px; border-radius: 4px; }
         .checkbox-item { display: flex; align-items: center; font-size: 0.8rem; margin-bottom: 2px; color: var(--text-main); }
         .checkbox-item input { margin-right: 5px; }
         .chart-container { position: relative; height: 450px; width: 100%; } 
         
-        /* 報表表格樣式 */
-        .report-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; color: #000; background: #fff; }
-        .report-table th, .report-table td { border: 1px solid black; padding: 6px; text-align: center; }
-        .report-table th { background-color: #f0f0f0; font-weight: bold; }
-        .report-title { font-size: 1.5rem; font-weight: bold; text-align: center; margin-bottom: 5px; color: #000; }
-        .report-subtitle { font-size: 1rem; text-align: center; margin-bottom: 15px; color: #000; }
-        /* 修正 Footer 樣式 (置中 + 間距) */
-        .report-footer { margin-top: 30px; display: flex; justify-content: center; gap: 80px; font-size: 1rem; color: #000; }
-
+        /* 報表樣式 */
+        .report-table { width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 20px; color: #000; background: #fff; }
+        .report-table th, .report-table td { border: 1px solid black; padding: 4px; text-align: center; white-space: nowrap; }
+        .report-table th { background-color: #f0f0f0; font-weight: bold; font-size: 9pt; }
+        .report-header-row th { vertical-align: middle; }
+        .report-title { font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 5px; color:#000; }
+        .report-subtitle { text-align: right; margin-bottom: 5px; color:#000; font-size: 10pt; }
+        .report-footer { margin-top: 20px; display: flex; justify-content: space-between; font-size: 10pt; color: #000; padding: 0 20px; }
+        
         @media (max-width: 600px) { #app { grid-template-columns: 1fr; } h1 { font-size: 1rem; } .value { font-size: 1.1rem; } .modal-content { margin: 10% auto; width: 95%; padding: 15px; } .chart-controls { flex-direction: column; } }
     </style>
 </head>
@@ -147,8 +149,8 @@
 </div>
 
 <div id="waterReportModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header"><h3>放流水水質紀錄表</h3><span class="close-btn" onclick="closeWaterReport()">&times;</span></div>
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header"><h3>放流水水質紀錄表 (每日平均)</h3><span class="close-btn" onclick="closeWaterReport()">&times;</span></div>
         <div class="chart-controls">
             <label style="color:var(--text-main)">選擇月份：</label>
             <input type="month" id="waterReportMonth" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
@@ -157,7 +159,7 @@
             <button class="btn-ctrl btn-print" onclick="printWaterReport()">🖨️ 列印 / PDF</button>
         </div>
         <div class="modal-body" id="waterReportPreview" style="background:white; color:black; padding:20px;">
-            <div style="text-align:center; color:#888;">請選擇月份並點擊更新</div>
+            <div style="text-align:center; color:#888;">請選擇月份並點擊更新 (資料來源：廢水歷史數據庫)</div>
         </div>
     </div>
 </div>
@@ -180,7 +182,6 @@
     }
 
     function fetchData() { 
-        // 重點：mode=read 會觸發每日流量計算
         fetch(API_URL + "?mode=read&t=" + new Date().getTime()).then(response => response.json()).then(data => { 
             if(data.timestamp) document.getElementById('last-update').innerText = data.timestamp.split(' ')[1]; 
             let htmlContent = ''; 
@@ -267,63 +268,134 @@
         if (!monthStr) return alert("請選擇月份");
         document.getElementById('waterReportPreview').innerHTML = "讀取歷史數據中...";
 
-        const p = cachedHistory ? Promise.resolve(cachedHistory) : fetch(API_URL + "?mode=history").then(r=>r.json());
+        // Fetch history if not cached (or refresh)
+        const p = fetch(API_URL + "?mode=history").then(r=>r.json());
         
         p.then(data => {
             cachedHistory = data;
             const [targetY, targetM] = monthStr.split('-').map(Number);
             const daysInMonth = new Date(targetY, targetM, 0).getDate();
-            // 增加 nh3 (氨氮)
+            
+            // 統計物件初始化 (ph, cod, ss, oil, nh3)
             const dayStats = {}; 
-            for(let i=1; i<=daysInMonth; i++) dayStats[i] = { ph:[0,0], cod:[0,0], ss:[0,0], oil:[0,0], nh3:[0,0] };
+            for(let i=1; i<=daysInMonth; i++) {
+                dayStats[i] = { 
+                    ph:{sum:0, cnt:0}, cod:{sum:0, cnt:0}, ss:{sum:0, cnt:0}, oil:{sum:0, cnt:0}, nh3:{sum:0, cnt:0},
+                    // 流量：累積最大值 與 最小值
+                    wasteQ: {max:-1, min:Infinity}, 
+                    domQ: {max:-1, min:Infinity},
+                    disQ: {max:-1, min:Infinity},
+                    recQ: {max:-1, min:Infinity}
+                };
+            }
 
+            // 欄位索引對照
+            const h = data.headers;
+            const idxMap = {
+                ph: h.indexOf("PHI018_VAL0"),
+                cod: h.indexOf("COD018_VAL0"),
+                ss: h.indexOf("SS018_VAL0"),
+                oil: h.indexOf("OFD018_VAL0"),
+                nh3: h.indexOf("NH3N018_VAL0"),
+                // 累積流量欄位 (Cumulative Flow)
+                wasteQ: h.indexOf("FI012_Q_VAL0"),  // 事業廢水累積
+                domQ:   h.indexOf("FI021W_Q_VAL0"), // 生活污水累積
+                disQ:   h.indexOf("FI018_Q_VAL0"),  // 放流水累積
+                recQ:   h.indexOf("FI018B_Q_VAL0")  // 回收水累積
+            };
+
+            // 遍歷歷史數據
             data.data.forEach(row => {
                 const d = new Date(row[0]);
                 if (d.getFullYear() === targetY && (d.getMonth()+1) === targetM) {
                     const day = d.getDate();
-                    const phIdx = data.headers.indexOf("PHI018_VAL0");
-                    const codIdx = data.headers.indexOf("COD018_VAL0");
-                    const ssIdx = data.headers.indexOf("SS018_VAL0");
-                    const oilIdx = data.headers.indexOf("OFD018_VAL0");
-                    const nh3Idx = data.headers.indexOf("NH3N018_VAL0"); // 新增
+                    const s = dayStats[day];
 
-                    const addStat = (key, idx) => {
-                        let val = parseFloat(row[idx]);
-                        if (!isNaN(val) && val > 0) { dayStats[day][key][0] += val; dayStats[day][key][1]++; }
-                    };
-                    addStat('ph', phIdx); addStat('cod', codIdx); addStat('ss', ssIdx); addStat('oil', oilIdx); addStat('nh3', nh3Idx);
+                    // 1. 水質平均 (Avg)
+                    ['ph', 'cod', 'ss', 'oil', 'nh3'].forEach(key => {
+                        let val = parseFloat(row[idxMap[key]]);
+                        if (!isNaN(val) && val > 0) { s[key].sum += val; s[key].cnt++; }
+                    });
+
+                    // 2. 流量 (Min/Max for Daily calc)
+                    ['wasteQ', 'domQ', 'disQ', 'recQ'].forEach(key => {
+                        let val = parseFloat(row[idxMap[key]]);
+                        if (!isNaN(val)) {
+                            if (val > s[key].max) s[key].max = val;
+                            if (val < s[key].min) s[key].min = val;
+                        }
+                    });
                 }
             });
 
+            // 生成 HTML 表格列
             let rows = "";
             for(let i=1; i<=daysInMonth; i++) {
                 const s = dayStats[i];
-                const getAvg = (key) => s[key][1] > 0 ? (s[key][0] / s[key][1]).toFixed(1) : "-";
-                // 增加一欄顯示氨氮
-                rows += `<tr><td>${i}</td><td>${getAvg('ph')}</td><td>${getAvg('cod')}</td><td>${getAvg('ss')}</td><td>${getAvg('oil')}</td><td>${getAvg('nh3')}</td><td></td></tr>`;
+                
+                // 平均值計算
+                const getAvg = (key) => s[key].cnt > 0 ? (s[key].sum / s[key].cnt).toFixed(1) : "-";
+                
+                // 流量計算 (每日 = Max - Min)
+                const getDailyQ = (key) => (s[key].max > -1 && s[key].min !== Infinity) ? (s[key].max - s[key].min).toFixed(1) : "-";
+                const getCumQ = (key) => (s[key].max > -1) ? s[key].max.toFixed(0) : "-";
+
+                rows += `<tr>
+                    <td>${i}</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td> <td>-</td><td>-</td><td>-</td><td>-</td><td>${getAvg('ph')}</td> <td>${getAvg('ss')}</td><td>${getAvg('cod')}</td><td>${getAvg('oil')}</td> <td>${getCumQ('wasteQ')}</td><td>${getDailyQ('wasteQ')}</td> <td>-</td><td>-</td> <td>${getCumQ('domQ')}</td><td>${getDailyQ('domQ')}</td> <td>${getCumQ('disQ')}</td><td>${getDailyQ('disQ')}</td> <td>${getCumQ('recQ')}</td><td>${getDailyQ('recQ')}</td> <td></td><td></td><td></td><td></td> <td></td><td></td><td></td><td></td>
+                </tr>`;
             }
 
             const html = `
-                <div style="font-family:BiauKai;">
-                <h2 style="text-align:center; font-size:18pt; margin-bottom:5px;">尖山電廠放流水水質紀錄表</h2>
-                
+                <div style="font-family:BiauKai; color:black;">
+                <h2 style="text-align:center; font-size:16pt; margin-bottom:5px;">尖山發電廠廢(污)水操作處理紀錄表</h2>
                 <div style="text-align:right; margin-bottom:5px;">日期：${targetY - 1911}年 ${targetM}月</div>
+                <div style="overflow-x:auto;">
                 <table class="report-table">
                     <thead>
                         <tr>
-                            <th>日期</th><th>PH</th><th>COD</th><th>SS</th><th>OIL</th><th>氨氮</th><th>備註</th>
+                            <th rowspan="3">日期</th>
+                            <th colspan="4">水位</th>
+                            <th colspan="5">pH值</th>
+                            <th colspan="3">水質</th>
+                            <th colspan="2">事業廢水</th>
+                            <th colspan="2">事業廢水(重複)</th>
+                            <th colspan="2">生活污水</th>
+                            <th colspan="2">放流水</th>
+                            <th colspan="2">回收水</th>
+                            <th rowspan="2">累積用電</th>
+                            <th rowspan="2">污泥產生</th>
+                            <th rowspan="2">污泥貯存</th>
+                            <th rowspan="2">污泥清運</th>
+                            <th colspan="4">化學品使用</th>
                         </tr>
-                        <tr style="background:#eee;">
-                            <th>標準</th><th>6~9</th><th><100mg/L</th><th><30 mg/L</th><th><10 mg/L</th><th><100 mg/L</th><th></th>
+                        <tr>
+                            <th>API</th><th>中間</th><th>事業</th><th>生活</th>
+                            <th>攪拌</th><th>一pH</th><th>膠羽</th><th>二pH</th><th>放流</th>
+                            <th>SS</th><th>COD</th><th>油</th>
+                            <th>累積</th><th>日量</th>
+                            <th>累積</th><th>日量</th>
+                            <th>累積</th><th>日量</th>
+                            <th>累積</th><th>日量</th>
+                            <th>累積</th><th>日量</th>
+                            <th>酸</th><th>鹼</th><th>PAC</th><th>高分</th>
+                        </tr>
+                        <tr style="font-size:0.8em; background:#eee;">
+                            <th>標準</th><th><1.4</th><th><0.95</th><th><2.1</th><th><4.0</th>
+                            <th>-</th><th>-</th><th>-</th><th>-</th><th>6~9</th>
+                            <th><30</th><th><100</th><th><10</th>
+                            <th></th><th>≦20</th><th></th><th></th><th></th><th>≦24</th><th></th><th>≦16</th><th></th><th>≦40</th>
+                            <th></th><th></th><th></th><th></th><th></th><th></th><th></th><th></th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
                 </table>
-                <div class="report-footer" style="display:flex; justify-content:center; gap:80px; margin-top:20px;">
-                    <div>紀錄:　　　　經辦:　　　　課長:</div>
                 </div>
+                <div class="report-footer" style="display:flex; justify-content:space-between; margin-top:20px; padding:0 20px;">
+                    <div>紀錄:</div><div>經辦:</div><div>課長:</div>
                 </div>
-                <div style="text-align:center; font-size:0.8em; margin-top:0px;">表格：CS-WI-CX-22-F2</div>
+                <div style="text-align:right; font-size:0.8em; margin-top:5px;">表格：CS-WI-CX-22-F3</div>
+                </div>
             `;
             document.getElementById('waterReportPreview').innerHTML = html;
 
@@ -332,10 +404,10 @@
 
     function exportWaterExcel() {
         const div = document.getElementById('waterReportPreview');
-        if (!div || div.innerText === "請選擇月份並點擊更新") return alert("請先生成報表");
+        if (!div || div.innerText.includes("請選擇")) return alert("請先生成報表");
         const monthStr = document.getElementById('waterReportMonth').value;
-        const filename = `放流水水質紀錄表_${monthStr}.xls`;
-        const template = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}th,td{border:1px solid black;text-align:center;}</style></head><body>${div.innerHTML}</body></html>`;
+        const filename = `廢水操作紀錄表_${monthStr}.xls`;
+        const template = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}th,td{border:1px solid black;text-align:center;mso-number-format:"\@";}</style></head><body>${div.innerHTML}</body></html>`;
         const blob = new Blob([template], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
@@ -343,8 +415,8 @@
     
     function printWaterReport() {
         const content = document.getElementById('waterReportPreview').innerHTML;
-        const printWindow = window.open('', '', 'height=600,width=800');
-        printWindow.document.write('<html><head><title>列印</title><style>.report-table{width:100%;border-collapse:collapse;} .report-table th, .report-table td{border:1px solid black;padding:4px;text-align:center;} .report-footer{display:flex;justify-content:center;gap:80px;margin-top:20px;}</style></head><body>');
+        const printWindow = window.open('', '', 'height=600,width=1000');
+        printWindow.document.write('<html><head><title>列印</title><style>body{font-family:Arial;} table{width:100%;border-collapse:collapse;font-size:10px;} th,td{border:1px solid black;padding:2px;text-align:center;white-space:nowrap;} th{background:#f0f0f0;} .report-footer{display:flex;justify-content:space-between;margin-top:20px;padding:0 50px;}</style></head><body>');
         printWindow.document.write(content); printWindow.document.write('</body></html>'); printWindow.document.close(); printWindow.print();
     }
 

@@ -236,12 +236,42 @@ button.btn-ctrl:hover { opacity: 0.9; }
 .unit { font-size: 0.7rem; color: var(--text-sub); margin-left: 2px; }
 
 /* 進度條/儀表條 */
-.gauge-container { height: 5px; width: 100%; background: var(--gauge-bg); border-radius: 3px; position: relative; display: flex; overflow: visible; margin-top: 2px; }
+
+.gauge-container { 
+    height: 5px; 
+    width: 100%; 
+    background: var(--gauge-bg); 
+    border-radius: 3px; 
+    position: relative; 
+    display: flex; /* 關鍵：讓內部的 seg 排成一列 */
+    overflow: visible; 
+    margin-top: 2px; 
+}
+
 .gauge-seg { height: 100%; }
+
+/* 一般高警報 (綠 -> 黃 -> 紅) */
 .seg-good { background-color: var(--gauge-good); border-radius: 3px 0 0 3px; } 
 .seg-warn { background-color: var(--gauge-warn); } 
 .seg-poor { background-color: var(--gauge-bad); border-radius: 0 3px 3px 0; }
-.gauge-marker { position: absolute; top: -2px; width: 2px; height: 9px; background-color: var(--text-main); border: 1px solid var(--bg-card); transform: translateX(-50%); z-index: 2; transition: left 0.5s ease; }
+
+/* ▼▼▼ 補上這三行：低警報/反向警報 (紅 -> 黃 -> 綠) ▼▼▼ */
+.seg-rev-poor { background-color: var(--gauge-bad); border-radius: 3px 0 0 3px; } 
+.seg-rev-warn { background-color: var(--gauge-warn); } 
+.seg-rev-good { background-color: var(--gauge-good); border-radius: 0 3px 3px 0; }
+/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+
+.gauge-marker { 
+    position: absolute; 
+    top: -2px; 
+    width: 2px; 
+    height: 9px; 
+    background-color: var(--text-main); 
+    border: 1px solid var(--bg-card); 
+    transform: translateX(-50%); 
+    z-index: 2; 
+    transition: left 0.5s ease; 
+}
 
 .loading { grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-sub); font-size: 1rem; }
 

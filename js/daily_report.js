@@ -1,11 +1,17 @@
 // js/daily_report.js
+
+// ============================================================
+// 1. 設定與變數
+// ============================================================
+
 // ⚠️ 請確認這是您正確的 GAS 網址
 const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec";
+
 // 獨立的快取變數，避免與主程式衝突
 let _reportCache = null;
 
 // ============================================================
-// 1. 開啟/關閉視窗
+// 2. 開啟/關閉視窗
 // ============================================================
 function openReportModal() {
     document.getElementById('reportModal').style.display = 'block';
@@ -20,7 +26,7 @@ function closeReportModal() {
     document.getElementById('reportModal').style.display = 'none';
 }
 
-// 點擊視窗外部關閉 (針對報表 Modal)
+// 點擊視窗外部關閉
 window.addEventListener('click', function(event) {
     const modal = document.getElementById('reportModal');
     if (event.target == modal) {
@@ -29,7 +35,7 @@ window.addEventListener('click', function(event) {
 });
 
 // ============================================================
-// 2. 報表計算與生成 (核心邏輯)
+// 3. 報表計算與生成 (核心邏輯)
 // ============================================================
 function updateReportPreview() {
     const month = document.getElementById('reportMonth').value;
@@ -37,7 +43,7 @@ function updateReportPreview() {
 
     document.getElementById('reportPreview').innerHTML = "數據載入與計算中...";
 
-    // 使用全域變數 API_URL (請確保 daily.html 或 config.js 有定義)
+    // 呼叫 API
     const p = _reportCache ? Promise.resolve(_reportCache) : fetch(API_URL + "?mode=history").then(r => r.json());
 
     p.then(json => {
@@ -71,25 +77,24 @@ function updateReportPreview() {
             // 格式化日期字串 (YYYY-MM-DD) 以便比對
             const dateKey = `${yyyy}-${mm}-${d.toString().padStart(2, '0')}`;
             
-            // 在歷史資料中尋找當天的紀錄 (比對 row[0] 時間欄位)
-            // 假設 row[0] 是 ISO 格式或 "YYYY/MM/DD HH:mm:ss"
-            const row = rows.find(r => r[0].startsWith(dateKey.replace(/-/g, '/')) || r[0].startsWith(dateKey));
+            // 在歷史資料中尋找當天的紀錄
+            // 修正：增加 iOS 相容性 (replace - with /)
+            const row = rows.find(r => {
+                const rowDate = r[0].split('T')[0]; // 取出 YYYY-MM-DD
+                return rowDate === dateKey;
+            });
 
             let valDesal = 0, valGenWater = 0, valUrea = 0;
             let note = "";
 
             if (row) {
-                // 依據 daily.html 的欄位定義：
-                // row[13]: 海淡水 (N欄)
-                // row[14]: 造水機 (O欄)
-                // row[18]: 尿素 (S欄) - *請確認這是否對應 S 欄*
+                // ⚠️ 欄位對照 (請依據您的 Excel 實際位置修改)
+                // A=0, B=1, ... N=13, O=14, S=18
+                valDesal = parseFloat(row[13]) || 0;    // N欄: 海淡水
+                valGenWater = parseFloat(row[14]) || 0; // O欄: 造水機
+                valUrea = parseFloat(row[18]) || 0;     // S欄: 尿素使用
                 
-                valDesal = parseFloat(row[13]) || 0;
-                valGenWater = parseFloat(row[14]) || 0;
-                valUrea = parseFloat(row[18]) || 0; 
-                
-                // 如果有數據才列入統計 (避免空值拉低平均)
-                // 這裡假設 row[11] (L欄/總鹼價) 有值代表當天有巡查紀錄
+                // 判斷當天是否有有效紀錄 (例如檢查總鹼價欄位是否有值)
                 if (row[11]) daysCount++; 
             }
 
@@ -107,8 +112,7 @@ function updateReportPreview() {
                 </tr>`;
         }
 
-        // 計算平均 (除以當月天數 或 有紀錄天數，這裡範例除以當月天數)
-        // 若要除以有紀錄天數，請改用 daysCount
+        // 計算平均
         const avgDivisor = daysInMonth; 
 
         html += `
@@ -140,11 +144,11 @@ function updateReportPreview() {
 }
 
 // ============================================================
-// 3. 匯出與列印
+// 4. 匯出與列印
 // ============================================================
 function exportToExcel() {
     const div = document.getElementById('reportPreview');
-    if (!div || div.innerText.includes("數據載入")) {
+    if (!div || div.innerText.includes("數據載入") || div.innerText.includes("請選擇")) {
         alert("請先產生報表");
         return;
     }
@@ -152,7 +156,6 @@ function exportToExcel() {
     const month = document.getElementById('reportMonth').value;
     const filename = `尖山電廠運轉月報表_${month}.xls`;
     
-    // 加入 Excel XML 表頭以支援中文與格線
     const template = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" 
               xmlns:x="urn:schemas-microsoft-com:office:excel" 

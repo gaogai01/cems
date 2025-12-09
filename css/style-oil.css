@@ -1,1 +1,75 @@
+        /* --- CSS 變數定義 --- */
+        :root { 
+            --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #888; 
+            --border-color: #e0e0e0; --primary: #607d8b; --danger: #dc3545; 
+            --table-head-bg: #f8f9fa; --table-hover: #f1f3f5; --table-stripe: #fafafa;
+            --sticky-bg: #ffffff;
+        }
+        [data-theme="dark"] {
+            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaaaaa;
+            --border-color: #333333; --table-head-bg: #2c2c2c; --table-hover: #333; --table-stripe: #222;
+            --sticky-bg: #1e1e1e;
+        }
 
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
+        
+        /* 導航列 (手動加回，因為移除了 common.js) */
+        .navbar { background: #333; padding: 10px 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .nav-link { color: #ccc; text-decoration: none; padding: 6px 12px; border-radius: 5px; transition: 0.2s; }
+        .nav-link:hover { background: #555; color: white; }
+        .nav-link.active { background: var(--primary); color: white; font-weight: bold; }
+
+        .container { max-width: 98%; margin: 0 auto; padding: 0 10px; }
+        
+        h2 { margin: 20px 0 15px 0; font-size: 1.3rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; align-items: center;}
+        h3.section-title { margin: 25px 0 10px 0; font-size: 1.1rem; color: var(--text-main); border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
+        .btn-theme { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+
+        .table-controls { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: var(--bg-card); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .table-controls label { font-weight: bold; font-size: 0.9rem; color: var(--text-main); }
+        select { padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.9rem; background: var(--bg-card); color: var(--text-main); }
+
+        .table-container { width: 100%; overflow-x: auto; background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 30px; max-height: 80vh; }
+        .overview-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem; white-space: nowrap; }
+        .overview-table th, .overview-table td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); text-align: center; vertical-align: middle; }
+        .overview-table thead th { background: var(--table-head-bg); color: var(--text-main); font-weight: bold; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border-color); }
+        .overview-table th:first-child, .overview-table td:first-child { position: sticky; left: 0; z-index: 11; background-color: var(--sticky-bg); border-right: 2px solid var(--border-color); font-weight: bold; min-width: 80px; }
+        .overview-table thead th:first-child { z-index: 12; background-color: var(--table-head-bg); }
+        .overview-table tbody tr:nth-child(even) td { background-color: var(--table-stripe); }
+        .overview-table tbody tr:nth-child(even) td:first-child { background-color: var(--sticky-bg); filter: brightness(0.97); } 
+        .overview-table tbody tr:hover td { background-color: var(--table-hover); cursor: pointer; }
+        
+        .val-limit { color: var(--danger); font-weight: 900; background-color: rgba(220, 53, 69, 0.1); }
+        .unit-small { font-size: 0.75rem; color: var(--text-sub); font-weight: normal; display: block; }
+        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+        .dot-ok { background-color: #28a745; } .dot-err { background-color: #dc3545; box-shadow: 0 0 5px #dc3545; }
+
+        .chart-section { background: var(--bg-card); padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 50px; }
+        .chart-controls { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; align-items: flex-start; }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group label { font-weight: bold; font-size: 0.9rem; color: var(--text-sub); }
+        
+        .checkbox-container { display: flex; flex-wrap: wrap; gap: 10px; max-height: 100px; overflow-y: auto; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; flex: 1; min-width: 300px; background: var(--bg-body); }
+        .checkbox-item { display: flex; align-items: center; font-size: 0.85rem; color: var(--text-main); cursor: pointer; background: var(--bg-card); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color); }
+        .checkbox-item input { margin-right: 5px; cursor: pointer; }
+        .checkbox-item:hover { background: var(--table-hover); }
+        .chart-container { position: relative; height: 450px; width: 100%; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        .modal-content { background-color: var(--bg-card); color: var(--text-main); margin: 2% auto; padding: 0; border-radius: 12px; width: 95%; max-width: 900px; max-height: 95vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .modal-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--table-head-bg); }
+        .close-btn { font-size: 1.8rem; cursor: pointer; color: var(--text-sub); line-height: 1; }
+        .modal-body { overflow-y: auto; padding: 10px 20px 20px 20px; }
+        
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .detail-table th { background: var(--table-head-bg); color: var(--text-sub); font-weight: bold; padding: 10px 5px; text-align: center; position: sticky; top: 0; z-index: 2; border-bottom: 2px solid var(--border-color); }
+        .detail-table td { padding: 6px 5px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-main); vertical-align: middle; }
+        .detail-table tr:hover { background-color: var(--table-hover); }
+        .col-item { text-align: left !important; width: 30%; font-weight: bold; color: var(--text-main); }
+        .col-unit { font-size: 0.75rem; color: var(--text-sub); font-weight: normal; margin-left: 4px; }
+        .col-limit { width: 15%; font-size: 0.8rem; color: var(--text-sub) !important; }
+        .col-data { width: 18%; font-family: 'Arial', sans-serif; }
+        .latest-col { background-color: rgba(0, 123, 255, 0.05); font-weight: bold; }
+
+        #loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #888; }

@@ -20,12 +20,14 @@
     <div class="container">
         <div class="page-header">
             <h1>尖山發電廠 - 廢油水監控</h1>
-            <div class="header-right">
-                <button class="btn-ctrl btn-report" onclick="openWaterReport()">📊 產出水質紀錄表</button>
-                <button class="btn-ctrl" onclick="toggleTheme()" id="themeBtn">🌓</button>
-                <button class="btn-ctrl" onclick="openChartModal()">📊 趨勢</button>
-                <div class="status-box">更新: <span id="last-update">...</span></div>
-            </div>
+<div class="header-right">
+    <button class="btn-ctrl btn-report" onclick="openOpReport()">📊 操作紀錄表</button>
+
+    <button class="btn-ctrl btn-report" onclick="openWaterReport()">📊 水質紀錄表</button>
+    <button class="btn-ctrl" onclick="toggleTheme()" id="themeBtn">🌓</button>
+    <button class="btn-ctrl" onclick="openChartModal()">📊 趨勢</button>
+    <div class="status-box">更新: <span id="last-update">...</span></div>
+</div>
         </div>
 
         <div id="app">
@@ -63,16 +65,32 @@
         </div>
     </div>
 
-    //<script src="js/common.js"></script>
+<div id="opReportModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header"><h3>廢(污)水操作處理及溫排水水溫紀錄表</h3><span class="close-btn" onclick="closeOpReport()">&times;</span></div>
+        <div class="chart-controls">
+            <label style="color:var(--text-main)">選擇月份：</label>
+            <input type="month" id="opReportMonth" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
+            <button class="btn-ctrl btn-report" onclick="generateOpReport()">🔄 更新預覽</button>
+            <button class="btn-ctrl btn-excel" onclick="exportOpExcel()">📥 下載 Excel</button>
+            <button class="btn-ctrl btn-print" onclick="printOpReport()">🖨️ 列印 / PDF</button>
+        </div>
+        <div class="modal-body" id="opReportPreview" style="background:white; color:black; padding:10px; overflow-x:auto;">
+            <div style="text-align:center; color:#888; padding:30px;">請選擇月份並點擊更新</div>
+        </div>
+    </div>
+</div>
+
     <script src="js/config.js"></script>    
     <script src="js/dashboard.js"></script> 
     <script src="js/charts.js"></script>    
     <script src="js/reports.js"></script>   
+    <script src="js/operation_report.js"></script> 
     <script>
         // 啟動點：當 common.js 驗證通過後會呼叫此函式
-        //function startApp() {
+        function startApp() {
             initDashboard(); // 來自 dashboard.js
-        //}
+        }
     </script>
 </body>
 </html>

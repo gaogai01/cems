@@ -62,10 +62,10 @@ function closeWaterReport() { document.getElementById('waterReportModal').style.
                     <tbody>${rows}</tbody>
                 </table>
                 <div class="report-footer" style="display:flex; justify-content:center; gap:80px; margin-top:20px;">
-                    <div>紀錄:　　　　經辦:　　　　課長:</div>
+                    <div>紀錄:　　　　　　　　經辦:　　　　　　　　課長:</div>
                 </div>
                 </div>
-                <div style="text-align:center; font-size:0.8em; margin-top:0px;">表格：CS-WI-CX-22-F2</div>
+                <div style="text-align:center; font-size:0.8em; margin-top:0px;">表格：CS-WI-CX-22-F2，版次：2</div>
             `;
             document.getElementById('waterReportPreview').innerHTML = html;
 

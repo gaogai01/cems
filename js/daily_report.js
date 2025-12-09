@@ -1,5 +1,6 @@
 // js/daily_report.js
-
+// ⚠️ 請確認這是您正確的 GAS 網址
+const API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec";
 // 獨立的快取變數，避免與主程式衝突
 let _reportCache = null;
 

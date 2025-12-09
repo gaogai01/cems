@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>綜研滑油化驗報告</title>
+    <title>滑油化驗報告</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -78,19 +79,15 @@
             <h3 id="modalTitle" style="margin:0;">機組詳情</h3>
             <span class="close-btn" onclick="closeModal()">&times;</span>
         </div>
-        <div class="modal-body">
-            <table class="detail-table">
-                <thead><tr id="modalHeaderRow"></tr></thead>
-                <tbody id="detailTableBody"></tbody>
-            </table>
-        </div>
+        <div class="modal-body" id="modalBody">
+            </div>
     </div>
 </div>
 
 <script src="common.js"></script>
 
 <script>
-    // 請填入您的 Apps Script 網址
+    // API 設定
     const API_URL = "https://script.google.com/macros/s/AKfycbwqP_rRkI8xyVYFvo8nWY9pq4i1OLlvrLfAMxmleSAh-XDbMQN3yGk3eF0j5OdDDVMYxw/exec";
 
     let rawData = { headers: [], cnHeaders: [], units: [], dgLimits: { upper: [], lower: [] }, egLimits: { upper: [], lower: [] }, data: [] };
@@ -107,11 +104,9 @@
             const res = await fetch(API_URL + "?mode=oil");
             const json = await res.json();
             
-            // 處理資料結構
             if(json.dgLimits && json.egLimits) {
                 rawData = json;
             } else {
-                // 舊版相容
                 rawData.headers = json.headers || [];
                 rawData.cnHeaders = json.cnHeaders || [];
                 rawData.units = json.units || [];
@@ -121,7 +116,7 @@
             }
 
             document.getElementById('loading').style.display = 'none';
-            initControls(); 
+            initControls();      
             renderOverviewTables(); 
         } catch (e) {
             console.error("Error:", e);
@@ -137,7 +132,7 @@
         if(chartInstance) updateChart();
     }
 
-    // --- 狀態檢查 ---
+    // 狀態檢查
     function checkStatus(val, colIdx, isEG) {
         if (val === "" || val === undefined) return true; 
         let num = parseFloat(val);
@@ -157,7 +152,6 @@
     function getLimitText(colIdx, isEG) {
         const limits = isEG ? rawData.egLimits : rawData.dgLimits;
         if (!limits || !limits.lower || !limits.upper) return "-";
-
         const lower = limits.lower[colIdx];
         const upper = limits.upper[colIdx];
         if(lower !== "" && upper !== "") return `${lower}~${upper}`;
@@ -166,10 +160,10 @@
         return "-";
     }
 
-    // --- 整合資料來源 ---
     function getAllMachines() {
         let machines = [];
         if (rawData.data) machines = rawData.data.map(r => r[1]);
+        // 這裡沒有 filter，所以所有機組 (#1~#12, EG) 都會顯示
         return [...new Set(machines)].sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
     }
 
@@ -177,18 +171,16 @@
         const machines = getAllMachines();
         const years = new Set();
         rawData.data.forEach(r => { 
-            if(r[0]) {
-                const y = r[0].substring(0, 4); 
-                if(y) years.add(y); 
-            }
+            if(r[0]) { const y = r[0].substring(0, 4); if(y) years.add(y); }
         });
         const sortedYears = [...years].sort().reverse();
 
         const tYearSelect = document.getElementById('tableYear');
-        sortedYears.forEach(y => tYearSelect.innerHTML += `<option value="${y}">${y}年</option>`);
-
         const cYearSelect = document.getElementById('chartYear');
-        sortedYears.forEach(y => cYearSelect.innerHTML += `<option value="${y}">${y}年</option>`);
+        sortedYears.forEach(y => {
+            tYearSelect.innerHTML += `<option value="${y}">${y}年</option>`;
+            cYearSelect.innerHTML += `<option value="${y}">${y}年</option>`;
+        });
 
         const mBox = document.getElementById('machineCheckboxes');
         mBox.innerHTML = "";
@@ -198,14 +190,14 @@
         });
         
         const pSelect = document.getElementById('chartParam');
-        for(let i=2; i<rawData.headers.length - 1; i++) { // 減1排除 Diagnosis
+        for(let i=2; i<rawData.headers.length - 1; i++) { 
             const name = rawData.cnHeaders[i] || rawData.headers[i];
             pSelect.innerHTML += `<option value="${rawData.headers[i]}">${name}</option>`;
         }
         updateChart();
     }
 
-    // --- 渲染表格 ---
+    // 渲染總覽表格 (已移除「判定」欄位)
     function renderOverviewTables() {
         document.getElementById('dgTable').innerHTML = "";
         document.getElementById('egTable').innerHTML = "";
@@ -234,13 +226,16 @@
         let thead = document.createElement('thead');
         let trHead = document.createElement('tr');
         trHead.innerHTML = `<th>機組</th><th>檢驗日期</th>`;
-        for (let i = 2; i < rawData.headers.length - 1; i++) { // 減1排除 Diagnosis
+        for (let i = 2; i < rawData.headers.length - 1; i++) { 
             const cnName = rawData.cnHeaders[i] || rawData.headers[i];
             const unit = rawData.units[i] ? `<span class="unit-small">(${rawData.units[i]})</span>` : '';
             const th = document.createElement('th');
             th.innerHTML = `${cnName} ${unit}`;
             trHead.appendChild(th);
         }
+        // ▼ 移除判定欄位表頭
+        // const thDiag = document.createElement('th'); thDiag.innerText = "判定"; trHead.appendChild(thDiag);
+        
         thead.appendChild(trHead);
         table.appendChild(thead);
 
@@ -270,11 +265,12 @@
 
             const dateStr = targetRow[0].split('T')[0];
             const diagIdx = rawData.headers.length - 1;
-            const diagText = targetRow[diagIdx];
+            const diagText = targetRow[diagIdx]; // 建議事項內容
             
             let tr = document.createElement('tr');
             tr.onclick = () => openModal(key, history.slice(0, 3), isEG);
 
+            // 計算狀態 (用於顯示機組旁的紅綠燈)
             let hasError = false;
             for (let i = 2; i < rawData.headers.length - 1; i++) {
                 if (!checkStatus(targetRow[i], i, isEG)) { hasError = true; break; }
@@ -282,9 +278,11 @@
             const dotClass = hasError ? "dot-err" : "dot-ok";
 
             let tdName = document.createElement('td');
+            // 保留紅綠燈，但移除判定欄位
             tdName.innerHTML = `<span class="status-dot ${dotClass}"></span>${key}`;
+            // 如果有建議事項，顯示小圖示
             if (diagText && diagText.trim() !== "") {
-                tdName.innerHTML += `<span class="diagnosis-text">💬 ${diagText}</span>`;
+                tdName.innerHTML += `<span class="diagnosis-text" title="有建議事項"> 📝</span>`;
             }
             tr.appendChild(tdName);
 
@@ -302,51 +300,71 @@
                 td.innerText = val;
                 tr.appendChild(td);
             }
+            // ▼ 移除判定結果的 td
+            // let tdDiag = document.createElement('td'); ... tr.appendChild(tdDiag);
+
             tbody.appendChild(tr);
         });
         table.appendChild(tbody);
     }
 
-    // --- Modal ---
+    // --- Modal (詳細視窗：建議顯示在最上方) ---
     function openModal(machineId, historyRows, isEG) {
         const modal = document.getElementById('detailModal');
-        const theadRow = document.getElementById('modalHeaderRow');
-        const tbody = document.getElementById('detailTableBody');
-        document.getElementById('modalTitle').innerText = `${machineId} - 近三次歷史報告`;
+        const modalBody = document.getElementById('modalBody'); // 取得 body 容器
+        document.getElementById('modalTitle').innerText = `${machineId} - 詳細歷史紀錄`;
         
-        let headerHtml = `<th style="width:30%">檢驗項目</th><th style="width:15%">標準</th>`;
+        // 1. 處理建議事項 (放在最上方)
+        const diagIdx = rawData.headers.length - 1;
+        const latestDiag = historyRows[0][diagIdx];
+        let adviceHtml = "";
+        
+        // 檢查是否有異常 (決定建議框顏色)
+        let hasError = false;
+        for (let i = 2; i < rawData.headers.length - 1; i++) {
+            if (!checkStatus(historyRows[0][i], i, isEG)) { hasError = true; break; }
+        }
+        const alertClass = hasError ? "alert-danger" : "alert-info"; // 紅色或藍色框
+        const diagText = (latestDiag && latestDiag.trim() !== "") ? latestDiag : "本次化驗無特別建議事項。";
+
+        adviceHtml = `
+            <div class="advice-box ${alertClass}" style="padding:15px; margin-bottom:15px; border-radius:8px; border-left:5px solid; background-color:${hasError?'#ffebee':'#e3f2fd'}; border-left-color:${hasError?'#f44336':'#2196f3'}; color:${hasError?'#b71c1c':'#0d47a1'};">
+                <strong>📝 最新建議 (${historyRows[0][0].split('T')[0]})：</strong><br>
+                ${diagText}
+            </div>
+        `;
+
+        // 2. 建立詳細表格
+        let tableHtml = `<table class="detail-table" style="width:100%; border-collapse:collapse;"><thead><tr><th style="text-align:left; background:var(--table-head-bg);">檢驗項目</th><th style="background:var(--table-head-bg);">標準</th>`;
+        
         historyRows.forEach((row, idx) => {
             const date = row[0].split('T')[0];
-            headerHtml += `<th class="${idx===0?'col-latest':''}">${date}</th>`;
+            tableHtml += `<th class="${idx===0?'col-latest':''}" style="background:var(--table-head-bg);">${date}</th>`;
         });
-        for(let i=historyRows.length; i<3; i++) headerHtml += `<th>-</th>`;
-        theadRow.innerHTML = headerHtml;
+        for(let i=historyRows.length; i<3; i++) tableHtml += `<th style="background:var(--table-head-bg);">-</th>`;
+        tableHtml += `</tr></thead><tbody>`;
 
-        tbody.innerHTML = "";
         for(let i=2; i<rawData.headers.length - 1; i++) {
             const cnName = rawData.cnHeaders[i] || rawData.headers[i];
             const unit = rawData.units[i] || "";
             let limitText = getLimitText(i, isEG);
             
-            let rowHtml = `<tr><td>${cnName} <span style="color:#999;font-size:0.8em">(${unit})</span></td><td style="color:#666;font-size:0.85em">${limitText}</td>`;
+            tableHtml += `<tr><td style="text-align:left; font-weight:bold;">${cnName} <span style="color:#888;font-size:0.8em">(${unit})</span></td><td style="color:#666;font-size:0.85em">${limitText}</td>`;
             for(let j=0; j<3; j++) {
                 const isLatest = (j === 0) ? 'col-latest' : '';
                 if (j < historyRows.length) {
                     const val = historyRows[j][i];
                     const valClass = checkStatus(val, i, isEG) ? "" : "val-limit";
-                    rowHtml += `<td class="${isLatest} ${valClass}">${val}</td>`;
-                } else { rowHtml += `<td class="${isLatest}">-</td>`; }
+                    // 詳細表格加上底線樣式
+                    tableHtml += `<td class="${isLatest} ${valClass}" style="border-bottom:1px solid var(--border-color); padding:8px;">${val}</td>`;
+                } else { tableHtml += `<td class="${isLatest}" style="border-bottom:1px solid var(--border-color);"> - </td>`; }
             }
-            rowHtml += `</tr>`;
-            tbody.innerHTML += rowHtml;
+            tableHtml += `</tr>`;
         }
-        
-        const diagIdx = rawData.headers.length - 1;
-        const latestDiag = historyRows[0][diagIdx];
-        if(latestDiag) {
-            tbody.innerHTML += `<tr><td colspan="5" style="text-align:left; color:#d32f2f; padding:10px; background:#fff5f5;"><b>💡 最新建議：</b> ${latestDiag}</td></tr>`;
-        }
+        tableHtml += `</tbody></table>`;
 
+        // 組合內容
+        modalBody.innerHTML = adviceHtml + tableHtml;
         modal.style.display = 'block';
     }
     function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
@@ -367,7 +385,6 @@
         let allLabels = new Set();
         const pIdx = rawData.headers.indexOf(pKey);
 
-        // 取得上下限 (優先用 DG)
         const isAllEG = selectedMachines.every(m => m.includes('EG'));
         const limits = isAllEG ? rawData.egLimits : rawData.dgLimits;
         const lower = limits ? parseFloat(limits.lower[pIdx]) : NaN;
@@ -398,7 +415,6 @@
 
         const sortedLabels = Array.from(allLabels).sort();
         
-        // 對齊數據
         datasets.forEach(ds => {
              const newData = sortedLabels.map(lbl => {
                  const pt = ds.data.find(p => p.x === lbl);

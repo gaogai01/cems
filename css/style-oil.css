@@ -194,6 +194,7 @@ select {
     border-right: 2px solid var(--border-color); 
     font-weight: bold; 
     min-width: 80px; 
+    max-width: 100px;
 }
 
 /* 左上角交界處 (Corner Cell) */

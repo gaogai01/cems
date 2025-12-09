@@ -1,75 +1,401 @@
-        /* --- CSS 變數定義 --- */
-        :root { 
-            --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #888; 
-            --border-color: #e0e0e0; --primary: #607d8b; --danger: #dc3545; 
-            --table-head-bg: #f8f9fa; --table-hover: #f1f3f5; --table-stripe: #fafafa;
-            --sticky-bg: #ffffff;
-        }
-        [data-theme="dark"] {
-            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #aaaaaa;
-            --border-color: #333333; --table-head-bg: #2c2c2c; --table-hover: #333; --table-stripe: #222;
-            --sticky-bg: #1e1e1e;
-        }
+/* ==========================================================================
+   1. 全域變數定義 (CSS Variables)
+   說明：定義全站共用的顏色系統，方便統一管理與切換深色模式。
+   ========================================================================== */
+:root { 
+    /* --- 亮色模式 (Light Mode) 預設值 --- */
+    --bg-body: #f0f2f5;       /* 網頁背景色 */
+    --bg-card: #ffffff;       /* 卡片/區塊背景色 */
+    --text-main: #2c3e50;     /* 主要文字顏色 */
+    --text-sub: #888;         /* 次要文字顏色 (單位、標籤) */
+    --border-color: #e0e0e0;  /* 邊框顏色 */
+    --primary: #607d8b;       /* 主題色 (藍灰色) */
+    --danger: #dc3545;        /* 危險/錯誤色 (紅) */
+    
+    /* 表格專用顏色 */
+    --table-head-bg: #f8f9fa; /* 表頭背景 */
+    --table-hover: #f1f3f5;   /* 滑鼠懸停背景 */
+    --table-stripe: #fafafa;  /* 斑馬紋背景 */
+    --sticky-bg: #ffffff;     /* 凍結欄位的背景 (需不透明以免穿透) */
+}
 
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
-        
-        /* 導航列 (手動加回，因為移除了 common.js) */
-        .navbar { background: #333; padding: 10px 20px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .nav-link { color: #ccc; text-decoration: none; padding: 6px 12px; border-radius: 5px; transition: 0.2s; }
-        .nav-link:hover { background: #555; color: white; }
-        .nav-link.active { background: var(--primary); color: white; font-weight: bold; }
+/* --- 深色模式 (Dark Mode) 覆寫值 --- */
+/* 當 body 標籤帶有 data-theme="dark" 屬性時生效 */
+[data-theme="dark"] {
+    --bg-body: #121212; 
+    --bg-card: #1e1e1e; 
+    --text-main: #e0e0e0; 
+    --text-sub: #aaaaaa;
+    --border-color: #333333; 
+    --table-head-bg: #2c2c2c; 
+    --table-hover: #333; 
+    --table-stripe: #222;
+    --sticky-bg: #1e1e1e;
+}
 
-        .container { max-width: 98%; margin: 0 auto; padding: 0 10px; }
-        
-        h2 { margin: 20px 0 15px 0; font-size: 1.3rem; border-left: 5px solid var(--primary); padding-left: 10px; display: flex; justify-content: space-between; align-items: center;}
-        h3.section-title { margin: 25px 0 10px 0; font-size: 1.1rem; color: var(--text-main); border-bottom: 2px solid var(--border-color); padding-bottom: 5px; }
-        .btn-theme { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+/* ==========================================================================
+   2. 基礎排版 (Base Layout)
+   ========================================================================== */
+body { 
+    font-family: "Microsoft JhengHei", sans-serif; /* 微軟正黑體 */
+    background: var(--bg-body); 
+    color: var(--text-main); 
+    margin: 0; 
+    padding: 0; 
+    transition: background 0.3s; /* 切換主題時的平滑過渡效果 */
+}
 
-        .table-controls { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; background: var(--bg-card); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
-        .table-controls label { font-weight: bold; font-size: 0.9rem; color: var(--text-main); }
-        select { padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.9rem; background: var(--bg-card); color: var(--text-main); }
+/* --- 導航列樣式 --- */
+/* 手動加回，因為此頁面移除了 common.js 的自動載入 */
+.navbar { 
+    background: #333; 
+    padding: 10px 20px; 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    margin-bottom: 20px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+}
 
-        .table-container { width: 100%; overflow-x: auto; background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 30px; max-height: 80vh; }
-        .overview-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem; white-space: nowrap; }
-        .overview-table th, .overview-table td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); text-align: center; vertical-align: middle; }
-        .overview-table thead th { background: var(--table-head-bg); color: var(--text-main); font-weight: bold; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border-color); }
-        .overview-table th:first-child, .overview-table td:first-child { position: sticky; left: 0; z-index: 11; background-color: var(--sticky-bg); border-right: 2px solid var(--border-color); font-weight: bold; min-width: 80px; }
-        .overview-table thead th:first-child { z-index: 12; background-color: var(--table-head-bg); }
-        .overview-table tbody tr:nth-child(even) td { background-color: var(--table-stripe); }
-        .overview-table tbody tr:nth-child(even) td:first-child { background-color: var(--sticky-bg); filter: brightness(0.97); } 
-        .overview-table tbody tr:hover td { background-color: var(--table-hover); cursor: pointer; }
-        
-        .val-limit { color: var(--danger); font-weight: 900; background-color: rgba(220, 53, 69, 0.1); }
-        .unit-small { font-size: 0.75rem; color: var(--text-sub); font-weight: normal; display: block; }
-        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
-        .dot-ok { background-color: #28a745; } .dot-err { background-color: #dc3545; box-shadow: 0 0 5px #dc3545; }
+.nav-link { 
+    color: #ccc; 
+    text-decoration: none; 
+    padding: 6px 12px; 
+    border-radius: 5px; 
+    transition: 0.2s; 
+}
 
-        .chart-section { background: var(--bg-card); padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 50px; }
-        .chart-controls { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; align-items: flex-start; }
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        .control-group label { font-weight: bold; font-size: 0.9rem; color: var(--text-sub); }
-        
-        .checkbox-container { display: flex; flex-wrap: wrap; gap: 10px; max-height: 100px; overflow-y: auto; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; flex: 1; min-width: 300px; background: var(--bg-body); }
-        .checkbox-item { display: flex; align-items: center; font-size: 0.85rem; color: var(--text-main); cursor: pointer; background: var(--bg-card); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color); }
-        .checkbox-item input { margin-right: 5px; cursor: pointer; }
-        .checkbox-item:hover { background: var(--table-hover); }
-        .chart-container { position: relative; height: 450px; width: 100%; }
+.nav-link:hover { 
+    background: #555; 
+    color: white; 
+}
 
-        /* Modal */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
-        .modal-content { background-color: var(--bg-card); color: var(--text-main); margin: 2% auto; padding: 0; border-radius: 12px; width: 95%; max-width: 900px; max-height: 95vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .modal-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--table-head-bg); }
-        .close-btn { font-size: 1.8rem; cursor: pointer; color: var(--text-sub); line-height: 1; }
-        .modal-body { overflow-y: auto; padding: 10px 20px 20px 20px; }
-        
-        .detail-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        .detail-table th { background: var(--table-head-bg); color: var(--text-sub); font-weight: bold; padding: 10px 5px; text-align: center; position: sticky; top: 0; z-index: 2; border-bottom: 2px solid var(--border-color); }
-        .detail-table td { padding: 6px 5px; border-bottom: 1px solid var(--border-color); text-align: center; color: var(--text-main); vertical-align: middle; }
-        .detail-table tr:hover { background-color: var(--table-hover); }
-        .col-item { text-align: left !important; width: 30%; font-weight: bold; color: var(--text-main); }
-        .col-unit { font-size: 0.75rem; color: var(--text-sub); font-weight: normal; margin-left: 4px; }
-        .col-limit { width: 15%; font-size: 0.8rem; color: var(--text-sub) !important; }
-        .col-data { width: 18%; font-family: 'Arial', sans-serif; }
-        .latest-col { background-color: rgba(0, 123, 255, 0.05); font-weight: bold; }
+.nav-link.active { 
+    background: var(--primary); /* 當前頁面高亮 */
+    color: white; 
+    font-weight: bold; 
+}
 
-        #loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #888; }
+/* 內容容器：限制最大寬度並置中 */
+.container { 
+    max-width: 98%; 
+    margin: 0 auto; 
+    padding: 0 10px; 
+}
+
+/* --- 標題樣式 --- */
+h2 { 
+    margin: 20px 0 15px 0; 
+    font-size: 1.3rem; 
+    border-left: 5px solid var(--primary); /* 左側裝飾線 */
+    padding-left: 10px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+}
+
+h3.section-title { 
+    margin: 25px 0 10px 0; 
+    font-size: 1.1rem; 
+    color: var(--text-main); 
+    border-bottom: 2px solid var(--border-color); /* 底部裝飾線 */
+    padding-bottom: 5px; 
+}
+
+/* 切換主題按鈕 */
+.btn-theme { 
+    border: 1px solid var(--border-color); 
+    background: var(--bg-card); 
+    color: var(--text-main); 
+    padding: 5px 10px; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    font-size: 0.9rem; 
+}
+
+/* ==========================================================================
+   3. 表格控制區 (Table Controls)
+   說明：篩選器與下拉選單的樣式
+   ========================================================================== */
+.table-controls { 
+    margin-bottom: 10px; 
+    display: flex; 
+    gap: 10px; 
+    align-items: center; 
+    background: var(--bg-card); 
+    padding: 10px; 
+    border-radius: 8px; 
+    border: 1px solid var(--border-color); 
+}
+
+.table-controls label { 
+    font-weight: bold; 
+    font-size: 0.9rem; 
+    color: var(--text-main); 
+}
+
+select { 
+    padding: 6px; 
+    border-radius: 4px; 
+    border: 1px solid var(--border-color); 
+    font-size: 0.9rem; 
+    background: var(--bg-card); 
+    color: var(--text-main); 
+}
+
+/* ==========================================================================
+   4. 總覽表格樣式 (Overview Table) - 重點：凍結窗格
+   ========================================================================== */
+.table-container { 
+    width: 100%; 
+    overflow-x: auto; /* 允許水平捲動 */
+    background: var(--bg-card); 
+    border-radius: 8px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    border: 1px solid var(--border-color); 
+    margin-bottom: 30px; 
+    max-height: 80vh; /* 限制高度，超出則垂直捲動 */
+}
+
+.overview-table { 
+    width: 100%; 
+    border-collapse: separate; /* 必須設為 separate 才能使 sticky 生效 */
+    border-spacing: 0; 
+    font-size: 0.9rem; 
+    white-space: nowrap; /* 強制不換行 */
+}
+
+.overview-table th, .overview-table td { 
+    padding: 10px 8px; 
+    border-bottom: 1px solid var(--border-color); 
+    border-right: 1px solid var(--border-color); 
+    text-align: center; 
+    vertical-align: middle; 
+}
+
+/* --- 凍結表頭 (Sticky Header) --- */
+.overview-table thead th { 
+    background: var(--table-head-bg); 
+    color: var(--text-main); 
+    font-weight: bold; 
+    position: sticky; /* 關鍵屬性 */
+    top: 0; 
+    z-index: 10; /* 層級需高於內容 */
+    border-bottom: 2px solid var(--border-color); 
+}
+
+/* --- 凍結首欄 (Sticky First Column) --- */
+.overview-table th:first-child, 
+.overview-table td:first-child { 
+    position: sticky; 
+    left: 0; 
+    z-index: 11; /* 層級需高於一般儲存格 */
+    background-color: var(--sticky-bg); /* 必須設定背景色，否則捲動時文字會重疊 */
+    border-right: 2px solid var(--border-color); 
+    font-weight: bold; 
+    min-width: 80px; 
+}
+
+/* 左上角交界處 (Corner Cell) */
+.overview-table thead th:first-child { 
+    z-index: 12; /* 最高層級，確保捲動時永遠在最上層 */
+    background-color: var(--table-head-bg); 
+}
+
+/* 斑馬紋與懸停效果 */
+.overview-table tbody tr:nth-child(even) td { 
+    background-color: var(--table-stripe); 
+}
+/* 修正斑馬紋首欄的背景色問題 */
+.overview-table tbody tr:nth-child(even) td:first-child { 
+    background-color: var(--sticky-bg); 
+    filter: brightness(0.97); /* 讓首欄稍微變暗以區分 */
+} 
+.overview-table tbody tr:hover td { 
+    background-color: var(--table-hover); 
+    cursor: pointer; 
+}
+
+/* --- 狀態指示器 --- */
+.val-limit { 
+    color: var(--danger); 
+    font-weight: 900; 
+    background-color: rgba(220, 53, 69, 0.1); /* 紅色背景強調 */
+}
+
+.unit-small { 
+    font-size: 0.75rem; 
+    color: var(--text-sub); 
+    font-weight: normal; 
+    display: block; 
+}
+
+.status-dot { 
+    display: inline-block; 
+    width: 10px; 
+    height: 10px; 
+    border-radius: 50%; 
+    margin-right: 5px; 
+}
+.dot-ok { background-color: #28a745; } /* 綠燈 */
+.dot-err { background-color: #dc3545; box-shadow: 0 0 5px #dc3545; } /* 紅燈+光暈 */
+
+/* ==========================================================================
+   5. 圖表區塊樣式 (Charts)
+   ========================================================================== */
+.chart-section { 
+    background: var(--bg-card); 
+    padding: 20px; 
+    border-radius: 10px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    border: 1px solid var(--border-color); 
+    margin-bottom: 50px; 
+}
+
+.chart-controls { 
+    display: flex; 
+    gap: 15px; 
+    margin-bottom: 15px; 
+    flex-wrap: wrap; 
+    align-items: flex-start; 
+}
+
+.control-group { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+}
+
+.control-group label { 
+    font-weight: bold; 
+    font-size: 0.9rem; 
+    color: var(--text-sub); 
+}
+
+/* 自訂勾選框列表容器 */
+.checkbox-container { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 10px; 
+    max-height: 100px; 
+    overflow-y: auto; 
+    border: 1px solid var(--border-color); 
+    padding: 8px; 
+    border-radius: 4px; 
+    flex: 1; 
+    min-width: 300px; 
+    background: var(--bg-body); 
+}
+
+.checkbox-item { 
+    display: flex; 
+    align-items: center; 
+    font-size: 0.85rem; 
+    color: var(--text-main); 
+    cursor: pointer; 
+    background: var(--bg-card); 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    border: 1px solid var(--border-color); 
+}
+
+.checkbox-item input { margin-right: 5px; cursor: pointer; }
+.checkbox-item:hover { background: var(--table-hover); }
+
+.chart-container { position: relative; height: 450px; width: 100%; }
+
+/* ==========================================================================
+   6. 彈出視窗 (Modal)
+   說明：用於顯示單一設備的詳細歷史紀錄
+   ========================================================================== */
+.modal { 
+    display: none; /* 預設隱藏 */
+    position: fixed; 
+    z-index: 1000; 
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    height: 100%; 
+    background-color: rgba(0,0,0,0.6); /* 半透明遮罩 */
+    backdrop-filter: blur(3px); /* 背景模糊效果 */
+}
+
+.modal-content { 
+    background-color: var(--bg-card); 
+    color: var(--text-main); 
+    margin: 2% auto; 
+    padding: 0; 
+    border-radius: 12px; 
+    width: 95%; 
+    max-width: 900px; 
+    max-height: 95vh; 
+    overflow: hidden; /* 內部內容捲動，框本身不捲動 */
+    display: flex; 
+    flex-direction: column; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+}
+
+.modal-header { 
+    padding: 12px 20px; 
+    border-bottom: 1px solid var(--border-color); 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    background: var(--table-head-bg); 
+}
+
+.close-btn { 
+    font-size: 1.8rem; 
+    cursor: pointer; 
+    color: var(--text-sub); 
+    line-height: 1; 
+}
+
+.modal-body { 
+    overflow-y: auto; /* 內容過長時垂直捲動 */
+    padding: 10px 20px 20px 20px; 
+}
+
+/* --- 詳細資料表格樣式 --- */
+.detail-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    font-size: 0.9rem; 
+}
+
+.detail-table th { 
+    background: var(--table-head-bg); 
+    color: var(--text-sub); 
+    font-weight: bold; 
+    padding: 10px 5px; 
+    text-align: center; 
+    position: sticky; 
+    top: 0; 
+    z-index: 2; 
+    border-bottom: 2px solid var(--border-color); 
+}
+
+.detail-table td { 
+    padding: 6px 5px; 
+    border-bottom: 1px solid var(--border-color); 
+    text-align: center; 
+    color: var(--text-main); 
+    vertical-align: middle; 
+}
+
+.detail-table tr:hover { background-color: var(--table-hover); }
+
+/* 詳細表格欄位寬度設定 */
+.col-item { text-align: left !important; width: 30%; font-weight: bold; color: var(--text-main); }
+.col-unit { font-size: 0.75rem; color: var(--text-sub); font-weight: normal; margin-left: 4px; }
+.col-limit { width: 15%; font-size: 0.8rem; color: var(--text-sub) !important; }
+.col-data { width: 18%; font-family: 'Arial', sans-serif; }
+.latest-col { background-color: rgba(0, 123, 255, 0.05); font-weight: bold; } /* 標示最新一筆資料 */
+
+/* 載入中動畫 */
+#loading { 
+    text-align: center; 
+    padding: 50px; 
+    font-size: 1.2rem; 
+    color: #888; 
+}

@@ -9,6 +9,9 @@
  * 3. 產生勾選框
  * 4. 若無歷史資料則開始下載，若有則直接更新圖表
  */
+
+const API_URL = "https://script.google.com/macros/s/AKfycbz7e5iwN7g122fMywsZUVF3YyOUtQWsmYzz_rO-NuKW55zpUsNUOMgKnY5bBV-6k9KM/exec";
+
 function openChartModal() {
     document.getElementById('chartModal').style.display = 'block';
     

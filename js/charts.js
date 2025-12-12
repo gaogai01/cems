@@ -1,239 +1,243 @@
-// 全域變數 (用於儲存歷史數據與圖表實例)
-//let historyData = null;
+// index.html的歷史趨勢圖
+
+// ============================================================
+// 1. 設定區
+// ============================================================
+const CHART_API_URL = "https://script.google.com/macros/s/AKfycbz7e5iwN7g122fMywsZUVF3YyOUtQWsmYzz_rO-NuKW55zpUsNUOMgKnY5bBV-6k9KM/exec";
+
+// 全域變數
 //let myChart = null;
 
-/**
- * 開啟圖表視窗
- * 1. 顯示 Modal
- * 2. 預設選擇「液位」類別
- * 3. 產生勾選框
- * 4. 若無歷史資料則開始下載，若有則直接更新圖表
- */
+// ============================================================
+// 2. 視窗控制
+// ============================================================
 
 function openChartModal() {
-    document.getElementById('chartModal').style.display = 'block';
+    const modal = document.getElementById('chartModal');
+    if(modal) modal.style.display = 'block';
     
+    // 預設日期：今天
+    const dateInput = document.getElementById('chartEndDate');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+
     // 預設選取類別
     const catSelect = document.getElementById('categorySelect');
-    if (catSelect.value === "") catSelect.value = 'level';
+    if (catSelect && catSelect.value === "") catSelect.value = 'level';
     
     renderCheckboxes();
     
-    // 如果還沒抓過歷史資料，就去抓；否則直接畫圖
-    if (!historyData) {
+    // 檢查是否有歷史資料
+    if (!window.historyData || !window.historyData.data || window.historyData.data.length === 0) {
         fetchHistory();
     } else {
-        // 稍微延遲以確保 DOM 渲染完成
         setTimeout(() => {
-            // 嘗試預設勾選一個項目 (例如檢知槽液位)，避免圖表空白
-            const defaultChk = document.querySelector('input[value="LI018_VAL0"]'); // 預設 LI018
-            if (defaultChk && document.querySelectorAll('#tagCheckboxes input:checked').length === 0) {
-                defaultChk.checked = true;
-            }
+            autoSelectDefault();
             updateChart();
         }, 100);
     }
 }
 
-/**
- * 關閉圖表視窗
- */
 function closeChartModal() {
-    document.getElementById('chartModal').style.display = 'none';
+    const modal = document.getElementById('chartModal');
+    if(modal) modal.style.display = 'none';
 }
 
-/**
- * 從後端 API 抓取歷史數據 (mode=history)
- */
-function fetchHistory() {
-    // 顯示載入中狀態 (可選)
-    const ctx = document.getElementById('myChart').getContext('2d');
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.font = "20px Arial";
-    ctx.fillStyle = "gray";
-    ctx.textAlign = "center";
-    ctx.fillText("數據載入中...", ctx.canvas.width/2, ctx.canvas.height/2);
+function autoSelectDefault() {
+    const defaultChk = document.querySelector('input[value="LI018_VAL0"]'); 
+    const checked = document.querySelectorAll('#tagCheckboxes input:checked');
+    if (defaultChk && checked.length === 0) {
+        defaultChk.checked = true;
+    }
+}
 
-    fetch(API_URL + "?mode=history")
-        .then(res => res.json())
-        .then(json => {
-            historyData = json;
-            updateChart();
+// ============================================================
+// 3. 資料抓取
+// ============================================================
+
+function fetchHistory() {
+    const loading = document.getElementById('chartLoading');
+    if(loading) loading.style.display = 'block';
+
+    console.log("開始抓取歷史資料...");
+
+    fetch(CHART_API_URL + "?mode=history")
+        .then(response => {
+            if (!response.ok) throw new Error("網路回應不正常");
+            return response.json();
         })
-        .catch(err => {
-            console.error("History fetch error:", err);
-            alert("歷史數據載入失敗");
+        .then(json => {
+            console.log("歷史資料抓取成功，筆數:", json.data ? json.data.length : 0);
+            window.historyData = json;
+            
+            if(loading) loading.style.display = 'none';
+            
+            setTimeout(() => {
+                autoSelectDefault();
+                updateChart();
+            }, 100);
+        })
+        .catch(error => {
+            console.error('History Error:', error);
+            if(loading) {
+                loading.innerHTML = `<div style="color:red; padding:20px;">
+                    歷史數據載入失敗<br>
+                    <small>${error.message}</small><br>
+                    <button onclick="fetchHistory()" style="margin-top:10px;">重試</button>
+                </div>`;
+            }
         });
 }
 
-/**
- * 根據選擇的類別 (Category) 渲染對應的勾選框
- */
+// ============================================================
+// 4. 選單與 checkbox 渲染 (已新增 回收水槽 與 氨氮)
+// ============================================================
+
+const CATEGORIES = {
+    // ▼ 新增 LI011_VAL0 (回收水槽液位)
+    'level': ['LIT000_VAL0','LI003_VAL0','LI012_VAL0','LI021_VAL0','LI018_VAL0', 'LI011_VAL0'], 
+    'flow':  ['FI000B_Q_VAL0','FI000A_Q_VAL0','FI012_Q_VAL0','FI021W_Q_VAL0','FI018_Q_VAL0','FI018B_Q_VAL0','FI000B_Q_VAL0'], 
+    'ph':    ['PHI015_VAL0','PHI013_VAL0','PHI014_VAL0','PHI017_VAL0','PHI018_VAL0'], 
+    // ▼ 新增 NH3018_VAL0 (氨氮)
+    'quality': ['SS018_VAL0','COD018_VAL0','OFD018_VAL0', 'NH3018_VAL0'], 
+    'pac': ['LI044_VAL0','LI048_VAL0','LI049_VAL0','LI043_VAL0']
+};
+
+const TAG_NAMES = {
+    'LIT000_VAL0': 'T05-01二段式API槽水位', 'LI003_VAL0': 'T05-04中間水槽水位', 'LI012_VAL0': 'T01-01調勻槽水位', 'LI021_VAL0': 'T02-01生活污水槽水位', 'LI018_VAL0': 'T01-07進水檢知槽水位',
+    'FI000B_Q_VAL0': '含油廢水進口流量','FI000A_Q_VAL0': '含油廢水出口流量', 'FI012_Q_VAL0': '事業廢水流量', 'FI021W_Q_VAL0': '生活污水流量', 'FI018_Q_VAL0': '放流水流量', 'FI018B_Q_VAL0': '回收水流量',
+    'PHI015_VAL0': '靜態攪拌管pH', 'PHI013_VAL0': '第一酸鹼槽PH', 'PHI014_VAL0': '膠凝槽PH', 'PHI017_VAL0': '第二酸鹼槽PH', 'PHI018_VAL0': '放流水PH',
+    'SS018_VAL0': '放流水SS', 'COD018_VAL0': '放流水COD', 'OFD018_VAL0': '放流水油脂',
+    'LI044_VAL0': '鹼槽液位', 'LI048_VAL0': '凝膠儲槽液位', 'LI049_VAL0': 'PAC儲槽液位', 'LI043_VAL0': '酸槽液位',
+    'FI000B_Q_VAL0': 'API進口累積', 'FI000A_Q_VAL0': 'API出口累積',
+    // ▼ 新增的中文對照 (若 Tag ID 不對，請修改左邊的 Key)
+    'LI011_VAL0': 'T02-04回收水槽液位',
+    'NH3018_VAL0': '放流水氨氮'
+};
+
 function renderCheckboxes() {
     const cat = document.getElementById('categorySelect').value;
     const container = document.getElementById('tagCheckboxes');
-    container.innerHTML = ''; // 清空舊選項
-
-    let items = [];
-    // 從 DASHBOARD_CONFIG 篩選出符合類別的項目
-    DASHBOARD_CONFIG.forEach(group => {
-        group.items.forEach(item => {
-            if (item.cat === cat) {
-                items.push(item);
-            }
-        });
-    });
-
-    // 生成 HTML
-    items.forEach((item) => {
-        const div = document.createElement('div');
-        div.className = 'checkbox-item';
-        div.innerHTML = `
-            <input type="checkbox" value="${item.col}" id="chk_${item.col}" onchange="updateChart()">
-            <label for="chk_${item.col}">${item.name} (${item.tag})</label>
-        `;
-        container.appendChild(div);
-    });
+    if(!container) return;
     
-    // 切換類別後，圖表會暫時清空，等待使用者勾選
-    if(myChart) {
-        myChart.data.datasets = [];
-        myChart.update();
-    }
+    container.innerHTML = ""; 
+
+    const tags = CATEGORIES[cat] || [];
+    
+    tags.forEach(tag => {
+        const label = document.createElement('label');
+        label.className = "checkbox-item";
+        label.style.display = "inline-block"; 
+        label.style.marginRight = "15px";
+        label.style.marginBottom = "5px";
+        label.style.cursor = "pointer";
+        
+        const input = document.createElement('input');
+        input.type = "checkbox";
+        input.value = tag;
+        input.onchange = updateChart; 
+        
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(" " + (TAG_NAMES[tag] || tag)));
+        
+        container.appendChild(label);
+    });
 }
 
-/**
- * 核心繪圖函式
- * 根據時間範圍、選擇的點位，繪製 Chart.js 折線圖
- */
+// ============================================================
+// 5. 圖表核心繪製邏輯 (已更新日期篩選邏輯)
+// ============================================================
+
 function updateChart() {
-    if (!historyData) return;
+    if (!window.historyData || !window.historyData.data) return;
 
-    // 1. 取得篩選條件
-    const timeRangeHours = parseInt(document.getElementById('timeRange').value);
-    const selectedDateStr = document.getElementById('chartDate').value; // 如果有日期選擇器
-    
-    // 計算時間範圍 (預設以今天/現在為基準，或以選擇的日期 23:59:59 為基準)
-    let endTime = new Date();
-    if (selectedDateStr) {
-        const d = new Date(selectedDateStr);
-        endTime = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
-    }
-    const startTime = endTime.getTime() - (timeRangeHours * 60 * 60 * 1000);
+    const checkedBoxes = document.querySelectorAll('#tagCheckboxes input:checked');
+    const selectedTags = Array.from(checkedBoxes).map(cb => cb.value);
 
-    const headers = historyData.headers;
-    const rawRows = historyData.data; // 原始數據 (二維陣列)
+    const ctxCanvas = document.getElementById('historyChart');
+    if(!ctxCanvas) return;
+    const ctx = ctxCanvas.getContext('2d');
     
-    // 2. 找出被勾選的欄位
-    const checkboxes = document.querySelectorAll('#tagCheckboxes input:checked');
-    const selectedCols = [];
-    checkboxes.forEach(chk => {
-        const idx = headers.indexOf(chk.value);
-        if (idx !== -1) {
-            selectedCols.push({
-                idx: idx,
-                label: chk.parentNode.textContent.trim(), // 取得 label 文字
-                key: chk.value,
-                data: []
-            });
+    if (selectedTags.length === 0) {
+        if (myChart) {
+            myChart.data.datasets = [];
+            myChart.update();
         }
-    });
-
-    if (selectedCols.length === 0) {
-        if(myChart) { myChart.data.datasets = []; myChart.update(); }
         return;
     }
 
-    // 3. 遍歷數據，篩選時間並填入 Dataset
-    const labels = [];
-    
-    // 為了效能，可以從後面開始往回找 (如果是按時間排序的話)
-    // 這裡假設數據是依時間排序的，或者是亂序全掃描
-    rawRows.forEach(row => {
-        // row[0] 是 timestamp
-        let timeStr = row[0];
-        // 處理 iOS/Safari 日期相容性 (將 - 轉為 /)
-        let rowDate = new Date(timeStr.replace(/-/g, "/"));
-        let rowTime = rowDate.getTime();
+    const headers = window.historyData.headers;
+    const rows = window.historyData.data;
 
-        if (rowTime >= startTime && rowTime <= endTime.getTime()) {
-            // 格式化 X 軸標籤 (月/日 時:分)
-            let label = (rowDate.getMonth() + 1) + "/" + rowDate.getDate() + " " + 
-                        rowDate.getHours().toString().padStart(2, '0') + ":" + 
-                        rowDate.getMinutes().toString().padStart(2, '0');
+    // Tag 索引
+    const tagIndices = selectedTags.map(tag => {
+        return { tag: tag, index: headers.indexOf(tag) };
+    });
+
+    const datasets = [];
+    const colors = ['#3f51b5', '#e91e63', '#4caf50', '#ff9800', '#9c27b0', '#00bcd4', '#795548'];
+    
+    // --- 📅 時間篩選邏輯開始 ---
+    const rangeSelect = document.getElementById('timeRangeSelect');
+    const dateInput = document.getElementById('chartEndDate');
+    
+    const range = rangeSelect ? rangeSelect.value : '24h';
+    let endTime = new Date();
+    
+    // 若有選擇結束日期，設定為該日期的 23:59:59
+    if (dateInput && dateInput.value) {
+        endTime = new Date(dateInput.value);
+        endTime.setHours(23, 59, 59, 999);
+    }
+
+    // 計算開始時間 (StartTime)
+    let startTime = new Date(endTime);
+    if (range === '24h') startTime.setHours(endTime.getHours() - 24);
+    else if (range === '7d') startTime.setDate(endTime.getDate() - 7);
+    else if (range === '30d') startTime.setDate(endTime.getDate() - 30);
+    
+    // 篩選數據 (比對 rows[0] 時間欄位)
+    let dataSlice = rows.filter(r => {
+        if(!r[0]) return false;
+        const d = new Date(r[0]);
+        return d >= startTime && d <= endTime;
+    });
+    // --- 📅 時間篩選邏輯結束 ---
+
+    // X軸 Labels
+    const labels = dataSlice.map(r => {
+        const d = new Date(r[0]);
+        return (d.getMonth()+1) + '/' + d.getDate() + ' ' + 
+               d.getHours().toString().padStart(2,'0') + ':00';
+    });
+
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? '#444' : '#ddd';
+    const textColor = isDark ? '#eee' : '#666';
+
+    tagIndices.forEach((item, i) => {
+        if (item.index > -1) {
+            const dataPoints = dataSlice.map(r => {
+                const val = parseFloat(r[item.index]);
+                return isNaN(val) ? null : val;
+            });
             
-            labels.push(label);
-            
-            // 填入各線條數據
-            selectedCols.forEach(col => {
-                let val = parseFloat(row[col.idx]);
-                col.data.push(isNaN(val) ? null : val); // 無效值填 null 以斷開連線
+            datasets.push({
+                label: TAG_NAMES[item.tag] || item.tag,
+                data: dataPoints,
+                borderColor: colors[i % colors.length],
+                backgroundColor: colors[i % colors.length],
+                borderWidth: 2,
+                pointRadius: 1, 
+                fill: false,
+                tension: 0.3 
             });
         }
     });
 
-    // 4. 準備 Chart.js 的 Datasets
-    const ctx = document.getElementById('myChart').getContext('2d');
     if (myChart) myChart.destroy();
 
-    // 根據主題設定顏色
-    const isDark = document.body.getAttribute("data-theme") === "dark";
-    const gridColor = isDark ? '#444' : '#ddd';
-    const textColor = isDark ? '#eee' : '#666';
-    const colors = ['#007bff', '#28a745', '#dc3545', '#fd7e14', '#6f42c1', '#17a2b8', '#e83e8c', '#343a40'];
-
-    let datasets = selectedCols.map((col, i) => ({
-        label: col.label,
-        data: col.data,
-        borderColor: colors[i % colors.length],
-        backgroundColor: colors[i % colors.length], // 點的顏色
-        borderWidth: 2,
-        pointRadius: 0, // 預設不顯示點，滑鼠移上去才顯示 hover
-        pointHoverRadius: 5,
-        fill: false,
-        tension: 0.1 // 曲線平滑度
-    }));
-
-    // 5. 如果只選了一個點位，且該點位有設定警報值，則畫出警報線 (紅線/黃線)
-    if (selectedCols.length === 1) {
-        const key = selectedCols[0].key;
-        const rule = ALARMS[key]; // 從 config.js 讀取
-        
-        if (rule) {
-            // 判斷是高警報還是低警報
-            let isLowAlarm = rule.warn > rule.crit;
-
-            // 警告線 (黃色)
-            if (rule.warn !== undefined) {
-                datasets.push({
-                    label: '警告 (' + rule.warn + ')',
-                    data: new Array(labels.length).fill(rule.warn),
-                    borderColor: '#ffc107',
-                    borderDash: [5, 5], // 虛線
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    fill: false
-                });
-            }
-            // 超限線 (紅色)
-            if (rule.crit !== undefined) {
-                datasets.push({
-                    label: '超限 (' + rule.crit + ')',
-                    data: new Array(labels.length).fill(rule.crit),
-                    borderColor: '#dc3545',
-                    borderDash: [5, 5],
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    fill: false
-                });
-            }
-        }
-    }
-
-    // 6. 繪製圖表
-    Chart.defaults.color = textColor;
-    Chart.defaults.borderColor = gridColor;
-    
     myChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -243,37 +247,29 @@ function updateChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
+            interaction: { mode: 'index', intersect: false },
             scales: {
                 x: {
-                    ticks: {
-                        maxTicksLimit: 10, // 限制 X 軸標籤數量，避免擁擠
-                        maxRotation: 0
-                    },
+                    ticks: { maxTicksLimit: 12, maxRotation: 0, color: textColor },
                     grid: { color: gridColor }
                 },
                 y: {
                     grid: { color: gridColor },
-                    beginAtZero: false // Y 軸不強制從 0 開始，更能看清變化
+                    ticks: { color: textColor },
+                    beginAtZero: false 
                 }
             },
             plugins: {
-                legend: {
-                    labels: { color: textColor }
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false
-                }
+                legend: { labels: { color: textColor } }
             }
         }
     });
 }
-// 點擊外部關閉視窗
-window.onclick = function(event) { 
-    if (event.target == document.getElementById('waterReportModal')) closeWaterReport(); 
-    if (event.target == document.getElementById('chartModal')) closeChartModal(); 
-}
+
+// 綁定視窗關閉事件
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('chartModal');
+    if (event.target == modal) {
+        closeChartModal();
+    }
+});

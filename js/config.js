@@ -49,6 +49,7 @@ const ALARMS = {
     "FI021W_Q_VAL0_DAILY": { max: 16, warn: 14, crit: 15 }, 
     "FI031_Q_VAL0_DAILY":  { max: 20, warn: 16, crit: 18 }
 };
+window.ALARMS = ALARMS;
 
 // ============================================================
 // 4. 儀表板版面配置 (DASHBOARD_CONFIG)

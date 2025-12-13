@@ -1,37 +1,87 @@
-// index.html的歷史趨勢圖
+// js/charts.js
 
 // ============================================================
 // 1. 設定區
 // ============================================================
 const CHART_API_URL = "https://script.google.com/macros/s/AKfycbz7e5iwN7g122fMywsZUVF3YyOUtQWsmYzz_rO-NuKW55zpUsNUOMgKnY5bBV-6k9KM/exec";
 
-// 全域變數
-//let myChart = null;
+// 初始化全域變數
+if (typeof window.myChart === 'undefined') {
+    window.myChart = null;
+}
 
 // ============================================================
-// 2. 視窗控制
+// 2. 核心輔助函式
+// ============================================================
+
+function getHistoryData() {
+    if (window.historyData && window.historyData.data && window.historyData.data.length > 0) {
+        return window.historyData;
+    }
+    if (typeof historyData !== 'undefined' && historyData && historyData.data && historyData.data.length > 0) {
+        window.historyData = historyData;
+        return historyData;
+    }
+    return null;
+}
+
+function setHistoryData(json) {
+    window.historyData = json;
+    try {
+        if (typeof historyData !== 'undefined') {
+            historyData = json;
+        }
+    } catch (e) {
+        console.warn("變數同步警告", e);
+    }
+}
+
+// 日期切換函式
+function changeDate(offset) {
+    const dateInput = document.getElementById('chartEndDate');
+    if (!dateInput) return;
+
+    let currentDate = dateInput.value ? new Date(dateInput.value) : new Date();
+    currentDate.setDate(currentDate.getDate() + offset);
+    
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    
+    dateInput.value = `${year}-${month}-${day}`;
+    updateChart();
+}
+
+// ============================================================
+// 3. 視窗控制
 // ============================================================
 
 function openChartModal() {
     const modal = document.getElementById('chartModal');
     if(modal) modal.style.display = 'block';
     
-    // 預設日期：今天
     const dateInput = document.getElementById('chartEndDate');
-    if (dateInput && !dateInput.value) {
-        dateInput.value = new Date().toISOString().split('T')[0];
+    if (dateInput) {
+        if (!dateInput.value) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        }
     }
 
-    // 預設選取類別
     const catSelect = document.getElementById('categorySelect');
     if (catSelect && catSelect.value === "") catSelect.value = 'level';
     
     renderCheckboxes();
     
-    // 檢查是否有歷史資料
-    if (!window.historyData || !window.historyData.data || window.historyData.data.length === 0) {
+    const currentData = getHistoryData();
+    if (!currentData) {
+        console.log("無快取資料，下載中...");
         fetchHistory();
     } else {
+        console.log("使用快取資料");
         setTimeout(() => {
             autoSelectDefault();
             updateChart();
@@ -45,15 +95,18 @@ function closeChartModal() {
 }
 
 function autoSelectDefault() {
-    const defaultChk = document.querySelector('input[value="LI018_VAL0"]'); 
+    const defaultTag = "LIT000_VAL0"; 
+    const defaultChk = document.querySelector(`input[value="${defaultTag}"]`); 
     const checked = document.querySelectorAll('#tagCheckboxes input:checked');
+    
     if (defaultChk && checked.length === 0) {
         defaultChk.checked = true;
+        defaultChk.dispatchEvent(new Event('change'));
     }
 }
 
 // ============================================================
-// 3. 資料抓取
+// 4. 資料抓取
 // ============================================================
 
 function fetchHistory() {
@@ -64,26 +117,26 @@ function fetchHistory() {
 
     fetch(CHART_API_URL + "?mode=history")
         .then(response => {
-            if (!response.ok) throw new Error("網路回應不正常");
+            if (!response.ok) throw new Error("網路回應");
             return response.json();
         })
         .then(json => {
-            console.log("歷史資料抓取成功，筆數:", json.data ? json.data.length : 0);
-            window.historyData = json;
+            console.log("資料抓取成功，筆數:", json.data ? json.data.length : 0);
+            setHistoryData(json);
             
             if(loading) loading.style.display = 'none';
             
             setTimeout(() => {
+                renderCheckboxes(); 
                 autoSelectDefault();
                 updateChart();
             }, 100);
         })
         .catch(error => {
-            console.error('History Error:', error);
+            console.error('Fetch Error:', error);
             if(loading) {
                 loading.innerHTML = `<div style="color:red; padding:20px;">
-                    歷史數據載入失敗<br>
-                    <small>${error.message}</small><br>
+                    載入失敗<br><small>${error.message}</small><br>
                     <button onclick="fetchHistory()" style="margin-top:10px;">重試</button>
                 </div>`;
             }
@@ -91,15 +144,13 @@ function fetchHistory() {
 }
 
 // ============================================================
-// 4. 選單與 checkbox 渲染 (已新增 回收水槽 與 氨氮)
+// 5. 選單與 Checkbox 渲染
 // ============================================================
 
 const CATEGORIES = {
-    // ▼ 新增 LI011_VAL0 (回收水槽液位)
     'level': ['LIT000_VAL0','LI003_VAL0','LI012_VAL0','LI021_VAL0','LI018_VAL0', 'LI011_VAL0'], 
     'flow':  ['FI000B_Q_VAL0','FI000A_Q_VAL0','FI012_Q_VAL0','FI021W_Q_VAL0','FI018_Q_VAL0','FI018B_Q_VAL0','FI000B_Q_VAL0'], 
     'ph':    ['PHI015_VAL0','PHI013_VAL0','PHI014_VAL0','PHI017_VAL0','PHI018_VAL0'], 
-    // ▼ 新增 NH3018_VAL0 (氨氮)
     'quality': ['SS018_VAL0','COD018_VAL0','OFD018_VAL0', 'NH3018_VAL0'], 
     'pac': ['LI044_VAL0','LI048_VAL0','LI049_VAL0','LI043_VAL0']
 };
@@ -111,16 +162,16 @@ const TAG_NAMES = {
     'SS018_VAL0': '放流水SS', 'COD018_VAL0': '放流水COD', 'OFD018_VAL0': '放流水油脂',
     'LI044_VAL0': '鹼槽液位', 'LI048_VAL0': '凝膠儲槽液位', 'LI049_VAL0': 'PAC儲槽液位', 'LI043_VAL0': '酸槽液位',
     'FI000B_Q_VAL0': 'API進口累積', 'FI000A_Q_VAL0': 'API出口累積',
-    // ▼ 新增的中文對照 (若 Tag ID 不對，請修改左邊的 Key)
     'LI011_VAL0': 'T02-04回收水槽液位',
     'NH3018_VAL0': '放流水氨氮'
 };
 
 function renderCheckboxes() {
-    const cat = document.getElementById('categorySelect').value;
+    const catSelect = document.getElementById('categorySelect');
     const container = document.getElementById('tagCheckboxes');
-    if(!container) return;
+    if(!container || !catSelect) return;
     
+    const cat = catSelect.value;
     container.innerHTML = ""; 
 
     const tags = CATEGORIES[cat] || [];
@@ -128,148 +179,321 @@ function renderCheckboxes() {
     tags.forEach(tag => {
         const label = document.createElement('label');
         label.className = "checkbox-item";
-        label.style.display = "inline-block"; 
-        label.style.marginRight = "15px";
-        label.style.marginBottom = "5px";
-        label.style.cursor = "pointer";
-        
+        label.style.cssText = "display:inline-flex; align-items:center; padding:4px 12px; cursor:pointer; background:#fff; border:1px solid #ced4da; border-radius:20px; font-size:0.9rem; transition:all 0.2s; user-select:none; margin-right:8px;";
+
         const input = document.createElement('input');
         input.type = "checkbox";
         input.value = tag;
-        input.onchange = updateChart; 
-        
+        input.style.display = "none"; 
+
+        const checkMark = document.createElement('span');
+        checkMark.innerText = "✔ ";
+        checkMark.style.display = "none";
+        checkMark.style.marginRight = "5px";
+
+        input.onchange = function() {
+            if(this.checked) {
+                label.style.backgroundColor = "#e8eaf6";
+                label.style.borderColor = "#3f51b5";
+                label.style.color = "#3f51b5";
+                label.style.fontWeight = "bold";
+                checkMark.style.display = "inline";
+            } else {
+                label.style.backgroundColor = "#fff";
+                label.style.borderColor = "#ced4da";
+                label.style.color = "#000";
+                label.style.fontWeight = "normal";
+                checkMark.style.display = "none";
+            }
+            updateChart();
+        }; 
+
+        label.onmouseover = function() { 
+            if(!input.checked) { this.style.borderColor = "#3f51b5"; this.style.color = "#3f51b5"; }
+        };
+        label.onmouseout = function() { 
+            if(!input.checked) { this.style.borderColor = "#ced4da"; this.style.color = "#000"; }
+        };
+
         label.appendChild(input);
-        label.appendChild(document.createTextNode(" " + (TAG_NAMES[tag] || tag)));
+        label.appendChild(checkMark);
+        label.appendChild(document.createTextNode(TAG_NAMES[tag] || tag));
         
         container.appendChild(label);
     });
 }
 
 // ============================================================
-// 5. 圖表核心繪製邏輯 (已更新日期篩選邏輯)
+// 6. 圖表核心繪製邏輯
 // ============================================================
 
 function updateChart() {
-    if (!window.historyData || !window.historyData.data) return;
+    const dataObj = getHistoryData();
+    if (!dataObj || !dataObj.data) {
+        if (!window.fetchTimeout) {
+            window.fetchTimeout = setTimeout(() => {
+                fetchHistory();
+                window.fetchTimeout = null;
+            }, 2000);
+        }
+        return;
+    }
 
     const checkedBoxes = document.querySelectorAll('#tagCheckboxes input:checked');
     const selectedTags = Array.from(checkedBoxes).map(cb => cb.value);
-
+    
+    const statsContainer = document.getElementById('chartStats');
     const ctxCanvas = document.getElementById('historyChart');
     if(!ctxCanvas) return;
     const ctx = ctxCanvas.getContext('2d');
     
     if (selectedTags.length === 0) {
-        if (myChart) {
-            myChart.data.datasets = [];
-            myChart.update();
+        if (window.myChart) {
+            window.myChart.data.datasets = [];
+            window.myChart.update();
         }
+        if(statsContainer) statsContainer.innerHTML = '<span style="color:#999; font-style:italic; padding:5px;">請勾選項目...</span>';
         return;
     }
 
-    const headers = window.historyData.headers;
-    const rows = window.historyData.data;
+    const isSingleSelection = selectedTags.length === 1;
+    const appAlarms = window.ALARMS || (typeof ALARMS !== 'undefined' ? ALARMS : {});
+    const headers = dataObj.headers;
+    const rows = dataObj.data;
 
-    // Tag 索引
     const tagIndices = selectedTags.map(tag => {
         return { tag: tag, index: headers.indexOf(tag) };
     });
 
     const datasets = [];
     const colors = ['#3f51b5', '#e91e63', '#4caf50', '#ff9800', '#9c27b0', '#00bcd4', '#795548'];
+    const annotations = {}; 
+    let statsHTML = ""; 
     
-    // --- 📅 時間篩選邏輯開始 ---
+    let maxDataVal = 0;   
+    let maxAlarmVal = 0;  
+
     const rangeSelect = document.getElementById('timeRangeSelect');
     const dateInput = document.getElementById('chartEndDate');
-    
     const range = rangeSelect ? rangeSelect.value : '24h';
-    let endTime = new Date();
     
-    // 若有選擇結束日期，設定為該日期的 23:59:59
+    // --- 📊 設定 X 軸時間邏輯 (Time Scale Config) ---
+    let timeUnit = 'hour';
+    let stepSize = 1;
+    let displayFormats = {};
+    let tooltipFormat = 'MM/dd HH:mm';
+    let maxTicks = 12; // 預設 Tick 限制
+
+    if (range === '24h') {
+        timeUnit = 'hour';
+        stepSize = 2; // 每2小時
+        displayFormats = { hour: 'HH:mm' }; 
+        maxTicks = 13;
+    } else if (range === '7d') {
+        timeUnit = 'hour';
+        stepSize = 12; // 每12小時 (00:00, 12:00)
+        displayFormats = { hour: 'MM/dd HH:mm' }; 
+        maxTicks = 20; // 7天*2 = 14個點，稍微放寬限制以確保顯示
+    } else if (range === '30d') {
+        timeUnit = 'day';
+        stepSize = 2; // 每2天
+        displayFormats = { day: "d'號' HH:mm" }; 
+        maxTicks = 16;
+    }
+
+    let endTime = new Date();
     if (dateInput && dateInput.value) {
         endTime = new Date(dateInput.value);
         endTime.setHours(23, 59, 59, 999);
-    }
+    } 
 
-    // 計算開始時間 (StartTime)
     let startTime = new Date(endTime);
     if (range === '24h') startTime.setHours(endTime.getHours() - 24);
     else if (range === '7d') startTime.setDate(endTime.getDate() - 7);
     else if (range === '30d') startTime.setDate(endTime.getDate() - 30);
     
-    // 篩選數據 (比對 rows[0] 時間欄位)
     let dataSlice = rows.filter(r => {
         if(!r[0]) return false;
         const d = new Date(r[0]);
+        if(isNaN(d.getTime())) return false;
         return d >= startTime && d <= endTime;
     });
-    // --- 📅 時間篩選邏輯結束 ---
 
-    // X軸 Labels
-    const labels = dataSlice.map(r => {
-        const d = new Date(r[0]);
-        return (d.getMonth()+1) + '/' + d.getDate() + ' ' + 
-               d.getHours().toString().padStart(2,'0') + ':00';
-    });
+    const labels = dataSlice.map(r => new Date(r[0]));
 
     const isDark = document.body.getAttribute('data-theme') === 'dark';
-    const gridColor = isDark ? '#444' : '#ddd';
+    const gridColor = isDark ? '#444' : '#eee'; 
     const textColor = isDark ? '#eee' : '#666';
 
     tagIndices.forEach((item, i) => {
         if (item.index > -1) {
-            const dataPoints = dataSlice.map(r => {
-                const val = parseFloat(r[item.index]);
-                return isNaN(val) ? null : val;
-            });
+            const rawData = dataSlice.map(r => parseFloat(r[item.index]));
+            const validData = rawData.filter(v => !isNaN(v) && v !== null);
+
+            let maxVal = "-", minVal = "-", avgVal = "-";
+            if (validData.length > 0) {
+                const currentMax = Math.max(...validData);
+                maxDataVal = Math.max(maxDataVal, currentMax); 
+                
+                maxVal = currentMax.toFixed(1);
+                minVal = Math.min(...validData).toFixed(1);
+                const sum = validData.reduce((a, b) => a + b, 0);
+                avgVal = (sum / validData.length).toFixed(1);
+            }
+
+            const tagName = TAG_NAMES[item.tag] || item.tag;
+            const colorCode = colors[i % colors.length];
+            
+            statsHTML += `
+                <div style="display:inline-flex; align-items:center; background:${isDark ? '#555' : '#fff'}; border:1px solid ${colorCode}; padding:2px 10px; border-radius:15px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                    <span style="width:8px; height:8px; background:${colorCode}; border-radius:50%; margin-right:6px;"></span>
+                    <strong style="margin-right:8px; color:${isDark ? '#fff' : '#333'};">${tagName}</strong>
+                    <span style="font-size:0.9em; color:${isDark ? '#ccc' : '#666'};">
+                        均:<b style="color:${isDark ? '#fff' : '#000'}">${avgVal}</b> 
+                        <span style="margin:0 4px; color:#ddd">|</span> 
+                        高:<span style="color:#d32f2f">${maxVal}</span> 
+                        <span style="margin:0 4px; color:#ddd">|</span>
+                        低:<span style="color:#1976d2">${minVal}</span>
+                    </span>
+                </div>
+            `;
+
+            const dataPoints = rawData.map(v => isNaN(v) ? null : v);
             
             datasets.push({
-                label: TAG_NAMES[item.tag] || item.tag,
+                label: tagName,
                 data: dataPoints,
-                borderColor: colors[i % colors.length],
-                backgroundColor: colors[i % colors.length],
+                borderColor: colorCode,
+                backgroundColor: colorCode,
                 borderWidth: 2,
-                pointRadius: 1, 
+                // ▼▼▼ 修改：隱藏數據點 ▼▼▼
+                pointRadius: 0, 
+                pointHoverRadius: 5, // 滑鼠懸停時顯示，方便看數值
+                // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
                 fill: false,
                 tension: 0.3 
             });
+
+            if (isSingleSelection && appAlarms && appAlarms[item.tag]) {
+                const alarm = appAlarms[item.tag];
+                
+                if (alarm.crit) maxAlarmVal = Math.max(maxAlarmVal, alarm.crit);
+                if (alarm.warn) maxAlarmVal = Math.max(maxAlarmVal, alarm.warn);
+
+                if (alarm.warn !== undefined) {
+                    annotations['warnLine_' + item.tag] = {
+                        type: 'line',
+                        yMin: alarm.warn,
+                        yMax: alarm.warn,
+                        borderColor: '#FFC107',
+                        borderWidth: 2,
+                        borderDash: [6, 6],
+                        label: {
+                            display: true,
+                            content: '警戒 ' + alarm.warn,
+                            position: 'start', 
+                            backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                            font: { size: 10 }
+                        }
+                    };
+                }
+
+                if (alarm.crit !== undefined) {
+                    annotations['critLine_' + item.tag] = {
+                        type: 'line',
+                        yMin: alarm.crit,
+                        yMax: alarm.crit,
+                        borderColor: '#F44336',
+                        borderWidth: 2,
+                        borderDash: [6, 6],
+                        label: {
+                            display: true,
+                            content: '危險 ' + alarm.crit,
+                            position: 'start',
+                            backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                            font: { size: 10 }
+                        }
+                    };
+                }
+            }
         }
     });
+    
+    if(statsContainer) statsContainer.innerHTML = statsHTML;
 
-    if (myChart) myChart.destroy();
+    if (window.myChart) window.myChart.destroy();
+    
+    let yAxisSuggestedMax = undefined;
+    if (isSingleSelection) {
+        const targetMax = Math.max(maxDataVal, maxAlarmVal);
+        if (targetMax > 0) {
+            // ▼▼▼ 修改：Y軸最大值無緩衝，直接切齊 ▼▼▼
+            yAxisSuggestedMax = targetMax * 1.0;
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        }
+    }
 
-    myChart = new Chart(ctx, {
+    window.myChart = new Chart(ctx, {
         type: 'line',
-        data: {
-            labels: labels,
-            datasets: datasets
-        },
+        data: { labels: labels, datasets: datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             scales: {
                 x: {
-                    ticks: { maxTicksLimit: 12, maxRotation: 0, color: textColor },
-                    grid: { color: gridColor }
+                    type: 'time', 
+                    time: {
+                        unit: timeUnit,
+                        stepSize: stepSize,
+                        displayFormats: displayFormats,
+                        tooltipFormat: tooltipFormat
+                    },
+                    ticks: { 
+                        color: textColor,
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: maxTicks // 根據 7d 需求放寬限制
+                    },
+                    grid: { color: gridColor, drawBorder: false }
                 },
                 y: {
-                    grid: { color: gridColor },
+                    suggestedMax: yAxisSuggestedMax,
+                    grid: { color: gridColor, borderDash: [2, 2] }, 
                     ticks: { color: textColor },
                     beginAtZero: false 
                 }
             },
             plugins: {
-                legend: { labels: { color: textColor } }
+                legend: { labels: { color: textColor }, display: !isSingleSelection },
+                annotation: { annotations: annotations },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            const date = new Date(context[0].parsed.x);
+                            const m = String(date.getMonth()+1).padStart(2,'0');
+                            const d = String(date.getDate()).padStart(2,'0');
+                            const h = String(date.getHours()).padStart(2,'0');
+                            const min = String(date.getMinutes()).padStart(2,'0');
+                            return `${m}/${d} ${h}:${min}`;
+                        }
+                    }
+                }
             }
         }
     });
 }
 
-// 綁定視窗關閉事件
+// 綁定事件
 window.addEventListener('click', function(event) {
     const modal = document.getElementById('chartModal');
     if (event.target == modal) {
         closeChartModal();
+    }
+});
+
+window.addEventListener('resize', function() {
+    if (window.myChart) {
+        updateChart();
     }
 });

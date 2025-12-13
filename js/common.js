@@ -20,8 +20,8 @@ const db = firebase.firestore();
 const ROLE_ACCESS = {
     'admin': ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html','try.html','admin.html'], //管理者
     'env':   ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html'], //環化課
-    'mech':  ['oil.html'], //機械組
-    'ops':   ['cems.html', 'oil.html'], //運轉組
+    'mech':  ['cems.html','oil.html'], //機械組
+    'ops':   ['index.html','cems.html', 'oil.html'], //運轉組
     'guest': []
 };
 

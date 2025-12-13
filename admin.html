@@ -140,11 +140,11 @@
         snap.forEach(doc => {
             const u = doc.data();
             const roleOptions = `
-                <option value="guest" ${u.role==='guest'?'selected':''}>訪客 (停用)</option>
-                <option value="env" ${u.role==='env'?'selected':''}>環化課 (全開)</option>
-                <option value="mech" ${u.role==='mech'?'selected':''}>機械組 (僅滑油)</option>
-                <option value="ops" ${u.role==='ops'?'selected':''}>運轉組 (CEMS+滑油)</option>
-                <option value="admin" ${u.role==='admin'?'selected':''}>管理員 (全開+後台)</option>
+                <option value="guest" ${u.role==='guest'?'selected':''}>停用</option>
+                <option value="env" ${u.role==='env'?'selected':''}>全開</option>
+                <option value="mech" ${u.role==='mech'?'selected':''}>空+油</option>
+                <option value="ops" ${u.role==='ops'?'selected':''}>水+空+油</option>
+                <option value="admin" ${u.role==='admin'?'selected':''}>全開+後台</option>
             `;
             
             // 待審核區

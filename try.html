@@ -3,95 +3,402 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>尖山發電廠 - 廢油水監控系統</title>
+    <title>CEMS 監測 - 尖山發電廠</title>
     
-    <link rel="stylesheet" href="css/style.css">
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <link rel="stylesheet" href="css/style-cems.css">
 </head>
 <body>
 
-    <div id="navbar-placeholder"></div>
+<div id="navbar-placeholder"></div>
+    
+<div class="cems-container">
+    <header>
+        <div class="header-spacer"></div>
+        <div class="header-title"><h1>CEMS</h1></div>
+        <div class="header-controls">
+            <button type="button" class="btn btn-primary ms-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#ureaModal">
+    <i class="bi bi-bar-chart-line"></i> 尿素統計
+</button>
+            <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">☀️ 亮色</span></button>
+            <div id="updateTime" class="update-pill">連線中...</div>
+        </div>
+    </header>
 
-    <div class="container">
-        <div class="page-header">
-            <h1>尖山發電廠 - 廢油水監控</h1>
-<div class="header-right">
-    <button class="btn-ctrl btn-report" onclick="openOpReport()">📊 操作紀錄表</button>
+    <div class="dashboard">
+        <div class="card power">
+            <h3>目前總發電量</h3>
+            <div class="data-row"><span class="value" id="totalLoad">0</span><span class="unit">KW</span></div>
+            <div class="gauge-container"><div class="gauge-bar" id="bar-power"></div><div class="gauge-marker" id="marker-power"></div></div>
+            <div class="sub-val" id="loadDiff">讀取中...</div>
+        </div>
+        <div class="card units">
+            <h3>運轉機組數</h3>
+            <div class="data-row"><span class="value" id="runningCountVal">0</span><span class="unit">台</span></div>
+            <div class="gauge-container"><div class="gauge-bar" id="bar-units"></div><div class="gauge-marker" id="marker-units"></div></div>
+            <div class="sub-val" id="boilerCountVal">含鍋爐: 0</div>
+        </div>
+        <div class="card urea">
+            <h3>總尿素用量</h3>
+            <div class="data-row"><span class="value" id="totalUreaVal">0.0</span><span class="unit">kL/日</span></div>
+            <div class="gauge-container"><div class="gauge-bar" id="bar-urea"></div><div class="gauge-marker" id="marker-urea"></div></div>
+            <div class="sub-val">全廠合計</div>
+        </div>
+        <div class="card aqi">
+            <h3>澎湖 AQI</h3>
+            <div class="data-row"><span class="value" id="aqiVal">--</span><span class="unit"></span></div>
+            <div class="gauge-container"><div class="gauge-bar" id="bar-aqi"></div><div class="gauge-marker" id="marker-aqi"></div></div>
+            <div class="sub-val" id="aqiStatus">載入中</div>
+        </div>
+        <div class="card temp">
+            <h3>湖西鄉氣溫</h3>
+            <div class="data-row"><span class="value" id="tempVal">--</span><span class="unit">°C</span></div>
+            <div class="gauge-container"><div class="gauge-bar" id="bar-temp"></div><div class="gauge-marker" id="marker-temp"></div></div>
+            <div class="sub-val">即時氣溫</div>
+        </div>
+        <div class="card wind">
+            <h3>環境風速 / 風向</h3>
+            <div class="data-row"><span class="value" id="windSpeed">--</span><span class="unit">m/s</span></div>
+            <div class="gauge-container"><div class="gauge-bar" id="bar-wind"></div><div class="gauge-marker" id="marker-wind"></div></div>
+            <div class="sub-val" id="windDir">--</div>
+        </div>
+    </div>
 
-    <button class="btn-ctrl btn-report" onclick="openWaterReport()">📊 水質紀錄表</button>
-    <button class="btn-ctrl" onclick="toggleTheme()" id="themeBtn">🌓</button>
-    <button class="btn-ctrl" onclick="openChartModal()">📊 趨勢</button>
-    <div class="status-box">更新: <span id="last-update">...</span></div>
+    <div id="loading">讀取機組數據中...</div>
+
+    <div class="table-container">
+        <table id="dataTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>機組 #</th><th>SO2<br>(ppm)</th><th>NOx<br>(ppm)</th><th>OPAC<br>(%)</th><th>TEMP<br>(°C)</th><th>O2<br>(%)</th><th>Vel<br>(m/s)</th><th>Flow<br>(nm3/hr)</th><th>Load<br>(kw)</th><th>Urea<br>(L/hr)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="chart-controls">
+        <label>趨勢圖設定：</label>
+        <select id="chartMachine">
+            <option value="1">#1 號機</option><option value="2">#2 號機</option><option value="3">#3 號機</option><option value="4">#4 號機</option><option value="5">#5 號機</option><option value="6">#6 號機</option><option value="7">#7 號機</option><option value="8">#8 號機</option><option value="9">#9 號機</option><option value="10">#10 號機</option><option value="11">#11 號機</option><option value="12">#12 號機</option>
+        </select>
+        <select id="chartPollutant">
+            <option value="so2">SO2 (ppm)</option><option value="nox">NOx (ppm)</option><option value="opac">OPAC (%)</option><option value="load">Load (kw)</option><option value="urea">Urea (L/hr)</option>
+        </select>
+        <select id="chartRange">
+            <option value="24h">每日 (24H)</option><option value="7d">每週 (7D)</option><option value="30d">每月 (30D)</option>
+        </select>
+        <label>結束日期：</label>
+        <input type="date" id="chartDate">
+        <button onclick="updateChartFromHistory()" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">更新圖表</button>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="historyChart"></canvas>
+    </div>
 </div>
-        </div>
 
-        <div id="app">
-            <div class="loading">正在驗證權限並載入數據...</div>
-        </div>
-    </div>
+<script>
+    function startApp() {
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwPLWcCJhnE_ZnnIbCgk9hNcjo6ikLDR_rzFGCiBFPamXapAj3e-fg1YiJo1THW08T4/exec';
+        const LAT = 23.575; const LON = 119.665;
+        const THRESHOLDS = {
+            so2: { warn: 120, limit: 133, max: 200 }, nox: { warn: 327, limit: 363, max: 400 }, opac: { warn: 8, limit: 40, max: 50 }, load: { warn: 8000, limit: 9000, max: 11000 }, urea: { warn: 200, limit: 360, max: 400 },
+            powerCard: { max: 120000 }, unitsCard: { max: 12 }, ureaCard: { max: 50 }, aqiCard: { max: 150 }, tempCard: { max: 40 }, windCard: { max: 25 }
+        };
+        const GAUGE_VALUES = { aqi: [0, 0, 50, 100, 150], units: [0, 3, 9, 11, 12], urea: [0, 10, 30, 45, 50], power: [0, 30000, 70000, 110000, 120000], temp: [7, 16, 23, 28, 37], wind: [0, 3, 4, 8, 25] };
+        const COLORS_4 = ['#29b6f6', '#00e676', '#ffea00', '#ff1744'];
+        let chartInstance = null; let globalHistoryData = []; let currentTotalLoadVal = 0; const BOILER_UNITS = [1, 2, 3, 4, 5, 7, 9, 11];
 
-    <div id="chartModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>歷史趨勢</h3><span class="close-btn" onclick="closeChartModal()">&times;</span></div>
-            <div class="chart-controls">
-                <select id="timeRange" onchange="updateChart()"><option value="24">24H</option><option value="168">7D</option></select>
-                <select id="categorySelect" onchange="renderCheckboxes()"><option value="level">液位</option><option value="flow">流量</option><option value="quality">水質</option><option value="temp">溫度</option></select>
-                <div id="tagCheckboxes" style="flex:1; max-height:60px; overflow-y:auto;"></div>
-            </div>
-            <div class="chart-container">
-                <canvas id="myChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div id="waterReportModal" class="modal">
-        <div class="modal-content" style="max-width: 1200px;">
-            <div class="modal-header"><h3>放流水水質紀錄表 (每日平均)</h3><span class="close-btn" onclick="closeWaterReport()">&times;</span></div>
-            <div class="chart-controls">
-                <label style="color:var(--text-main)">選擇月份：</label>
-                <input type="month" id="waterReportMonth" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
-                <button class="btn-ctrl btn-report" onclick="generateWaterReport()">🔄 更新預覽</button>
-                <button class="btn-ctrl btn-excel" onclick="exportWaterExcel()">📥 下載 Excel</button>
-                <button class="btn-ctrl btn-print" onclick="printWaterReport()">🖨️ 列印 / PDF</button>
-            </div>
-            <div class="modal-body" id="waterReportPreview" style="background:white; color:black; padding:20px;">
-                <div style="text-align:center; color:#888;">請選擇月份並點擊更新 (資料來源：廢水歷史數據庫)</div>
-            </div>
-        </div>
-    </div>
-
-<div id="opReportModal" class="modal">
-    <div class="modal-content" style="max-width: 1200px;">
-        <div class="modal-header"><h3>廢(污)水操作處理及溫排水水溫紀錄表</h3><span class="close-btn" onclick="closeOpReport()">&times;</span></div>
-        <div class="chart-controls">
-            <label style="color:var(--text-main)">選擇月份：</label>
-            <input type="month" id="opReportMonth" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
-            <button class="btn-ctrl btn-report" onclick="generateOpReport()">🔄 更新預覽</button>
-            <button class="btn-ctrl btn-excel" onclick="exportOpExcel()">📥 下載 Excel</button>
-            <button class="btn-ctrl btn-print" onclick="printOpReport()">🖨️ 列印 / PDF</button>
-        </div>
-        <div class="modal-body" id="opReportPreview" style="background:white; color:black; padding:10px; overflow-x:auto;">
-            <div style="text-align:center; color:#888; padding:30px;">請選擇月份並點擊更新</div>
-        </div>
-    </div>
-</div>
-
-    <script src="js/common.js"></script>  
-    <script src="js/config.js"></script>    
-    <script src="js/dashboard.js"></script> 
-    <script src="js/charts.js"></script>    
-    <script src="js/reports.js"></script>   
-    <script src="js/operation_report.js"></script> 
-    <script>
-        // 啟動點：當 common.js 驗證通過後會呼叫此函式
-        function startApp() {
-            initDashboard(); // 來自 dashboard.js
+        function generateGradientByValue(values, colors, max) {
+            let gradientStr = 'linear-gradient(90deg, ';
+            for (let i = 0; i < values.length - 1; i++) {
+                let startPct = (values[i] / max) * 100; let endPct = (values[i+1] / max) * 100;
+                let color = colors[i] || colors[colors.length-1];
+                gradientStr += `${color} ${startPct}%, ${color} ${endPct}%`;
+                if (i < values.length - 2) gradientStr += ', ';
+            }
+            return gradientStr + ')';
         }
-    </script>
+        function initGauges() {
+            document.getElementById('bar-aqi').style.background = generateGradientByValue(GAUGE_VALUES.aqi, COLORS_4, THRESHOLDS.aqiCard.max);
+            document.getElementById('bar-units').style.background = generateGradientByValue(GAUGE_VALUES.units, COLORS_4, THRESHOLDS.unitsCard.max);
+            document.getElementById('bar-urea').style.background = generateGradientByValue(GAUGE_VALUES.urea, COLORS_4, THRESHOLDS.ureaCard.max);
+            document.getElementById('bar-power').style.background = generateGradientByValue(GAUGE_VALUES.power, COLORS_4, THRESHOLDS.powerCard.max);
+            document.getElementById('bar-temp').style.background = generateGradientByValue(GAUGE_VALUES.temp, COLORS_4, THRESHOLDS.tempCard.max);
+            document.getElementById('bar-wind').style.background = generateGradientByValue(GAUGE_VALUES.wind, COLORS_4, THRESHOLDS.windCard.max);
+        }
+        window.toggleTheme = function() { 
+            const body = document.body; body.classList.toggle('light-mode');
+            const isLight = body.classList.contains('light-mode');
+            document.getElementById('themeIcon').innerText = isLight ? "🌙 暗色" : "☀️ 亮色";
+            if (chartInstance) updateChartTheme(isLight);
+        };
+        function updateGauge(markerId, val, max) {
+            let percentage = (val / max) * 100; if (percentage > 100) percentage = 100; if (percentage < 0) percentage = 0;
+            document.getElementById(markerId).style.left = percentage + "%";
+        }
+        function getValueColor(val, type) {
+            val = parseFloat(val); if (isNaN(val)) return ""; if (!THRESHOLDS[type]) return "";
+            if (val > THRESHOLDS[type].limit) return "col-limit";
+            if (val > THRESHOLDS[type].warn) return "col-warn";
+            if (type === 'so2' && val < 50) return "col-good"; if (type === 'nox' && val < 247) return "col-good"; if (type === 'opac' && val < 4) return "col-good";
+            return "";
+        }
+
+        // --- 核心格式化函式 (含校正與超標標籤) ---
+        function formatCell(val, type, statusCode, codeVal, overCount) {
+            let displayVal = parseFloat(val);
+            
+            // 1. 數值處理
+            if (isNaN(displayVal)) {
+                displayVal = "-";
+            } else {
+                if (statusCode === 'N') {
+                    displayVal = Math.round(displayVal); // 運轉中取整數 (與舊邏輯一致)
+                    // 只有非運轉才顯示小數? 舊代碼是這樣寫的:
+                    // let showOpac = (parseFloat(opac)||0).toFixed(1)
+                    // 我們這裡統一邏輯：如果是 opacity/o2/vel/temp 還是要保留小數
+                    if (['opac', 'o2', 'vel', 'temp'].includes(type)) displayVal = parseFloat(val).toFixed(1);
+                } else {
+                    // 停機顯示小數
+                    displayVal = type === 'opac' || type === 'temp' ? displayVal.toFixed(1) : displayVal.toFixed(2);
+                }
+            }
+
+            // 2. 顏色判定
+            let colorClass = "";
+            if (statusCode === 'N') {
+                colorClass = getValueColor(val, type);
+            }
+
+            // 3. 標籤生成
+            let badges = "";
+            if (codeVal == '20') {
+                badges += `<span class="badge badge-calib">校正</span>`;
+            }
+            if (parseInt(overCount) >= 1) {
+                badges += `<span class="badge badge-over">超標${overCount}次</span>`;
+            }
+
+            return `<span class="${colorClass}">${displayVal}</span>${badges}`;
+        }
+
+        async function fetchRealtimeData() {
+            try {
+                const response = await fetch(GAS_URL); const json = await response.json();
+                if (json.dataString) { renderTable(json.timestamp, json.dataString); calculateLoadComparison(); }
+            } catch (error) { console.error(error); document.getElementById('updateTime').innerText = "連線異常"; }
+        }
+
+        function renderTable(timestamp, rawString) {
+            document.getElementById('loading').style.display = 'none'; document.getElementById('dataTable').style.display = 'table';
+            document.getElementById('updateTime').innerText = "更新: " + new Date(timestamp).toLocaleTimeString();
+            const dataArray = rawString.split(','); const tbody = document.getElementById('tableBody'); tbody.innerHTML = "";
+            const ITEMS_PER_MACHINE = 27; let runCount = 0; let boilerRunCount = 0; let totalGenLoad = 0; let totalUreaKLD = 0;
+            let totals = { so2: 0, nox: 0, opac: 0, temp: 0, o2: 0, vel: 0, flow: 0, load: 0, urea: 0 };
+            
+            for (let i = 0; i < 12; i++) {
+                let machineId = i + 1; let baseIndex = i * ITEMS_PER_MACHINE; if (baseIndex + 26 >= dataArray.length) break;
+                
+                // 提取關鍵欄位
+                let statusCode = dataArray[baseIndex + 2]; 
+                let rowClass = (statusCode === 'N') ? 'status-run' : 'status-stop';
+
+                // 數值
+                let so2 = dataArray[baseIndex + 1];
+                let nox = dataArray[baseIndex + 6];
+                let opac = dataArray[baseIndex + 10];
+                let temp = dataArray[baseIndex + 14];
+                let o2 = dataArray[baseIndex + 18];
+                let vel = dataArray[baseIndex + 21];
+                let flow = dataArray[baseIndex + 22];
+                let load = dataArray[baseIndex + 25];
+                let urea = dataArray[baseIndex + 26];
+
+                // 狀態碼與超標次數 (Index 偏移量)
+                // SO2: Val(1), Stat(2), Code(3), Over(4)
+                let so2_code = dataArray[baseIndex + 3];
+                let so2_over = dataArray[baseIndex + 4];
+                
+                // NOx: Val(6), Stat(7), Code(8), Over(9)
+                let nox_code = dataArray[baseIndex + 8];
+                let nox_over = dataArray[baseIndex + 9];
+                
+                // Opac: Val(10), Stat(11), Code(12), Over(13)
+                let opac_code = dataArray[baseIndex + 12];
+                let opac_over = dataArray[baseIndex + 13];
+
+                if (statusCode === 'N') {
+                    runCount++; if (BOILER_UNITS.includes(machineId)) boilerRunCount++;
+                    totals.so2 += parseFloat(so2)||0; totals.nox += parseFloat(nox)||0; totals.opac += parseFloat(opac)||0; totals.temp += parseFloat(temp)||0; totals.o2 += parseFloat(o2)||0; totals.vel += parseFloat(vel)||0; totals.flow += parseFloat(flow)||0; totals.load += parseFloat(load)||0; totals.urea += parseFloat(urea)||0;
+                    totalGenLoad += parseFloat(load)||0; totalUreaKLD += (parseFloat(urea)||0) * 24 / 1000;
+                }
+
+                // 生成 HTML
+                let cell_so2 = formatCell(so2, 'so2', statusCode, so2_code, so2_over);
+                let cell_nox = formatCell(nox, 'nox', statusCode, nox_code, nox_over);
+                let cell_opac = formatCell(opac, 'opac', statusCode, opac_code, opac_over);
+                
+                // 其他欄位保持原樣 (無 code/over)
+                let cell_temp = formatCell(temp, 'temp', statusCode, 0, 0);
+                let cell_o2 = formatCell(o2, 'o2', statusCode, 0, 0);
+                let cell_vel = formatCell(vel, 'vel', statusCode, 0, 0);
+                
+                let cell_load = "";
+                if(statusCode==='N') cell_load = `<span class="${getValueColor(load,'load')}">${Math.round(load)}</span>`;
+                else cell_load = `<span>${Math.round(load)}</span>`;
+                
+                let cell_urea = "";
+                if(statusCode==='N') cell_urea = `<span class="${getValueColor(urea,'urea')}">${Math.round(urea)}</span>`;
+                else cell_urea = `<span>${Math.round(urea)}</span>`;
+
+                tbody.innerHTML += `<tr class="${rowClass}">
+                    <td>#${machineId}</td>
+                    <td>${cell_so2}</td>
+                    <td>${cell_nox}</td>
+                    <td>${cell_opac}</td>
+                    <td>${cell_temp}</td>
+                    <td>${cell_o2}</td>
+                    <td>${cell_vel}</td>
+                    <td>${Math.round(flow)}</td>
+                    <td>${cell_load}</td>
+                    <td>${cell_urea}</td>
+                </tr>`;
+            }
+
+            currentTotalLoadVal = totalGenLoad;
+            document.getElementById('totalLoad').innerText = totalGenLoad.toLocaleString(); updateGauge('marker-power', totalGenLoad, THRESHOLDS.powerCard.max);
+            document.getElementById('runningCountVal').innerText = runCount; document.getElementById('boilerCountVal').innerText = `含鍋爐: ${boilerRunCount}`; updateGauge('marker-units', runCount, THRESHOLDS.unitsCard.max);
+            document.getElementById('totalUreaVal').innerText = totalUreaKLD.toFixed(1); updateGauge('marker-urea', totalUreaKLD, THRESHOLDS.ureaCard.max);
+            
+            if (runCount > 0) {
+                let avgNox = totals.nox / runCount; let avgNoxClass = avgNox > 247 ? "col-warn" : "";
+                tbody.innerHTML += `<tr class="avg-row"><td>平均</td><td>${Math.round(totals.so2 / runCount)}</td><td class="${avgNoxClass}">${Math.round(avgNox)}</td><td>${(totals.opac / runCount).toFixed(1)}</td><td>${Math.round(totals.temp / runCount)}</td><td>${(totals.o2 / runCount).toFixed(1)}</td><td>${(totals.vel / runCount).toFixed(1)}</td><td>${Math.round(totals.flow / runCount)}</td><td>${Math.round(totals.load / runCount)}</td><td>${Math.round(totals.urea / runCount)}</td></tr>`;
+            } else { tbody.innerHTML += `<tr class="avg-row"><td colspan="10">無運轉機組</td></tr>`; }
+        }
+        
+        async function fetchHistoryData() {
+            try { const response = await fetch(GAS_URL + "?type=history"); const json = await response.json(); if (Array.isArray(json)) { globalHistoryData = json; updateChartFromHistory(); calculateLoadComparison(); } } catch (error) { console.error("歷史資料錯誤", error); }
+        }
+        function calculateLoadComparison() {
+            if (globalHistoryData.length === 0 || currentTotalLoadVal === 0) return;
+            const now = new Date(); const targetTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            let closestRecord = null; let minDiff = Infinity;
+            for (let row of globalHistoryData) { let rowTime = new Date(row.t); let diff = Math.abs(rowTime - targetTime); if (diff < 1800000 && diff < minDiff) { minDiff = diff; closestRecord = row; } }
+            const diffEl = document.getElementById('loadDiff');
+            if (closestRecord) {
+                let oldLoad = 0; const dataParts = closestRecord.d.split(','); const ITEMS_PER_MACHINE = 27;
+                for (let i = 0; i < 12; i++) { let base = i * ITEMS_PER_MACHINE; if (base + 26 < dataParts.length) { let status = dataParts[base + 2]; let load = parseFloat(dataParts[base + 25]) || 0; if (status === 'N') oldLoad += load; } }
+                let diffPercent = 0; let diffClass = "diff-flat"; let icon = "-";
+                if (oldLoad > 0) { diffPercent = ((currentTotalLoadVal - oldLoad) / oldLoad) * 100; if (diffPercent > 0) { diffClass = "diff-up"; icon = "▲"; } else if (diffPercent < 0) { diffClass = "diff-down"; icon = "▼"; } }
+                diffEl.innerHTML = `<span style="color:var(--text-sub)">昨日: ${oldLoad.toLocaleString()}</span> <span class="${diffClass}">${icon} ${Math.abs(diffPercent).toFixed(1)}%</span>`;
+            } else { diffEl.innerText = "無昨日數據"; }
+        }
+        window.updateChartFromHistory = function() {
+            if (globalHistoryData.length === 0) return;
+            const machineId = parseInt(document.getElementById('chartMachine').value); const pollutant = document.getElementById('chartPollutant').value; const range = document.getElementById('chartRange').value; const dateInput = document.getElementById('chartDate').value;
+            const ITEMS_PER_MACHINE = 27; const baseIndex = (machineId - 1) * ITEMS_PER_MACHINE; let offset = 0; let labelName = "";
+            if (pollutant === 'so2') { offset = 1; labelName = `SO2 (ppm)`; } else if (pollutant === 'nox') { offset = 6; labelName = `NOx (ppm)`; } else if (pollutant === 'opac') { offset = 10; labelName = `OPAC (%)`; } else if (pollutant === 'load') { offset = 25; labelName = `Load (kw)`; } else if (pollutant === 'urea') { offset = 26; labelName = `Urea (L/hr)`; }
+            const chartData = []; let minVal = Infinity, maxVal = -Infinity, sumVal = 0, count = 0; let minPoint = null, maxPoint = null;
+            let endTime = dateInput ? new Date(dateInput) : new Date(); if(dateInput) endTime.setHours(23,59,59,999);
+            const startTime = new Date(endTime);
+            if (range === '24h') startTime.setTime(endTime.getTime() - 24 * 60 * 60 * 1000); if (range === '7d') startTime.setDate(endTime.getDate() - 7); if (range === '30d') startTime.setDate(endTime.getDate() - 30);
+            globalHistoryData.forEach(row => {
+                const time = new Date(row.t);
+                if (time >= startTime && time <= endTime) {
+                    const parts = row.d.split(','); const val = parts[baseIndex + offset];
+                    if (val !== undefined) {
+                        const numVal = parseFloat(val) || 0; chartData.push({ x: time, y: numVal });
+                        if (numVal < minVal) { minVal = numVal; minPoint = {x: time, y: numVal}; }
+                        if (numVal > maxVal) { maxVal = numVal; maxPoint = {x: time, y: numVal}; }
+                        sumVal += numVal; count++;
+                    }
+                }
+            });
+            const avgVal = count > 0 ? (sumVal / count) : 0;
+            drawChart(labelName, chartData, minVal, maxVal, avgVal, minPoint, maxPoint);
+        };
+        function drawChart(label, dataPoints, min, max, avg, minPoint, maxPoint) {
+            const ctx = document.getElementById('historyChart').getContext('2d'); if (chartInstance) chartInstance.destroy();
+            const isLight = document.body.classList.contains('light-mode');
+            const gridColor = isLight ? '#dddddd' : 'rgba(255,255,255,0.1)'; const textColor = isLight ? '#666666' : '#aaaaaa';
+            const datasets = [{ label: label, data: dataPoints, borderColor: '#00e676', backgroundColor: 'rgba(0, 230, 118, 0.1)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, fill: true, tension: 0.3 }];
+            if (dataPoints.length > 0) {
+                datasets.push({ label: `平均 (${avg.toFixed(1)})`, data: [{x: dataPoints[0].x, y: avg}, {x: dataPoints[dataPoints.length-1].x, y: avg}], borderColor: isLight ? '#666' : '#fff', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
+                datasets.push({ label: `最小 (${min.toFixed(1)})`, data: [{x: dataPoints[0].x, y: min}, {x: dataPoints[dataPoints.length-1].x, y: min}], borderColor: '#29b6f6', borderWidth: 1, borderDash: [2, 2], pointRadius: 0, fill: false });
+                datasets.push({ label: `最大 (${max.toFixed(1)})`, data: [{x: dataPoints[0].x, y: max}, {x: dataPoints[dataPoints.length-1].x, y: max}], borderColor: '#ff1744', borderWidth: 1, borderDash: [2, 2], pointRadius: 0, fill: false });
+                if (minPoint) datasets.push({ label: 'Min', type: 'scatter', data: [minPoint], backgroundColor: '#29b6f6', pointRadius: 5 });
+                if (maxPoint) datasets.push({ label: 'Max', type: 'scatter', data: [maxPoint], backgroundColor: '#ff1744', pointRadius: 5 });
+            }
+            chartInstance = new Chart(ctx, { type: 'line', data: { datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { type: 'time', time: { unit: 'hour', tooltipFormat: 'yyyy-MM-dd HH:mm' }, grid: { color: gridColor }, ticks: { color: textColor } }, y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } } }, plugins: { legend: { labels: { color: textColor } }, tooltip: { backgroundColor: isLight ? '#fff' : '#333', titleColor: isLight ? '#000' : '#fff', bodyColor: isLight ? '#000' : '#fff', borderColor: '#ccc', borderWidth: isLight ? 1 : 0 } } } });
+        }
+        function updateChartTheme(isLight) {
+            const gridColor = isLight ? '#dddddd' : 'rgba(255,255,255,0.1)'; const textColor = isLight ? '#666666' : '#aaaaaa';
+            chartInstance.options.scales.x.grid.color = gridColor; chartInstance.options.scales.x.ticks.color = textColor;
+            chartInstance.options.scales.y.grid.color = gridColor; chartInstance.options.scales.y.ticks.color = textColor;
+            chartInstance.options.plugins.legend.labels.color = textColor;
+            chartInstance.options.plugins.tooltip.backgroundColor = isLight ? '#fff' : '#333';
+            chartInstance.options.plugins.tooltip.titleColor = isLight ? '#000' : '#fff';
+            chartInstance.options.plugins.tooltip.bodyColor = isLight ? '#000' : '#fff';
+            chartInstance.update();
+        }
+        async function fetchWeather() {
+            try {
+                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
+                const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=us_aqi`;
+                const [weatherRes, aqiRes] = await Promise.all([fetch(weatherUrl), fetch(aqiUrl)]);
+                const weatherData = await weatherRes.json(); const aqiData = await aqiRes.json();
+                document.getElementById('tempVal').innerText = weatherData.current.temperature_2m; updateGauge('marker-temp', weatherData.current.temperature_2m, THRESHOLDS.tempCard.max);
+                document.getElementById('windSpeed').innerText = weatherData.current.wind_speed_10m; updateGauge('marker-wind', weatherData.current.wind_speed_10m, THRESHOLDS.windCard.max);
+                const windDeg = weatherData.current.wind_direction_10m;
+                const directions = ['北風', '東北', '東風', '東南', '南風', '西南', '西風', '西北'];
+                document.getElementById('windDir').innerText = directions[Math.round(windDeg / 45) % 8];
+                const aqi = aqiData.current.us_aqi; document.getElementById('aqiVal').innerText = aqi; updateGauge('marker-aqi', aqi, THRESHOLDS.aqiCard.max);
+                let aqiText = "良好", aqiColor = "#29b6f6";
+                if(aqi > 50) { aqiText = "普通"; aqiColor = "#00e676"; } if(aqi > 100) { aqiText = "對敏感族群不健康"; aqiColor = "#ffeb3b"; } if(aqi > 150) { aqiText = "不健康"; aqiColor = "#ff1744"; }
+                const aqiEl = document.getElementById('aqiStatus'); aqiEl.innerText = aqiText; aqiEl.style.color = aqiColor;
+            } catch (error) { console.error("天氣讀取失敗:", error); }
+        }
+
+        initGauges(); fetchRealtimeData(); fetchHistoryData(); fetchWeather();
+        setInterval(fetchRealtimeData, 10000); setInterval(fetchHistoryData, 300000); setInterval(fetchWeather, 300000);
+    }
+</script>
+<div class="modal fade" id="ureaModal" tabindex="-1" aria-labelledby="ureaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered"> <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="ureaModalLabel">
+                    📊 每日尿素用量統計 (近30日)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                
+                <div id="ureaStatus" class="mb-2 text-center"></div>
+
+                <div style="position: relative; height: 350px; width: 100%;">
+                    <canvas id="ureaChart"></canvas>
+                </div>
+                
+                <hr>
+
+                <div id="ureaTableContainer"></div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="common.js"></script>
+<script src="js/urea_stats.js"></script>
 </body>
 </html>

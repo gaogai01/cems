@@ -1,41 +1,37 @@
 // ==========================================
-// 📊 尿素用量統計前端腳本 (堆疊圖 + 日期導航版)
+// 📊 尿素用量統計前端腳本 (Modal 優化版)
 // ==========================================
 
+// ★ 請確認填入您的最新 GAS 網址
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwPLWcCJhnE_ZnnIbCgk9hNcjo6ikLDR_rzFGCiBFPamXapAj3e-fg1YiJo1THW08T4/exec"; 
 
-// 全域變數
+// 定義全域變數，避免重複宣告
 let myUreaChart = null; 
-let allUreaData = []; // 儲存抓回來的原始資料
-let currentDataIndex = -1; // 目前選中的資料索引 (對應 allUreaData)
-
-// 定義 12 部機組的專屬顏色 (色碼表)
-const MACHINE_COLORS = [
-    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', // M1~M6
-    '#E7E9ED', '#767676', '#c9cbcf', '#2E8B57', '#800000', '#000080'  // M7~M12
-];
+let isUreaDataLoaded = false; // 避免每次打開都重新抓資料
 
 document.addEventListener("DOMContentLoaded", function() {
-    // 1. 綁定 Modal 事件
+    // 監聽 Modal 打開的事件 (shown.bs.modal)
+    // 這樣可以確保視窗完全跳出來後，圖表才開始畫，寬度才會正確
     const ureaModal = document.getElementById('ureaModal');
     if (ureaModal) {
         ureaModal.addEventListener('shown.bs.modal', function () {
-            if (allUreaData.length === 0) {
+            // 如果還沒載入過資料，就執行載入
+            if (!isUreaDataLoaded) {
                 initUreaChart();
             }
         });
     }
-
-    // 2. 綁定日期控制按鈕事件
-    document.getElementById('btnPrevDay').addEventListener('click', () => changeDate(-1));
-    document.getElementById('btnNextDay').addEventListener('click', () => changeDate(1));
-    document.getElementById('ureaDatePicker').addEventListener('change', (e) => jumpToDate(e.target.value));
 });
 
 function initUreaChart() {
-    const statusDiv = document.getElementById('ureaStatus');
-    if(statusDiv) statusDiv.innerHTML = '<div class="spinner-border text-success spinner-border-sm"></div> 數據載入中...';
+    const ctx = document.getElementById('ureaChart');
+    if (!ctx) return; 
 
+    // 顯示載入狀態
+    const statusDiv = document.getElementById('ureaStatus');
+    if(statusDiv) statusDiv.innerHTML = '<div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div> <span class="ms-2">數據載入中...</span>';
+
+    // 呼叫後端 API
     fetch(GAS_API_URL + "?mode=urea_stats")
     .then(response => response.json())
     .then(data => {
@@ -43,168 +39,97 @@ function initUreaChart() {
             if(statusDiv) statusDiv.innerHTML = `<span class="text-danger">❌ ${data.error}</span>`;
             return;
         }
-        if(statusDiv) statusDiv.innerHTML = '';
+        if(statusDiv) statusDiv.innerHTML = ''; // 清除載入文字
         
-        allUreaData = data; // 存入全域變數
-        
-        // 預設顯示「最新一天」
-        currentDataIndex = allUreaData.length - 1;
-        
-        renderStackedChart(data);
-        updateDetailView(); // 更新表格與日期顯示
+        renderChart(data);
+        renderTodayTable(data);
+        isUreaDataLoaded = true; // 標記已載入，下次打開不用重抓(除非重整網頁)
     })
     .catch(error => {
         console.error('Error:', error);
-        if(statusDiv) statusDiv.innerHTML = '<span class="text-danger">連線失敗</span>';
+        if(statusDiv) statusDiv.innerHTML = '<span class="text-danger">連線失敗，請檢查網路</span>';
     });
 }
 
-// 繪製堆疊長條圖
-function renderStackedChart(data) {
+function renderChart(data) {
     const ctx = document.getElementById('ureaChart').getContext('2d');
-    if (myUreaChart) myUreaChart.destroy();
+    
+    // 如果舊圖表存在，先銷毀 (防止滑鼠移上去數值亂跳)
+    if (myUreaChart) {
+        myUreaChart.destroy();
+    }
 
     const labels = data.map(item => item.date);
-
-    // 準備 12 個 Dataset (M1 ~ M12)
-    const datasets = [];
-    for (let i = 1; i <= 12; i++) {
-        const mKey = `M${i}`;
-        // 抓取每一天該機組的數值
-        const mData = data.map(item => item[mKey] || 0);
-
-        datasets.push({
-            label: `#${i}機`,
-            data: mData,
-            backgroundColor: MACHINE_COLORS[i-1], // 對應顏色
-            stack: 'Stack 0', // 設定為同一組堆疊
-        });
-    }
+    const totalUsage = data.map(item => {
+        let sum = 0;
+        for (let i = 1; i <= 12; i++) sum += item[`M${i}`] || 0;
+        return sum.toFixed(1);
+    });
 
     myUreaChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
-            datasets: datasets
+            datasets: [{
+                label: '全廠尿素每日總用量 (公升)',
+                data: totalUsage,
+                backgroundColor: 'rgba(25, 135, 84, 0.6)', // 改成綠色系配合環保
+                borderColor: 'rgba(25, 135, 84, 1)',
+                borderWidth: 1
+            }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index', // 滑鼠移上去時顯示當天所有機組
-                intersect: false,
-            },
+            maintainAspectRatio: false, // 讓圖表填滿 Modal 高度
             scales: {
-                x: { stacked: true }, // X軸堆疊
-                y: { 
-                    stacked: true,    // Y軸堆疊
-                    beginAtZero: true,
-                    title: { display: true, text: '總用量 (L)' } 
-                }
-            },
-            onClick: (e, elements) => {
-                // 點擊圖表切換下方表格日期
-                if (elements.length > 0) {
-                    const index = elements[0].index;
-                    currentDataIndex = index;
-                    updateDetailView();
-                }
+                y: { beginAtZero: true, title: { display: true, text: '用量 (L)' } }
             },
             plugins: {
                 tooltip: {
                     callbacks: {
-                        footer: function(tooltipItems) {
-                            let sum = 0;
-                            tooltipItems.forEach(function(tooltipItem) {
-                                sum += tooltipItem.raw;
-                            });
-                            return '全廠總計: ' + sum.toFixed(1) + ' L';
+                        afterBody: function(context) {
+                            const index = context[0].dataIndex;
+                            const dayData = data[index];
+                            let str = "\n--- 各機組用量 (L) ---\n";
+                            let hasData = false;
+                            for(let i=1; i<=12; i++) {
+                                let val = dayData[`M${i}`];
+                                if(val > 0) {
+                                    str += `#${i}號機: ${val}\n`;
+                                    hasData = true;
+                                }
+                            }
+                            return hasData ? str : "\n無消耗紀錄";
                         }
                     }
-                },
-                legend: {
-                    position: 'bottom', // 圖例放下面比較不擋路
-                    labels: { boxWidth: 12, font: { size: 10 } }
                 }
             }
         }
     });
 }
 
-// --- 日期導航邏輯 ---
-
-// 按鈕切換 (+1 或 -1)
-function changeDate(offset) {
-    const newIndex = currentDataIndex + offset;
-    // 邊界檢查
-    if (newIndex >= 0 && newIndex < allUreaData.length) {
-        currentDataIndex = newIndex;
-        updateDetailView();
-    } else {
-        alert("已經是第一筆或最後一筆資料了！");
-    }
-}
-
-// 日期選擇器跳轉
-function jumpToDate(dateStr) {
-    // 尋找對應日期的索引
-    const index = allUreaData.findIndex(item => item.date === dateStr);
-    if (index !== -1) {
-        currentDataIndex = index;
-        updateDetailView();
-    } else {
-        alert("無此日期的數據 (可能非最近30日)");
-    }
-}
-
-// 更新下方的表格與日期顯示
-function updateDetailView() {
-    if (currentDataIndex < 0 || allUreaData.length === 0) return;
-
-    const currentDayData = allUreaData[currentDataIndex];
-    
-    // 1. 同步更新日期選擇器
-    document.getElementById('ureaDatePicker').value = currentDayData.date;
-
-    // 2. 判斷按鈕是否該停用 (Disable)
-    document.getElementById('btnPrevDay').disabled = (currentDataIndex === 0);
-    document.getElementById('btnNextDay').disabled = (currentDataIndex === allUreaData.length - 1);
-
-    // 3. 繪製表格
-    renderTable(currentDayData);
-}
-
-function renderTable(dayData) {
+function renderTodayTable(data) {
     const tableDiv = document.getElementById('ureaTableContainer');
-    
-    // 計算當日總量
-    let total = 0;
-    for(let i=1; i<=12; i++) total += (dayData[`M${i}`] || 0);
+    if (!tableDiv || data.length === 0) return;
 
-    let html = `<h6 class="fw-bold mt-2 text-center text-primary">
-                    📅 ${dayData.date} 明細 (全廠總計: ${total.toFixed(1)} L)
-                </h6>
-                <table class="table table-bordered table-sm text-center align-middle" style="font-size: 0.9rem;">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:15%">機組</th><th style="width:35%">用量(L)</th>
-                        <th style="width:15%">機組</th><th style="width:35%">用量(L)</th>
-                    </tr>
+    const lastDay = data[data.length - 1]; 
+
+    let html = `<h6 class="fw-bold">📅 ${lastDay.date} 各機組用量明細</h6>
+                <table class="table table-bordered table-striped table-sm text-center align-middle">
+                <thead class="table-success">
+                    <tr><th>機組</th><th>用量(L)</th><th>機組</th><th>用量(L)</th></tr>
                 </thead>
                 <tbody>`;
     
     for(let i=1; i<=12; i+=2) {
-        let v1 = dayData[`M${i}`];
-        let v2 = dayData[`M${i+1}`];
-        
-        // 有數值顯示顏色，並加粗
-        // 顏色使用圖表定義的顏色，增加辨識度
-        let style1 = v1 > 0 ? `color:${MACHINE_COLORS[i-1]}; font-weight:bold;` : "color:#ccc;";
-        let style2 = v2 > 0 ? `color:${MACHINE_COLORS[i]}; font-weight:bold;` : "color:#ccc;";
+        let v1 = lastDay[`M${i}`];
+        let v2 = lastDay[`M${i+1}`];
+        let c1 = v1 > 0 ? "text-success fw-bold" : "text-muted";
+        let c2 = v2 > 0 ? "text-success fw-bold" : "text-muted";
 
         html += `<tr>
-                    <td>#${i}</td> <td style="${style1}">${v1}</td>
-                    <td>#${i+1}</td> <td style="${style2}">${v2}</td>
+                    <td>#${i}</td> <td class="${c1}">${v1}</td>
+                    <td>#${i+1}</td> <td class="${c2}">${v2}</td>
                  </tr>`;
     }
     html += `</tbody></table>`;

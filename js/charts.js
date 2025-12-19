@@ -151,7 +151,7 @@ const CATEGORIES = {
     'level': ['LIT000_VAL0','LI003_VAL0','LI012_VAL0','LI021_VAL0','LI022_VAL0','LI018_VAL0', 'LI011_VAL0'], 
     'flow':  ['FI000B_Q_VAL0','FI000A_Q_VAL0','FI012_Q_VAL0','FI021W_Q_VAL0','FI018_Q_VAL0','FI018B_Q_VAL0','FI000B_Q_VAL0'], 
     'ph':    ['PHI015_VAL0','PHI013_VAL0','PHI014_VAL0','PHI017_VAL0','PHI018_VAL0'], 
-    'quality': ['SS018_VAL0','COD018_VAL0','OFD018_VAL0', 'NH3018_VAL0'], 
+    'quality': ['SS018_VAL0','COD018_VAL0','OFD018_VAL0', 'NH3N018_VAL0'], 
     'pac': ['LI044_VAL0','LI048_VAL0','LI049_VAL0','LI043_VAL0']
 };
 
@@ -163,7 +163,7 @@ const TAG_NAMES = {
     'LI044_VAL0': '鹼槽液位', 'LI048_VAL0': '凝膠儲槽液位', 'LI049_VAL0': 'PAC儲槽液位', 'LI043_VAL0': '酸槽液位',
     'FI000B_Q_VAL0': 'API進口累積', 'FI000A_Q_VAL0': 'API出口累積',
     'LI011_VAL0': 'T02-04回收水槽液位',
-    'NH3018_VAL0': '放流水氨氮'
+    'NH3N018_VAL0': '放流水氨氮'
 };
 
 function renderCheckboxes() {

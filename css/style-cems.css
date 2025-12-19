@@ -1,1 +1,161 @@
+        /* --- CSS 變數定義 --- */
+        :root { 
+            --bg-body: #0a0b10;
+            --bg-card: rgba(30, 34, 45, 0.7);
+            --bg-card-border: 1px solid rgba(255, 255, 255, 0.1);
+            --bg-table-head: rgba(44, 48, 60, 0.9);
+            --bg-table-row: rgba(30, 34, 45, 0.4);
+            --bg-table-row-hover: rgba(255, 255, 255, 0.05);
+            --text-main: #e0e6ed;
+            --text-sub: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --glow-green: 0 0 10px rgba(0, 230, 118, 0.3);
+            --marker-color: #ffffff; 
+            --text-running: #00e676; 
+        }
 
+        body.light-mode {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-card-border: 1px solid #e2e8f0;
+            --bg-table-head: #f8fafc;
+            --bg-table-row: #ffffff;
+            --bg-table-row-hover: #f1f5f9;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --glow-green: none;
+            --marker-color: #333333; 
+            --text-running: #15803d; 
+        }
+
+        body { 
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; 
+            background-color: var(--bg-body); color: var(--text-main); 
+            margin: 0; 
+            transition: background-color 0.3s, color 0.3s; 
+            overflow-y: auto; 
+            background-image: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.03) 0%, transparent 50%);
+        }
+        
+        .cems-container { padding: 10px 20px; }
+
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
+        .header-spacer { flex: 1; }
+        .header-title { text-align: center; flex: 2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        body.light-mode .header-title { text-shadow: none; }
+        h1 { color: #4CAF50; margin: 0; font-size: 1.6rem; letter-spacing: 1.5px; font-weight: 700; white-space: nowrap; }
+        .header-controls { flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+
+        .theme-toggle {
+            background: var(--bg-card); border: var(--bg-card-border); color: var(--text-main);
+            padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85rem;
+            transition: all 0.3s; backdrop-filter: blur(5px); white-space: nowrap;
+        }
+        .theme-toggle:hover { background-color: rgba(255,255,255,0.1); }
+
+        .update-pill {
+            background-color: #1b5e20; color: #e8f5e9; padding: 5px 15px; border-radius: 20px;
+            font-size: 0.85rem; font-weight: 500; letter-spacing: 0.5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap; display: flex; align-items: center; backdrop-filter: blur(5px);
+        }
+        body.light-mode .update-pill { background-color: #2e7d32; color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+
+        @media (max-width: 900px) {
+            h1 { font-size: 1.2rem; }
+            .header-controls { gap: 5px; }
+            .theme-toggle, .update-pill { padding: 4px 8px; font-size: 0.75rem; }
+        }
+
+        .dashboard { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 15px; }
+        @media (max-width: 900px) {
+            .dashboard { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .cems-container { padding: 5px 10px; }
+        }
+
+        .card { 
+            background-color: var(--bg-card); border: var(--bg-card-border); border-radius: 12px; 
+            padding: 10px; text-align: center; border-top: 3px solid #555; position: relative; 
+            box-shadow: var(--shadow-card); backdrop-filter: blur(10px);
+        }
+        .card.power { border-top-color: #ffca28; } .card.units { border-top-color: #ff5722; } 
+        .card.urea { border-top-color: #3f51b5; } .card.aqi { border-top-color: #00e676; } 
+        .card.temp { border-top-color: #29b6f6; } .card.wind { border-top-color: #ab47bc; } 
+        
+        .card h3 { margin: 0 0 4px 0; font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .data-row { display: flex; justify-content: center; align-items: baseline; gap: 3px; }
+        .card .value { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--text-main); text-shadow: 0 0 10px rgba(255,255,255,0.1); }
+        .card .unit { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+        .card .sub-val { font-size: 0.75rem; color: var(--text-sub); margin-top: 4px; min-height: 1.2em; line-height: 1.2;}
+
+        .gauge-container { position: relative; width: 100%; height: 6px; margin-top: 6px; display: flex; align-items: center; border-radius: 3px; background: rgba(255,255,255,0.1); }
+        .gauge-bar { width: 100%; height: 100%; border-radius: 3px; } 
+        .gauge-marker {
+            position: absolute; top: -3px; height: 12px; width: 4px;
+            background-color: var(--marker-color); border-radius: 2px;
+            transform: translateX(-50%); transition: left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            left: 0%; z-index: 2; box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .diff-up { color: #ff1744; font-weight: bold; } .diff-down { color: #00e676; font-weight: bold; } .diff-flat { color: var(--text-sub); }
+
+        .table-container { 
+            overflow-x: auto; margin-bottom: 20px; border-radius: 12px; 
+            box-shadow: var(--shadow-card); border: var(--bg-card-border); 
+            background-color: var(--bg-card); backdrop-filter: blur(10px);
+        } 
+        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 1.35rem; font-weight: 500; }
+        th, td { border-bottom: 1px solid var(--border-color); padding: 8px 6px; text-align: center; color: var(--text-main); line-height: 1.2; } 
+        th { background-color: var(--bg-table-head); color: #81d4fa; font-weight: 600; white-space: nowrap; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        body.light-mode th { color: #0277bd; }
+        tbody tr:hover { background-color: var(--bg-table-row-hover); }
+        td:first-child, th:first-child { position: sticky; left: 0; z-index: 10; background-color: var(--bg-card); border-right: 2px solid var(--border-color); color: var(--text-main); font-weight: 700; font-size: 1.1rem; }
+        .avg-row td { background-color: #004d40 !important; color: #fff !important; border-top: 2px solid #00695c; }
+        .avg-row td:first-child { background-color: #00695c !important; z-index: 11; }
+
+        .col-good { color: #29b6f6 !important; font-weight: bold; text-shadow: 0 0 8px rgba(41, 182, 246, 0.4); } 
+        body.light-mode .col-good { color: #0288d1 !important; text-shadow: none; } 
+        .col-warn { color: #ffea00 !important; font-weight: bold; text-shadow: 0 0 8px rgba(255, 234, 0, 0.4); } 
+        body.light-mode .col-warn { color: #f57f17 !important; text-shadow: none; }
+        .col-limit { color: #ff1744 !important; font-weight: bold; text-shadow: 0 0 10px rgba(255, 23, 68, 0.5); } 
+        .status-run td { color: var(--text-running); font-weight: 700; text-shadow: var(--glow-green); } 
+        .status-run td:first-child { color: #fff; text-shadow: none; } 
+        body.light-mode .status-run td:first-child { color: #000; }
+        .status-stop td { color: var(--text-muted) !important; font-weight: normal; font-size: 1.1rem; }
+
+        /* 藥丸標籤樣式 */
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 12px; font-size: 0.65rem; color: #fff; margin-left: 4px; vertical-align: middle; white-space: nowrap; line-height: 1; font-weight: normal; text-shadow: none; }
+        .badge-calib { background-color: #ff9800; border: 1px solid #f57c00; }
+        .badge-over { background-color: #f44336; border: 1px solid #d32f2f; animation: blink 2s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        .chart-controls { 
+            background-color: var(--bg-card); padding: 8px; border-radius: 8px; margin-bottom: 10px; 
+            display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border: var(--bg-card-border); 
+            font-size: 0.9rem; backdrop-filter: blur(5px);
+        }
+        .chart-controls label { color: var(--text-main); font-weight: 500; }
+        .chart-controls select, .chart-controls input[type="date"] { 
+            background-color: rgba(0,0,0,0.2); color: var(--text-main); border: 1px solid var(--border-color); 
+            padding: 4px 8px; border-radius: 4px; font-size: 0.9rem; outline: none;
+        }
+        .chart-controls input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+        body.light-mode .chart-controls input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0); }
+        body.light-mode .chart-controls select { background-color: #fff; }
+        button { transition: transform 0.1s, background-color 0.3s; }
+        button:active { transform: scale(0.95); }
+
+        .chart-container { 
+            position: relative; height: 400px; 
+            width: 100%; background-color: var(--bg-card); border-radius: 12px; 
+            margin-bottom: 20px; padding: 15px; box-sizing: border-box; 
+            box-shadow: var(--shadow-card); border: var(--bg-card-border);
+            backdrop-filter: blur(10px);
+        }
+        #loading { text-align: center; font-size: 1.2em; margin-top: 20px; color: var(--text-sub); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }

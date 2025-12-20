@@ -1,27 +1,28 @@
 // ==========================================
-// 📊 尿素用量統計前端腳本 (頁面嵌入版)
+// 📊 尿素用量統計 (顏色分組 + 橫向表格版)
 // ==========================================
 
 // ★★★ 請確認這裡填入您的最新 GAS 網址 ★★★
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwPLWcCJhnE_ZnnIbCgk9hNcjo6ikLDR_rzFGCiBFPamXapAj3e-fg1YiJo1THW08T4/exec"; 
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwPLWcCJhnE_ZnnIbCgk9hNcjo6ikLDR_rzFGCiBFPamXapAj3e-fg1YiJo1THW08T4/exec"; ; 
 
 // 全域變數
 let myUreaChart = null; 
 let allUreaData = []; 
 let currentDataIndex = -1; 
 
-// 定義 12 部機組顏色
+// --- 🎨 顏色設定 (依照需求分組) ---
 const MACHINE_COLORS = [
-    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', 
-    '#E7E9ED', '#767676', '#c9cbcf', '#2E8B57', '#800000', '#000080'
+    // 1~4 機: 橘黃色系 (金黃 -> 橘 -> 深橘紅)
+    '#FFD700', '#FFB347', '#FF8C00', '#FF4500', 
+    // 5~8 機: 綠色系 (淺綠 -> 萊姆綠 -> 森林綠 -> 深綠)
+    '#90EE90', '#32CD32', '#228B22', '#006400', 
+    // 9~12 機: 藍色系 (天藍 -> 鋼青 -> 寶藍 -> 深藍)
+    '#87CEEB', '#4682B4', '#0000FF', '#00008B'
 ];
 
 document.addEventListener("DOMContentLoaded", function() {
-    // 1. 網頁載入後，直接初始化圖表 (不再等待 Modal)
     initUreaChart();
 
-    // 2. 綁定按鈕事件
-    // 檢查元素是否存在，避免報錯
     const btnPrev = document.getElementById('btnPrevDay');
     const btnNext = document.getElementById('btnNextDay');
     const datePicker = document.getElementById('ureaDatePicker');
@@ -42,11 +43,10 @@ function initUreaChart() {
             if(statusDiv) statusDiv.innerHTML = `<span class="text-warning">⚠️ ${data.error}</span>`;
             return;
         }
-        if(statusDiv) statusDiv.innerHTML = ''; // 清除 Loading 文字
+        if(statusDiv) statusDiv.innerHTML = '';
         
         allUreaData = data; 
         
-        // 預設顯示最新一天
         if (allUreaData.length > 0) {
             currentDataIndex = allUreaData.length - 1;
             renderStackedChart(data);
@@ -63,7 +63,7 @@ function initUreaChart() {
 
 function renderStackedChart(data) {
     const ctx = document.getElementById('ureaChart');
-    if (!ctx) return; // 防呆
+    if (!ctx) return; 
 
     if (myUreaChart) myUreaChart.destroy();
 
@@ -75,7 +75,7 @@ function renderStackedChart(data) {
         const mData = data.map(item => item[mKey] || 0);
 
         datasets.push({
-            label: `#${i}機`,
+            label: `#${i}`, // 圖例簡化，只顯示數字
             data: mData,
             backgroundColor: MACHINE_COLORS[i-1],
             stack: 'Stack 0',
@@ -93,8 +93,15 @@ function renderStackedChart(data) {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             scales: {
-                x: { stacked: true },
-                y: { stacked: true, beginAtZero: true, title: { display: true, text: '總用量 (L)' } }
+                x: { 
+                    stacked: true,
+                    grid: { display: false } // 讓 X 軸乾淨點
+                },
+                y: { 
+                    stacked: true, 
+                    beginAtZero: true, 
+                    title: { display: true, text: '總用量 (L)' } 
+                }
             },
             onClick: (e, elements) => {
                 if (elements.length > 0) {
@@ -103,13 +110,20 @@ function renderStackedChart(data) {
                 }
             },
             plugins: {
-                legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } },
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        boxWidth: 10, 
+                        padding: 15,
+                        font: { size: 11 }
+                    } 
+                },
                 tooltip: {
                     callbacks: {
                         footer: (tooltipItems) => {
                             let sum = 0;
                             tooltipItems.forEach((t) => sum += t.raw);
-                            return '總計: ' + sum.toFixed(1) + ' L';
+                            return '全廠總計: ' + sum.toFixed(1) + ' L';
                         }
                     }
                 }
@@ -118,14 +132,13 @@ function renderStackedChart(data) {
     });
 }
 
-// --- 以下功能邏輯不變 ---
 function changeDate(offset) {
     const newIndex = currentDataIndex + offset;
     if (newIndex >= 0 && newIndex < allUreaData.length) {
         currentDataIndex = newIndex;
         updateDetailView();
     } else {
-        alert("已無更多資料");
+        // 到頂或到底時，按鈕會有視覺回饋，這裡不跳 alert 干擾
     }
 }
 
@@ -150,34 +163,46 @@ function updateDetailView() {
     renderTable(currentDayData);
 }
 
+// --- 🔄 表格繪製邏輯 (更新：橫向排列 1~12) ---
 function renderTable(dayData) {
     const tableDiv = document.getElementById('ureaTableContainer');
     let total = 0;
     for(let i=1; i<=12; i++) total += (dayData[`M${i}`] || 0);
 
-    let html = `<h6 class="fw-bold mt-2 text-center text-primary">
-                    📅 ${dayData.date} 明細 (總計: ${total.toFixed(1)} L)
-                </h6>
-                <table class="table table-bordered table-sm text-center align-middle" style="font-size: 0.9rem;">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:15%">機組</th><th style="width:35%">用量(L)</th>
-                        <th style="width:15%">機組</th><th style="width:35%">用量(L)</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+    // 組合 HTML
+    let html = `
+        <h6 class="fw-bold text-center mb-2" style="color: #555;">
+            📅 ${dayData.date} 用量明細表
+        </h6>
+        <table class="table table-bordered table-sm text-center align-middle" style="font-size: 0.85rem; min-width: 600px;">
+            <thead class="table-light">
+                <tr>
+                    <th class="bg-light">機組</th>`;
     
-    for(let i=1; i<=12; i+=2) {
-        let v1 = dayData[`M${i}`];
-        let v2 = dayData[`M${i+1}`];
-        let s1 = v1 > 0 ? `color:${MACHINE_COLORS[i-1]}; font-weight:bold;` : "color:#ccc;";
-        let s2 = v2 > 0 ? `color:${MACHINE_COLORS[i]}; font-weight:bold;` : "color:#ccc;";
-
-        html += `<tr>
-                    <td>#${i}</td> <td style="${s1}">${v1}</td>
-                    <td>#${i+1}</td> <td style="${s2}">${v2}</td>
-                 </tr>`;
+    // 產生表頭 #1 ~ #12
+    for(let i=1; i<=12; i++) {
+        // 使用對應的顏色當作表頭底色 (但在文字上做效果比較好看，這裡用簡單的底色)
+        html += `<th>#${i}</th>`;
     }
-    html += `</tbody></table>`;
+    html += `<th class="table-dark text-white">總計</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="fw-bold bg-light">用量</td>`;
+    
+    // 產生數據欄位
+    for(let i=1; i<=12; i++) {
+        let val = dayData[`M${i}`] || 0;
+        let colorStyle = val > 0 ? `color:${MACHINE_COLORS[i-1]}; font-weight:900;` : "color:#ccc;";
+        html += `<td style="${colorStyle}">${val}</td>`;
+    }
+
+    // 總計欄位
+    html += `<td class="fw-bold text-danger">${total.toFixed(1)}</td>
+            </tr>
+            </tbody>
+        </table>`;
+    
     tableDiv.innerHTML = html;
 }

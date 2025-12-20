@@ -23,9 +23,6 @@
         <div class="header-spacer"></div>
         <div class="header-title"><h1>CEMS</h1></div>
         <div class="header-controls">
-            <button type="button" class="btn btn-primary ms-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#ureaModal">
-    <i class="bi bi-bar-chart-line"></i> 尿素統計
-</button>
             <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">☀️ 亮色</span></button>
             <div id="updateTime" class="update-pill">連線中...</div>
         </div>
@@ -371,33 +368,18 @@
         setInterval(fetchRealtimeData, 10000); setInterval(fetchHistoryData, 300000); setInterval(fetchWeather, 300000);
     }
 </script>
-<div class="modal fade" id="ureaModal" tabindex="-1" aria-labelledby="ureaModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered"> <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="ureaModalLabel">
-                    📊 每日尿素用量統計 (近30日)
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                
-                <div id="ureaStatus" class="mb-2 text-center"></div>
 
-                <div style="position: relative; height: 350px; width: 100%;">
-                    <canvas id="ureaChart"></canvas>
-                </div>
-                
-                <hr>
-
-                <div id="ureaTableContainer"></div>
-
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
-            </div>
-        </div>
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <span>📊 尿素每日用量統計 (近30日)</span>
+        <div id="ureaStatus"></div> </div>
+    <div class="card-body">
+        <canvas id="ureaChart" style="max-height: 350px;"></canvas>
+        
+        <div id="ureaTableContainer"></div>
     </div>
 </div>
+    
 <script src="common.js"></script>
 <script src="js/urea_stats.js"></script>
 </body>

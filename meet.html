@@ -154,20 +154,66 @@
 
         <div class="card bg-white p-6 rounded-xl shadow-sm">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold text-red-700"><i class="fa-solid fa-faucet-drip mr-2"></i> 放流水質</h2>
-                <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">CWMS</span>
+                <h2 class="text-lg font-bold text-red-700"><i class="fa-solid fa-faucet-drip mr-2"></i> 放流水質及CWMS</h2>
+                <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">綜合監測</span>
             </div>
             <div class="space-y-4">
                 <div>
-                    <div class="flex justify-between text-xs mb-1"><span class="font-medium text-gray-700">出口水溫 (CSV資料)</span><span class="text-gray-500"><span id="cwmsTempVal">-</span> / 42 °C</span></div>
-                    <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" id="cwmsTempBar" style="width: 0%"></div></div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium text-gray-700">化學需氧量 (COD)</span>
+                        <span class="text-gray-500"><span id="cwmsCODVal">-</span> / 100 mg/L</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-500 h-2 rounded-full" id="cwmsCODBar" style="width: 0%"></div>
+                    </div>
                 </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium text-gray-700">懸浮固體 (SS)</span>
+                        <span class="text-gray-500"><span id="cwmsSSVal">-</span> / 30 mg/L</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-500 h-2 rounded-full" id="cwmsSSBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium text-gray-700">油脂 (Oil)</span>
+                        <span class="text-gray-500"><span id="cwmsOilVal">-</span> / 10 mg/L</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-500 h-2 rounded-full" id="cwmsOilBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
                  <div>
-                    <div class="flex justify-between text-xs mb-1"><span class="font-medium text-gray-700">化學需氧量 (COD)</span><span class="text-gray-500">60 / 100 mg/L</span></div>
-                    <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 60%"></div></div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium text-gray-700">回收水流量</span>
+                        <span class="text-gray-500"><span id="cwmsFlowVal">-</span> / 40 CMD</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-indigo-500 h-2 rounded-full" id="cwmsFlowBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium text-gray-700">出口水溫</span>
+                        <span class="text-gray-500"><span id="cwmsTempVal">-</span> / 42 °C</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-green-500 h-2 rounded-full" id="cwmsTempBar" style="width: 0%"></div>
+                    </div>
                 </div>
             </div>
-            <div class="mt-4 pt-3 border-t flex items-center justify-center"><span class="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full border border-green-200">監測中</span></div>
+            
+            <div class="mt-4 pt-3 border-t flex items-center justify-center">
+                 <span class="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full border border-green-200">
+                    <i class="fa-solid fa-check-double mr-1"></i>符合排放標準
+                </span>
+            </div>
         </div>
 
         <div class="card bg-white p-6 rounded-xl shadow-sm md:col-span-2 lg:col-span-3">
@@ -190,9 +236,8 @@
         // ==========================================
         //  CONFIG: 把你的 Google Sheet CSV 連結貼在這裡
         // ==========================================
-        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWzf_hWw8o_KD2kjFFwUycqTOK_ssn3Bl2AZQZiihZhnVYwsw6VNS3ceM5AJdCLAdaFJanIG3oUHRL/pub?output=csv";
+        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWzf_hWw8o_KD2kjFFwUycqTOK_ssn3Bl2AZQZiihZhnVYwsw6VNS3ceM5AJdCLAdaFJanIG3oUHRL/pubhtml";
         
-        // 預設年度設定 (若 CSV 有 115 年資料，程式會自動抓到，但這裡設定預設比較的去年)
         const COMPARE_YEAR_PREV = "113"; 
         const COMPARE_YEAR_CURR = "114"; 
 
@@ -222,18 +267,12 @@
         }
 
         function processData(csvText) {
-            // 簡單 CSV 解析 (假設沒有包含逗號的文字內容)
             const rows = csvText.split('\n').map(row => row.split(','));
             
-            // 根據你的 CSV 結構，資料從第 6 行開始 (Index 5)，且第一欄是年度
-            // Column Indices based on your CSV:
-            // 0:年度, 1:月份, 4:總造水量, 7:液位, 8:存量, 9:Tank導電, 11:海淡導電, 12:RO導電, 15:尿素用量, 20:月累積NOx, 22:出口水溫
+            const data113 = []; 
+            const data114 = []; 
             
-            const data113 = []; // 去年
-            const data114 = []; // 今年
-            
-            // 跳過標頭，從第 5 列開始掃描 (Index 5 是 "113, 1, ...")
-            // 需注意 CSV 可能有空行，要濾掉
+            // 跳過標頭，從第 5 列開始掃描
             for (let i = 5; i < rows.length; i++) {
                 const col = rows[i];
                 if (!col[0]) continue; 
@@ -253,16 +292,20 @@
                     condRO: parseFloat(col[12]) || 0,
                     urea: parseFloat(col[15]) || 0,
                     cems: parseFloat(col[20]) || 0,
-                    temp: parseFloat(col[22]) || 0
+                    temp: parseFloat(col[22]) || 0,
+                    
+                    // 新增欄位對應 (Z=25, AA=26, AB=27, AC=28)
+                    cwmsFlow: parseFloat(col[25]) || 0, // 回收水流量
+                    cwmsSS: parseFloat(col[26]) || 0,   // SS
+                    cwmsCOD: parseFloat(col[27]) || 0,  // COD
+                    cwmsOil: parseFloat(col[28]) || 0   // Oil
                 };
 
                 if (year === COMPARE_YEAR_PREV) data113.push(record);
                 if (year === COMPARE_YEAR_CURR) data114.push(record);
             }
 
-            // 取得最新一筆資料 (今年的最後一筆)
             const latest = data114[data114.length - 1];
-            // 取得上個月資料 (倒數第二筆，若無則用最新)
             const prevMonth = data114.length > 1 ? data114[data114.length - 2] : latest;
 
             return {
@@ -281,12 +324,9 @@
             const today = new Date();
             document.getElementById('currentDate').textContent = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
 
-            // 2. Water Chart & Text
+            // 2. Water
             document.getElementById('waterLabel').textContent = `${latest.year}年${latest.month}月產量`;
             document.getElementById('waterValue').textContent = latest.water.toLocaleString();
-            
-            // 計算成長率 (比較同期月份: 今年同月 vs 去年同月)
-            // 注意：要確保去年陣列有對應月份，這裡簡化處理假設月份順序一致
             const lastYearMatch = lastYear.find(d => d.month === latest.month);
             if(lastYearMatch) {
                 const growth = ((latest.water - lastYearMatch.water) / lastYearMatch.water * 100).toFixed(1);
@@ -295,21 +335,15 @@
                 document.getElementById('waterGrowth').className = `text-lg font-bold flex items-center justify-end ${colorClass}`;
                 document.getElementById('waterGrowth').innerHTML = `<i class="fa-solid ${icon} mr-1"></i> ${growth}%`;
             }
+            renderChart('waterChart', 'bar', thisYear.map(d => d.month + '月'),
+                [{ label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.water), backgroundColor: '#e2e8f0', order: 2 },
+                 { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.water), backgroundColor: '#3b82f6', order: 1 }], '噸');
 
-            renderChart('waterChart', 'bar', 
-                thisYear.map(d => d.month + '月'),
-                [
-                    { label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.water), backgroundColor: '#e2e8f0', order: 2 },
-                    { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.water), backgroundColor: '#3b82f6', order: 1 }
-                ], '噸'
-            );
-
-            // 3. Storage Chart & Text
+            // 3. Storage
             document.getElementById('storageRangeLabel').textContent = `${prevMonth.month}月 vs ${latest.month}月`;
             document.getElementById('storageCurrentDate').textContent = `${latest.month}月`;
             document.getElementById('storageVolume').textContent = latest.volume.toLocaleString();
             document.getElementById('storageLevel').textContent = latest.level;
-            
             const volDiff = latest.volume - prevMonth.volume;
             const diffEl = document.getElementById('storageDiff');
             if (volDiff < 0) {
@@ -319,16 +353,9 @@
                 diffEl.innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${volDiff.toLocaleString()}`;
                 diffEl.className = "text-xl font-bold text-blue-600";
             }
-
-            // Storage Comparison Chart
             new Chart(document.getElementById('storageChart').getContext('2d'), {
                 type: 'bar',
-                data: {
-                    labels: [`${prevMonth.month}月`, `${latest.month}月`],
-                    datasets: [{
-                        label: '儲水量', data: [prevMonth.volume, latest.volume], backgroundColor: ['#94a3b8', '#06b6d4'], borderRadius: 4
-                    }]
-                },
+                data: { labels: [`${prevMonth.month}月`, `${latest.month}月`], datasets: [{ label: '儲水量', data: [prevMonth.volume, latest.volume], backgroundColor: ['#94a3b8', '#06b6d4'], borderRadius: 4 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false} }, scales: { y: { display: false }, x: { grid: { display: false } } } }
             });
 
@@ -337,39 +364,52 @@
             document.getElementById('valSea').textContent = latest.condSea;
             document.getElementById('valRO').textContent = latest.condRO;
 
-            // 5. Urea Chart & Text
+            // 5. Urea
             document.getElementById('ureaLabel').textContent = `${latest.year}年${latest.month}月用量`;
             document.getElementById('ureaValue').textContent = latest.urea;
-            
             const lastYearUreaMatch = lastYear.find(d => d.month === latest.month);
             if(lastYearUreaMatch) {
                 const uGrowth = ((latest.urea - lastYearUreaMatch.urea) / lastYearUreaMatch.urea * 100).toFixed(1);
                 document.getElementById('ureaGrowth').innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${uGrowth}%`;
             }
-
-            renderChart('ureaChart', 'bar', 
-                thisYear.map(d => d.month + '月'),
-                [
-                    { label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.urea), backgroundColor: '#f1f5f9', order: 2 },
-                    { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.urea), backgroundColor: '#6366f1', order: 1 }
-                ], '噸'
-            );
+            renderChart('ureaChart', 'bar', thisYear.map(d => d.month + '月'),
+                [{ label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.urea), backgroundColor: '#f1f5f9', order: 2 },
+                 { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.urea), backgroundColor: '#6366f1', order: 1 }], '噸');
 
             // 6. CEMS
             document.getElementById('cemsValue').textContent = latest.cems;
-            const cemsPct = (latest.cems / 400) * 100; // 假設 max 400
+            const cemsPct = (latest.cems / 400) * 100; 
             document.getElementById('cemsBar').style.width = `${cemsPct}%`;
             document.getElementById('cemsTargetLine').style.left = `${(247/400)*100}%`;
             document.getElementById('cemsTargetLabel').style.left = `${(247/400)*100}%`;
             document.getElementById('cemsLimitLine').style.left = `${(363/400)*100}%`;
             document.getElementById('cemsLimitLabel').style.left = `${(363/400)*100}%`;
 
-            // 7. CWMS (Only Temp available in CSV)
+            // 7. CWMS (New Logic with Limits)
+            // 標準 (可依需求調整)：COD=100, SS=30, Oil=10, Flow=40, Temp=42
+            const limits = { cod: 100, ss: 30, oil: 10, flow: 40, temp: 42 };
+
+            // COD
+            document.getElementById('cwmsCODVal').textContent = latest.cwmsCOD;
+            document.getElementById('cwmsCODBar').style.width = `${Math.min((latest.cwmsCOD / limits.cod) * 100, 100)}%`;
+            
+            // SS
+            document.getElementById('cwmsSSVal').textContent = latest.cwmsSS;
+            document.getElementById('cwmsSSBar').style.width = `${Math.min((latest.cwmsSS / limits.ss) * 100, 100)}%`;
+
+            // Oil
+            document.getElementById('cwmsOilVal').textContent = latest.cwmsOil;
+            document.getElementById('cwmsOilBar').style.width = `${Math.min((latest.cwmsOil / limits.oil) * 100, 100)}%`;
+
+            // Flow
+            document.getElementById('cwmsFlowVal').textContent = latest.cwmsFlow;
+            document.getElementById('cwmsFlowBar').style.width = `${Math.min((latest.cwmsFlow / limits.flow) * 100, 100)}%`;
+
+            // Temp
             document.getElementById('cwmsTempVal').textContent = latest.temp;
-            document.getElementById('cwmsTempBar').style.width = `${(latest.temp/42)*100}%`;
+            document.getElementById('cwmsTempBar').style.width = `${Math.min((latest.temp / limits.temp) * 100, 100)}%`;
         }
 
-        // Helper for creating standard charts
         function renderChart(canvasId, type, labels, datasets, unit) {
             new Chart(document.getElementById(canvasId).getContext('2d'), {
                 type: type,
@@ -385,7 +425,6 @@
             });
         }
 
-        // Start
         window.addEventListener('DOMContentLoaded', initDashboard);
 
     </script>

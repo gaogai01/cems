@@ -228,8 +228,25 @@
                 <h2 class="text-lg font-bold text-purple-700"><i class="fa-solid fa-calendar-days mr-2"></i> 重點行程與業務規劃</h2>
             </div>
             <div class="flex flex-col gap-0">
-                 <div class="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100"><div class="sm:w-24 font-bold text-xs">12/28</div><div><h4 class="font-bold text-sm">廠務會議報告</h4><span class="text-xs text-gray-500">114年12月份報告</span></div></div>
-                 <div class="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100"><div class="sm:w-24 font-bold text-xs">01/10</div><div><h4 class="font-bold text-sm">廢水定檢申報</h4><span class="text-xs text-gray-500">法規申報截止日</span></div></div>
+                <div class="flex items-center py-4 border-b border-gray-100 last:border-0">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mr-4">
+                        1
+                    </div>
+                    <div class="flex-grow flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                        <h4 class="font-bold text-lg text-gray-800">廠務會議報告</h4>
+                        <span class="text-base text-gray-500">114年12月份報告</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center py-4 border-b border-gray-100 last:border-0">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mr-4">
+                        2
+                    </div>
+                    <div class="flex-grow flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                        <h4 class="font-bold text-lg text-gray-800">廢水定檢申報</h4>
+                        <span class="text-base text-gray-500">法規申報截止日</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -241,34 +258,23 @@
 
     <script>
         // ==========================================
-        //  CONFIG: 把你的 Google Sheet CSV 連結貼在這裡
+        //  CONFIG: Google Sheet CSV
         // ==========================================
         const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQBqhzNkZ_EJSSxTKhdf038RbZ0vc7_4C84ACXoUj4Dtnu9MBaK0nq9IFaMPcY7ixfc_FZK5Kz9SG3u/pub?output=csv";
         
         const COMPARE_YEAR_PREV = "113"; 
         const COMPARE_YEAR_CURR = "114"; 
 
-async function initDashboard() {
-            // 檢查是否還留著預設文字
+        async function initDashboard() {
             if(GOOGLE_SHEET_CSV_URL.includes("你的_GOOGLE_SHEET")) {
-                alert("錯誤：你還沒把 Google Sheet 的 CSV 網址貼上去喔！\n請去程式碼第 250 行左右修改 URL。");
+                alert("錯誤：你還沒把 Google Sheet 的 CSV 網址貼上去喔！");
                 document.getElementById('loading').style.display = 'none';
                 return;
             }
 
             try {
                 const rawData = await fetchData(GOOGLE_SHEET_CSV_URL);
-                
-                // 測試是否有抓到內容
-                if (!rawData || rawData.length < 10) {
-                    throw new Error("抓到的資料是空的，請檢查 Google Sheet 是否有資料並已發佈。");
-                }
-
-                // 測試欄位長度 (檢查是否有抓到 AC 欄)
-                const firstRow = rawData.split('\n')[5].split(','); // 抓第6行來檢查
-                if (firstRow.length < 29) { // A~AC 是 29 欄
-                    console.warn("警告：CSV 欄位數量似乎不足，可能新欄位 (Z~AC) 是空的或未讀取到。目前欄位數：" + firstRow.length);
-                }
+                if (!rawData || rawData.length < 10) throw new Error("抓到的資料是空的。");
 
                 const processedData = processData(rawData);
                 updateDashboard(processedData);
@@ -278,25 +284,20 @@ async function initDashboard() {
                 
             } catch (error) {
                 console.error(error);
-                // 直接把錯誤顯示在螢幕上
-                alert("發生錯誤，無法讀取資料！\n\n錯誤原因：" + error.message + "\n\n請檢查：\n1. 網址是否為 .csv 結尾？\n2. Google Sheet 是否有按「發佈到網路」？");
-                document.getElementById('loading').innerHTML = `<p class="text-white font-bold">讀取失敗：${error.message}</p>`;
+                alert("發生錯誤：" + error.message);
             }
         }
 
         async function fetchData(url) {
             const response = await fetch(url);
-            const data = await response.text();
-            return data;
+            return await response.text();
         }
 
         function processData(csvText) {
             const rows = csvText.split('\n').map(row => row.split(','));
-            
             const data113 = []; 
             const data114 = []; 
             
-            // 跳過標頭，從第 5 列開始掃描
             for (let i = 5; i < rows.length; i++) {
                 const col = rows[i];
                 if (!col[0]) continue; 
@@ -304,10 +305,8 @@ async function initDashboard() {
                 const year = col[0].trim();
                 const month = col[1].trim();
                 
-                // 建立物件格式
                 const record = {
-                    year: year,
-                    month: month,
+                    year: year, month: month,
                     water: parseFloat(col[4]) || 0,
                     level: parseFloat(col[7]) || 0,
                     volume: parseFloat(col[8]) || 0,
@@ -317,38 +316,32 @@ async function initDashboard() {
                     urea: parseFloat(col[16]) || 0,
                     cems: parseFloat(col[21]) || 0,
                     temp: parseFloat(col[23]) || 0,
-                    
-                    // 新增欄位對應 (Z=25, AA=26, AB=27, AC=28)
-                    cwmsFlow: parseFloat(col[25]) || 0, // 回收水流量
-                    cwmsSS: parseFloat(col[26]) || 0,   // SS
-                    cwmsCOD: parseFloat(col[27]) || 0,  // COD
-                    cwmsOil: parseFloat(col[28]) || 0   // Oil
+                    cwmsFlow: parseFloat(col[25]) || 0,
+                    cwmsSS: parseFloat(col[26]) || 0,
+                    cwmsCOD: parseFloat(col[27]) || 0,
+                    cwmsOil: parseFloat(col[28]) || 0
                 };
 
                 if (year === COMPARE_YEAR_PREV) data113.push(record);
                 if (year === COMPARE_YEAR_CURR) data114.push(record);
             }
 
+            // 自動取得最後兩筆資料 (即為最新月份與上個月份)
             const latest = data114[data114.length - 1];
             const prevMonth = data114.length > 1 ? data114[data114.length - 2] : latest;
 
-            return {
-                lastYear: data113,
-                thisYear: data114,
-                latest: latest,
-                prevMonth: prevMonth
-            };
+            return { lastYear: data113, thisYear: data114, latest: latest, prevMonth: prevMonth };
         }
 
         function updateDashboard(data) {
             const { lastYear, thisYear, latest, prevMonth } = data;
 
-            // 1. Header Info
+            // Header
             document.getElementById('headerSubtitle').textContent = `報告人：高振凱 課長 | 數據基準：${latest.year}年${latest.month}月`;
             const today = new Date();
             document.getElementById('currentDate').textContent = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
 
-            // 2. Water
+            // Water
             document.getElementById('waterLabel').textContent = `${latest.year}年${latest.month}月產量`;
             document.getElementById('waterValue').textContent = latest.water.toLocaleString();
             const lastYearMatch = lastYear.find(d => d.month === latest.month);
@@ -363,7 +356,7 @@ async function initDashboard() {
                 [{ label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.water), backgroundColor: '#e2e8f0', order: 2 },
                  { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.water), backgroundColor: '#3b82f6', order: 1 }], '噸');
 
-            // 3. Storage
+            // Storage (Logic automatically handles Dec vs Nov if data exists)
             document.getElementById('storageRangeLabel').textContent = `${prevMonth.month}月 vs ${latest.month}月`;
             document.getElementById('storageCurrentDate').textContent = `${latest.month}月`;
             document.getElementById('storageVolume').textContent = latest.volume.toLocaleString();
@@ -383,12 +376,12 @@ async function initDashboard() {
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false} }, scales: { y: { display: false }, x: { grid: { display: false } } } }
             });
 
-            // 4. Conductivity
+            // Conductivity
             document.getElementById('valTank').textContent = latest.condTank;
             document.getElementById('valSea').textContent = latest.condSea;
             document.getElementById('valRO').textContent = latest.condRO;
 
-            // 5. Urea
+            // Urea
             document.getElementById('ureaLabel').textContent = `${latest.year}年${latest.month}月用量`;
             document.getElementById('ureaValue').textContent = latest.urea;
             const lastYearUreaMatch = lastYear.find(d => d.month === latest.month);
@@ -397,10 +390,11 @@ async function initDashboard() {
                 document.getElementById('ureaGrowth').innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${uGrowth}%`;
             }
             renderChart('ureaChart', 'bar', thisYear.map(d => d.month + '月'),
-                [{ label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.urea), backgroundColor: '#f1f5f9', order: 2 },
+                // 修改：backgroundColor 從 #f1f5f9 改為 #94a3b8 (深灰色) 以增加對比
+                [{ label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.urea), backgroundColor: '#94a3b8', order: 2 },
                  { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.urea), backgroundColor: '#6366f1', order: 1 }], '噸');
 
-            // 6. CEMS
+            // CEMS
             document.getElementById('cemsValue').textContent = latest.cems;
             const cemsPct = (latest.cems / 400) * 100; 
             document.getElementById('cemsBar').style.width = `${cemsPct}%`;
@@ -409,27 +403,16 @@ async function initDashboard() {
             document.getElementById('cemsLimitLine').style.left = `${(363/400)*100}%`;
             document.getElementById('cemsLimitLabel').style.left = `${(363/400)*100}%`;
 
-            // 7. CWMS (New Logic with Limits)
-            // 標準 (可依需求調整)：COD=100, SS=30, Oil=10, Flow=40, Temp=42
+            // CWMS
             const limits = { cod: 100, ss: 30, oil: 10, flow: 40, temp: 42 };
-
-            // COD
             document.getElementById('cwmsCODVal').textContent = latest.cwmsCOD;
             document.getElementById('cwmsCODBar').style.width = `${Math.min((latest.cwmsCOD / limits.cod) * 100, 100)}%`;
-            
-            // SS
             document.getElementById('cwmsSSVal').textContent = latest.cwmsSS;
             document.getElementById('cwmsSSBar').style.width = `${Math.min((latest.cwmsSS / limits.ss) * 100, 100)}%`;
-
-            // Oil
             document.getElementById('cwmsOilVal').textContent = latest.cwmsOil;
             document.getElementById('cwmsOilBar').style.width = `${Math.min((latest.cwmsOil / limits.oil) * 100, 100)}%`;
-
-            // Flow
             document.getElementById('cwmsFlowVal').textContent = latest.cwmsFlow;
             document.getElementById('cwmsFlowBar').style.width = `${Math.min((latest.cwmsFlow / limits.flow) * 100, 100)}%`;
-
-            // Temp
             document.getElementById('cwmsTempVal').textContent = latest.temp;
             document.getElementById('cwmsTempBar').style.width = `${Math.min((latest.temp / limits.temp) * 100, 100)}%`;
         }

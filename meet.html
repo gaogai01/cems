@@ -152,7 +152,7 @@
                 <div class="flex items-start gap-2 text-sm text-gray-700">
                     <i class="fa-solid fa-gavel text-red-500 mt-1"></i>
                     <div>
-                        <p>許可證每日標準：<span class="font-bold" id="cemsLimitDesc"></span></p>
+                        <p>空污許可證排放限制：<span class="font-bold">363 ppm</span></p>
                         <p class="text-xs text-gray-500 mt-0.5"><i class="fa-solid fa-triangle-exclamation mr-1"></i>每日不可超標超過 3 次</p>
                     </div>
                 </div>
@@ -197,7 +197,7 @@
 
                  <div>
                     <div class="flex justify-between text-xs mb-1">
-                        <span class="font-medium text-gray-700">回收水流量</span>
+                        <span class="font-medium text-gray-700">回收水每日平均流量</span>
                         <span class="text-gray-500"><span id="cwmsFlowVal">-</span> / 40 CMD</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
@@ -207,7 +207,7 @@
 
                 <div>
                     <div class="flex justify-between text-xs mb-1">
-                        <span class="font-medium text-gray-700">出口水溫</span>
+                        <span class="font-medium text-gray-700">D02未接觸冷卻水出口水溫</span>
                         <span class="text-gray-500"><span id="cwmsTempVal">-</span> / 42 °C</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
@@ -314,9 +314,9 @@ async function initDashboard() {
                     condTank: parseFloat(col[9]) || 0,
                     condSea: parseFloat(col[11]) || 0,
                     condRO: parseFloat(col[12]) || 0,
-                    urea: parseFloat(col[15]) || 0,
-                    cems: parseFloat(col[20]) || 0,
-                    temp: parseFloat(col[22]) || 0,
+                    urea: parseFloat(col[16]) || 0,
+                    cems: parseFloat(col[21]) || 0,
+                    temp: parseFloat(col[23]) || 0,
                     
                     // 新增欄位對應 (Z=25, AA=26, AB=27, AC=28)
                     cwmsFlow: parseFloat(col[25]) || 0, // 回收水流量

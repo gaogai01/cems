@@ -141,9 +141,11 @@
             <div class="mb-2"><span class="text-3xl font-bold text-gray-800"><span id="cemsValue">-</span> <span class="text-sm font-normal text-gray-500">ppm</span></span></div>
             <div class="relative w-full h-8 bg-gray-100 rounded-lg mt-2 mb-1">
                 <div class="absolute top-0 bottom-0 border-l-2 border-dashed border-blue-500 z-20" id="cemsTargetLine" style="left: 0%"></div>
-                <div class="absolute -top-6 text-xs font-bold text-blue-600 transform -translate-x-1/2" id="cemsTargetLabel" style="left: 0%">目標247</div>
+                <div class="absolute -top-6 text-xs font-bold text-blue-600 transform -translate-x-1/2 whitespace-nowrap" id="cemsTargetLabel" style="left: 0%">目標 247</div>
+                
                 <div class="absolute top-0 bottom-0 w-1 bg-red-500 z-20" id="cemsLimitLine" style="left: 0%"></div>
-                <div class="absolute -top-6 text-xs font-bold text-red-600 transform -translate-x-1/2" id="cemsLimitLabel" style="left: 0%">上限363</div>
+                <div class="absolute -top-6 text-xs font-bold text-red-600 transform -translate-x-1/2 whitespace-nowrap" id="cemsLimitLabel" style="left: 0%">上限 363</div>
+                
                 <div class="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-l-lg opacity-90" id="cemsBar" style="width: 0%"></div>
             </div>
             <div class="flex justify-between text-xs text-gray-400 mt-1 mb-3"><span>0</span><span>400 ppm</span></div>
@@ -229,22 +231,18 @@
             </div>
             <div class="flex flex-col gap-0">
                 <div class="flex items-center py-4 border-b border-gray-100 last:border-0">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mr-4">
-                        1
-                    </div>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mr-4">1</div>
                     <div class="flex-grow flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
-                        <h4 class="font-bold text-lg text-gray-800">廠務會議報告</h4>
-                        <span class="text-base text-gray-500">114年12月份報告</span>
+                        <h4 class="font-bold text-lg text-gray-800" id="schedTitle1">-</h4>
+                        <span class="text-base text-gray-500" id="schedDesc1">-</span>
                     </div>
                 </div>
 
                 <div class="flex items-center py-4 border-b border-gray-100 last:border-0">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mr-4">
-                        2
-                    </div>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mr-4">2</div>
                     <div class="flex-grow flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
-                        <h4 class="font-bold text-lg text-gray-800">廢水定檢申報</h4>
-                        <span class="text-base text-gray-500">法規申報截止日</span>
+                        <h4 class="font-bold text-lg text-gray-800" id="schedTitle2">-</h4>
+                        <span class="text-base text-gray-500" id="schedDesc2">-</span>
                     </div>
                 </div>
             </div>
@@ -319,14 +317,18 @@
                     cwmsFlow: parseFloat(col[25]) || 0,
                     cwmsSS: parseFloat(col[26]) || 0,
                     cwmsCOD: parseFloat(col[27]) || 0,
-                    cwmsOil: parseFloat(col[28]) || 0
+                    cwmsOil: parseFloat(col[28]) || 0,
+                    // 新增：讀取行程資料 (Index 29, 30, 31, 32)
+                    schedTitle1: col[29] ? col[29].trim() : "",
+                    schedDesc1:  col[30] ? col[30].trim() : "",
+                    schedTitle2: col[31] ? col[31].trim() : "",
+                    schedDesc2:  col[32] ? col[32].trim() : ""
                 };
 
                 if (year === COMPARE_YEAR_PREV) data113.push(record);
                 if (year === COMPARE_YEAR_CURR) data114.push(record);
             }
 
-            // 自動取得最後兩筆資料 (即為最新月份與上個月份)
             const latest = data114[data114.length - 1];
             const prevMonth = data114.length > 1 ? data114[data114.length - 2] : latest;
 
@@ -356,7 +358,7 @@
                 [{ label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.water), backgroundColor: '#e2e8f0', order: 2 },
                  { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.water), backgroundColor: '#3b82f6', order: 1 }], '噸');
 
-            // Storage (Logic automatically handles Dec vs Nov if data exists)
+            // Storage
             document.getElementById('storageRangeLabel').textContent = `${prevMonth.month}月 vs ${latest.month}月`;
             document.getElementById('storageCurrentDate').textContent = `${latest.month}月`;
             document.getElementById('storageVolume').textContent = latest.volume.toLocaleString();
@@ -390,7 +392,6 @@
                 document.getElementById('ureaGrowth').innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${uGrowth}%`;
             }
             renderChart('ureaChart', 'bar', thisYear.map(d => d.month + '月'),
-                // 修改：backgroundColor 從 #f1f5f9 改為 #94a3b8 (深灰色) 以增加對比
                 [{ label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.urea), backgroundColor: '#94a3b8', order: 2 },
                  { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.urea), backgroundColor: '#6366f1', order: 1 }], '噸');
 
@@ -415,6 +416,12 @@
             document.getElementById('cwmsFlowBar').style.width = `${Math.min((latest.cwmsFlow / limits.flow) * 100, 100)}%`;
             document.getElementById('cwmsTempVal').textContent = latest.temp;
             document.getElementById('cwmsTempBar').style.width = `${Math.min((latest.temp / limits.temp) * 100, 100)}%`;
+
+            // Schedule (新增：填入動態資料)
+            document.getElementById('schedTitle1').textContent = latest.schedTitle1;
+            document.getElementById('schedDesc1').textContent = latest.schedDesc1;
+            document.getElementById('schedTitle2').textContent = latest.schedTitle2;
+            document.getElementById('schedDesc2').textContent = latest.schedDesc2;
         }
 
         function renderChart(canvasId, type, labels, datasets, unit) {

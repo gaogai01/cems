@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>114年12月 環化課廠務會議報告 (Live Data)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
+        .card { transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        @media print {
+            @page { margin: 10mm; size: A4 portrait; }
+            body { background-color: white; padding: 0; }
+            .card { break-inside: avoid; box-shadow: none; border: 1px solid #e5e7eb; margin-bottom: 1rem; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .no-print { display: none !important; }
+            header { border: none !important; padding-bottom: 0 !important; margin-bottom: 1rem !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-6">
+
+    <div id="loading" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="font-bold">正在從 Google Sheet 讀取最新數據...</p>
+        </div>
+    </div>
+
+    <header class="mb-8 flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-600">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900" id="headerTitle">廠務會議 - 環化課業務報告</h1>
+            <p class="text-sm text-gray-500 mt-1" id="headerSubtitle">數據載入中...</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden md:block">
+                <div class="text-sm text-gray-500">報告日期</div>
+                <div class="font-bold text-lg" id="currentDate"></div>
+            </div>
+            <button onclick="window.print()" class="no-print bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow inline-flex items-center transition-colors">
+                <i class="fa-solid fa-file-pdf mr-2"></i> 預覽 / 匯出 PDF
+            </button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="dashboardContent" style="opacity: 0.5;">
+
+        <div class="card bg-white p-6 rounded-xl shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-blue-700"><i class="fa-solid fa-water mr-2"></i> 海淡造水量</h2>
+                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">1~11月趨勢</span>
+            </div>
+            <div class="relative h-48"><canvas id="waterChart"></canvas></div>
+            <div class="mt-4 border-t pt-4">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-xs text-gray-500" id="waterLabel">本月產量</p>
+                        <p class="text-2xl font-bold text-gray-800"><span id="waterValue">-</span> <span class="text-sm font-normal">噸</span></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">YoY 成長率</p>
+                        <p class="text-lg font-bold text-green-600 flex items-center justify-end" id="waterGrowth">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-white p-6 rounded-xl shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-cyan-700"><i class="fa-solid fa-database mr-2"></i> 儲水量比較</h2>
+                <span class="bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-0.5 rounded" id="storageRangeLabel">近期水位</span>
+            </div>
+            <div class="relative h-48"><canvas id="storageChart"></canvas></div>
+            <div class="mt-4 border-t pt-4">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-xs text-gray-500">較上月增減</p>
+                        <p class="text-2xl font-bold text-orange-600"><span id="storageDiff">-</span> <span class="text-sm font-normal">噸</span></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">目前水位 (<span id="storageCurrentDate"></span>)</p>
+                        <p class="font-bold text-gray-800 text-lg"><span id="storageLevel">-</span> m</p>
+                        <p class="text-xs text-gray-400"><span id="storageVolume">-</span> 噸</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-white p-6 rounded-xl shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-bold text-teal-700"><i class="fa-solid fa-microscope mr-2"></i> 水質導電率</h2>
+                <span class="bg-teal-100 text-teal-800 text-xs font-semibold px-2.5 py-0.5 rounded">標準 < 100</span>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center"><div class="w-2 h-2 rounded-full bg-green-500 mr-3"></div><span class="text-sm font-medium">15000噸儲水槽</span></div>
+                    <div class="flex items-center"><span class="text-base font-bold text-gray-800 mr-2" id="valTank">-</span><span class="text-xs text-gray-500">μS/cm</span></div>
+                </div>
+                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center"><div class="w-2 h-2 rounded-full bg-green-500 mr-3"></div><span class="text-sm font-medium">海淡機產水</span></div>
+                    <div class="flex items-center"><span class="text-base font-bold text-gray-800 mr-2" id="valSea">-</span><span class="text-xs text-gray-500">μS/cm</span></div>
+                </div>
+                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center"><div class="w-2 h-2 rounded-full bg-green-500 mr-3"></div><span class="text-sm font-medium">RO 水</span></div>
+                    <div class="flex items-center"><span class="text-base font-bold text-gray-800 mr-2" id="valRO">-</span><span class="text-xs text-gray-500">μS/cm</span></div>
+                </div>
+            </div>
+            <div class="mt-4 pt-2 border-t text-center"><p class="text-xs text-green-600 font-medium"><i class="fa-solid fa-check-double mr-1"></i>全數符合水質標準</p></div>
+        </div>
+
+        <div class="card bg-white p-6 rounded-xl shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-indigo-700"><i class="fa-solid fa-flask mr-2"></i> 尿素使用量</h2>
+                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded">1~11月趨勢</span>
+            </div>
+            <div class="relative h-48"><canvas id="ureaChart"></canvas></div>
+            <div class="mt-4 border-t pt-4">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-xs text-gray-500" id="ureaLabel">本月用量</p>
+                        <p class="text-2xl font-bold text-gray-800"><span id="ureaValue">-</span> <span class="text-sm font-normal">噸</span></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">YoY 增加率</p>
+                        <p class="text-lg font-bold text-red-500 flex items-center justify-end" id="ureaGrowth">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-white p-6 rounded-xl shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-orange-700"><i class="fa-solid fa-cloud-arrow-up mr-2"></i> CEMS NOx</h2>
+                <span class="bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-0.5 rounded">月累積平均</span>
+            </div>
+            <div class="mb-2"><span class="text-3xl font-bold text-gray-800"><span id="cemsValue">-</span> <span class="text-sm font-normal text-gray-500">ppm</span></span></div>
+            <div class="relative w-full h-8 bg-gray-100 rounded-lg mt-2 mb-1">
+                <div class="absolute top-0 bottom-0 border-l-2 border-dashed border-blue-500 z-20" id="cemsTargetLine" style="left: 0%"></div>
+                <div class="absolute -top-6 text-xs font-bold text-blue-600 transform -translate-x-1/2" id="cemsTargetLabel" style="left: 0%">目標 247</div>
+                <div class="absolute top-0 bottom-0 w-1 bg-red-500 z-20" id="cemsLimitLine" style="left: 0%"></div>
+                <div class="absolute -top-6 text-xs font-bold text-red-600 transform -translate-x-1/2" id="cemsLimitLabel" style="left: 0%">上限 363</div>
+                <div class="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-l-lg opacity-90" id="cemsBar" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-400 mt-1 mb-3"><span>0</span><span>400 ppm</span></div>
+            <div class="space-y-2 mt-4 border-t pt-3">
+                 <div class="flex items-start gap-2 text-sm text-gray-700"><i class="fa-solid fa-bullseye text-blue-500 mt-1"></i><p>環保局年度目標：<span class="font-bold">247 ppm</span></p></div>
+            </div>
+        </div>
+
+        <div class="card bg-white p-6 rounded-xl shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-red-700"><i class="fa-solid fa-faucet-drip mr-2"></i> 放流水質</h2>
+                <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">CWMS</span>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span class="font-medium text-gray-700">出口水溫 (CSV資料)</span><span class="text-gray-500"><span id="cwmsTempVal">-</span> / 42 °C</span></div>
+                    <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" id="cwmsTempBar" style="width: 0%"></div></div>
+                </div>
+                 <div>
+                    <div class="flex justify-between text-xs mb-1"><span class="font-medium text-gray-700">化學需氧量 (COD)</span><span class="text-gray-500">60 / 100 mg/L</span></div>
+                    <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 60%"></div></div>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t flex items-center justify-center"><span class="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full border border-green-200">監測中</span></div>
+        </div>
+
+        <div class="card bg-white p-6 rounded-xl shadow-sm md:col-span-2 lg:col-span-3">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-purple-700"><i class="fa-solid fa-calendar-days mr-2"></i> 重點行程與業務規劃</h2>
+            </div>
+            <div class="flex flex-col gap-0">
+                 <div class="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100"><div class="sm:w-24 font-bold text-xs">12/28</div><div><h4 class="font-bold text-sm">廠務會議報告</h4><span class="text-xs text-gray-500">114年12月份報告</span></div></div>
+                 <div class="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100"><div class="sm:w-24 font-bold text-xs">01/10</div><div><h4 class="font-bold text-sm">廢水定檢申報</h4><span class="text-xs text-gray-500">法規申報截止日</span></div></div>
+            </div>
+        </div>
+
+    </div>
+    
+    <footer class="mt-8 text-center text-gray-400 text-xs no-print">
+        <p>台電尖山發電廠 - 環化課 | Data Source: Google Sheets</p>
+    </footer>
+
+    <script>
+        // ==========================================
+        //  CONFIG: 把你的 Google Sheet CSV 連結貼在這裡
+        // ==========================================
+        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWzf_hWw8o_KD2kjFFwUycqTOK_ssn3Bl2AZQZiihZhnVYwsw6VNS3ceM5AJdCLAdaFJanIG3oUHRL/pub?output=csv";
+        
+        // 預設年度設定 (若 CSV 有 115 年資料，程式會自動抓到，但這裡設定預設比較的去年)
+        const COMPARE_YEAR_PREV = "113"; 
+        const COMPARE_YEAR_CURR = "114"; 
+
+        async function initDashboard() {
+            if(GOOGLE_SHEET_CSV_URL.includes("你的_GOOGLE_SHEET")) {
+                alert("請記得修改程式碼中的 GOOGLE_SHEET_CSV_URL 變數！");
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+
+            try {
+                const rawData = await fetchData(GOOGLE_SHEET_CSV_URL);
+                const processedData = processData(rawData);
+                updateDashboard(processedData);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboardContent').style.opacity = '1';
+            } catch (error) {
+                console.error(error);
+                alert("讀取資料失敗，請檢查 Console 或確認 Google Sheet 權限。");
+            }
+        }
+
+        async function fetchData(url) {
+            const response = await fetch(url);
+            const data = await response.text();
+            return data;
+        }
+
+        function processData(csvText) {
+            // 簡單 CSV 解析 (假設沒有包含逗號的文字內容)
+            const rows = csvText.split('\n').map(row => row.split(','));
+            
+            // 根據你的 CSV 結構，資料從第 6 行開始 (Index 5)，且第一欄是年度
+            // Column Indices based on your CSV:
+            // 0:年度, 1:月份, 4:總造水量, 7:液位, 8:存量, 9:Tank導電, 11:海淡導電, 12:RO導電, 15:尿素用量, 20:月累積NOx, 22:出口水溫
+            
+            const data113 = []; // 去年
+            const data114 = []; // 今年
+            
+            // 跳過標頭，從第 5 列開始掃描 (Index 5 是 "113, 1, ...")
+            // 需注意 CSV 可能有空行，要濾掉
+            for (let i = 5; i < rows.length; i++) {
+                const col = rows[i];
+                if (!col[0]) continue; 
+
+                const year = col[0].trim();
+                const month = col[1].trim();
+                
+                // 建立物件格式
+                const record = {
+                    year: year,
+                    month: month,
+                    water: parseFloat(col[4]) || 0,
+                    level: parseFloat(col[7]) || 0,
+                    volume: parseFloat(col[8]) || 0,
+                    condTank: parseFloat(col[9]) || 0,
+                    condSea: parseFloat(col[11]) || 0,
+                    condRO: parseFloat(col[12]) || 0,
+                    urea: parseFloat(col[15]) || 0,
+                    cems: parseFloat(col[20]) || 0,
+                    temp: parseFloat(col[22]) || 0
+                };
+
+                if (year === COMPARE_YEAR_PREV) data113.push(record);
+                if (year === COMPARE_YEAR_CURR) data114.push(record);
+            }
+
+            // 取得最新一筆資料 (今年的最後一筆)
+            const latest = data114[data114.length - 1];
+            // 取得上個月資料 (倒數第二筆，若無則用最新)
+            const prevMonth = data114.length > 1 ? data114[data114.length - 2] : latest;
+
+            return {
+                lastYear: data113,
+                thisYear: data114,
+                latest: latest,
+                prevMonth: prevMonth
+            };
+        }
+
+        function updateDashboard(data) {
+            const { lastYear, thisYear, latest, prevMonth } = data;
+
+            // 1. Header Info
+            document.getElementById('headerSubtitle').textContent = `報告人：高振凱 課長 | 數據基準：${latest.year}年${latest.month}月`;
+            const today = new Date();
+            document.getElementById('currentDate').textContent = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
+
+            // 2. Water Chart & Text
+            document.getElementById('waterLabel').textContent = `${latest.year}年${latest.month}月產量`;
+            document.getElementById('waterValue').textContent = latest.water.toLocaleString();
+            
+            // 計算成長率 (比較同期月份: 今年同月 vs 去年同月)
+            // 注意：要確保去年陣列有對應月份，這裡簡化處理假設月份順序一致
+            const lastYearMatch = lastYear.find(d => d.month === latest.month);
+            if(lastYearMatch) {
+                const growth = ((latest.water - lastYearMatch.water) / lastYearMatch.water * 100).toFixed(1);
+                const colorClass = growth >= 0 ? 'text-green-600' : 'text-red-600';
+                const icon = growth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+                document.getElementById('waterGrowth').className = `text-lg font-bold flex items-center justify-end ${colorClass}`;
+                document.getElementById('waterGrowth').innerHTML = `<i class="fa-solid ${icon} mr-1"></i> ${growth}%`;
+            }
+
+            renderChart('waterChart', 'bar', 
+                thisYear.map(d => d.month + '月'),
+                [
+                    { label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.water), backgroundColor: '#e2e8f0', order: 2 },
+                    { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.water), backgroundColor: '#3b82f6', order: 1 }
+                ], '噸'
+            );
+
+            // 3. Storage Chart & Text
+            document.getElementById('storageRangeLabel').textContent = `${prevMonth.month}月 vs ${latest.month}月`;
+            document.getElementById('storageCurrentDate').textContent = `${latest.month}月`;
+            document.getElementById('storageVolume').textContent = latest.volume.toLocaleString();
+            document.getElementById('storageLevel').textContent = latest.level;
+            
+            const volDiff = latest.volume - prevMonth.volume;
+            const diffEl = document.getElementById('storageDiff');
+            if (volDiff < 0) {
+                diffEl.innerHTML = `<i class="fa-solid fa-arrow-down mr-1"></i> ${Math.abs(volDiff).toLocaleString()}`;
+                diffEl.className = "text-xl font-bold text-orange-600";
+            } else {
+                diffEl.innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${volDiff.toLocaleString()}`;
+                diffEl.className = "text-xl font-bold text-blue-600";
+            }
+
+            // Storage Comparison Chart
+            new Chart(document.getElementById('storageChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: [`${prevMonth.month}月`, `${latest.month}月`],
+                    datasets: [{
+                        label: '儲水量', data: [prevMonth.volume, latest.volume], backgroundColor: ['#94a3b8', '#06b6d4'], borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false} }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+            });
+
+            // 4. Conductivity
+            document.getElementById('valTank').textContent = latest.condTank;
+            document.getElementById('valSea').textContent = latest.condSea;
+            document.getElementById('valRO').textContent = latest.condRO;
+
+            // 5. Urea Chart & Text
+            document.getElementById('ureaLabel').textContent = `${latest.year}年${latest.month}月用量`;
+            document.getElementById('ureaValue').textContent = latest.urea;
+            
+            const lastYearUreaMatch = lastYear.find(d => d.month === latest.month);
+            if(lastYearUreaMatch) {
+                const uGrowth = ((latest.urea - lastYearUreaMatch.urea) / lastYearUreaMatch.urea * 100).toFixed(1);
+                document.getElementById('ureaGrowth').innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${uGrowth}%`;
+            }
+
+            renderChart('ureaChart', 'bar', 
+                thisYear.map(d => d.month + '月'),
+                [
+                    { label: `${COMPARE_YEAR_PREV}年`, data: lastYear.map(d => d.urea), backgroundColor: '#f1f5f9', order: 2 },
+                    { label: `${COMPARE_YEAR_CURR}年`, data: thisYear.map(d => d.urea), backgroundColor: '#6366f1', order: 1 }
+                ], '噸'
+            );
+
+            // 6. CEMS
+            document.getElementById('cemsValue').textContent = latest.cems;
+            const cemsPct = (latest.cems / 400) * 100; // 假設 max 400
+            document.getElementById('cemsBar').style.width = `${cemsPct}%`;
+            document.getElementById('cemsTargetLine').style.left = `${(247/400)*100}%`;
+            document.getElementById('cemsTargetLabel').style.left = `${(247/400)*100}%`;
+            document.getElementById('cemsLimitLine').style.left = `${(363/400)*100}%`;
+            document.getElementById('cemsLimitLabel').style.left = `${(363/400)*100}%`;
+
+            // 7. CWMS (Only Temp available in CSV)
+            document.getElementById('cwmsTempVal').textContent = latest.temp;
+            document.getElementById('cwmsTempBar').style.width = `${(latest.temp/42)*100}%`;
+        }
+
+        // Helper for creating standard charts
+        function renderChart(canvasId, type, labels, datasets, unit) {
+            new Chart(document.getElementById(canvasId).getContext('2d'), {
+                type: type,
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: true, align: 'end' },
+                        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.raw.toLocaleString() + ' ' + unit } } 
+                    },
+                    scales: { y: { display: false }, x: { grid: { display: false } } }
+                }
+            });
+        }
+
+        // Start
+        window.addEventListener('DOMContentLoaded', initDashboard);
+
+    </script>
+</body>
+</html>

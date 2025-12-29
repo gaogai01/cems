@@ -241,22 +241,39 @@
         const COMPARE_YEAR_PREV = "113"; 
         const COMPARE_YEAR_CURR = "114"; 
 
-        async function initDashboard() {
+async function initDashboard() {
+            // 檢查是否還留著預設文字
             if(GOOGLE_SHEET_CSV_URL.includes("你的_GOOGLE_SHEET")) {
-                alert("請記得修改程式碼中的 GOOGLE_SHEET_CSV_URL 變數！");
+                alert("錯誤：你還沒把 Google Sheet 的 CSV 網址貼上去喔！\n請去程式碼第 250 行左右修改 URL。");
                 document.getElementById('loading').style.display = 'none';
                 return;
             }
 
             try {
                 const rawData = await fetchData(GOOGLE_SHEET_CSV_URL);
+                
+                // 測試是否有抓到內容
+                if (!rawData || rawData.length < 10) {
+                    throw new Error("抓到的資料是空的，請檢查 Google Sheet 是否有資料並已發佈。");
+                }
+
+                // 測試欄位長度 (檢查是否有抓到 AC 欄)
+                const firstRow = rawData.split('\n')[5].split(','); // 抓第6行來檢查
+                if (firstRow.length < 29) { // A~AC 是 29 欄
+                    console.warn("警告：CSV 欄位數量似乎不足，可能新欄位 (Z~AC) 是空的或未讀取到。目前欄位數：" + firstRow.length);
+                }
+
                 const processedData = processData(rawData);
                 updateDashboard(processedData);
+                
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('dashboardContent').style.opacity = '1';
+                
             } catch (error) {
                 console.error(error);
-                alert("讀取資料失敗，請檢查 Console 或確認 Google Sheet 權限。");
+                // 直接把錯誤顯示在螢幕上
+                alert("發生錯誤，無法讀取資料！\n\n錯誤原因：" + error.message + "\n\n請檢查：\n1. 網址是否為 .csv 結尾？\n2. Google Sheet 是否有按「發佈到網路」？");
+                document.getElementById('loading').innerHTML = `<p class="text-white font-bold">讀取失敗：${error.message}</p>`;
             }
         }
 

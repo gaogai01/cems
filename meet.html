@@ -20,7 +20,6 @@
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             .no-print { display: none !important; }
             header { border: none !important; padding-bottom: 0 !important; margin-bottom: 1rem !important; }
-            /* 隱藏選單 */
             #dateSelector { display: none !important; }
         }
     </style>
@@ -58,10 +57,6 @@
             </div>
 
             <div class="flex items-center gap-4">
-                <div class="text-right hidden md:block">
-                    <div class="text-sm text-gray-500">報告日期</div>
-                    <div class="font-bold text-lg" id="currentDate"></div>
-                </div>
                 <button onclick="window.print()" class="no-print bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow inline-flex items-center transition-colors text-sm">
                     <i class="fa-solid fa-file-pdf mr-2"></i> PDF
                 </button>
@@ -98,15 +93,19 @@
             </div>
             <div class="relative h-48"><canvas id="storageChart"></canvas></div>
             <div class="mt-4 border-t pt-4">
-                <div class="flex justify-between items-end">
-                    <div>
-                        <p class="text-xs text-gray-500">較上月增減</p>
-                        <p class="text-2xl font-bold text-orange-600"><span id="storageDiff">-</span> <span class="text-sm font-normal">噸</span></p>
+                <div class="flex justify-between items-start">
+                    <div class="w-1/2">
+                        <p class="text-xs text-gray-500">預測下月增減</p>
+                        <p class="text-2xl font-bold text-gray-300" id="storageDiff">--</p> 
+                        <p class="text-xs text-gray-400 mt-2">本月: <span id="storageCurrentVol" class="font-medium">-</span></p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-xs text-gray-500">目前水位 (<span id="storageCurrentDate"></span>)</p>
-                        <p class="font-bold text-gray-800 text-lg"><span id="storageLevel">-</span> m</p>
-                        <p class="text-xs text-gray-400"><span id="storageVolume">-</span> 噸</p>
+                    <div class="w-1/2 text-right">
+                        <p class="text-xs text-gray-500">預測下月水位 (<span id="storageNextDate">--</span>)</p>
+                        <p class="text-3xl font-bold text-purple-600 leading-tight">
+                            <span id="storageNextVolume">--</span>
+                            <span class="text-sm text-purple-500 font-medium">噸</span>
+                        </p>
+                        <p class="text-sm font-bold text-gray-600 mt-1"><span id="storageNextLevel">--</span> m</p>
                     </div>
                 </div>
             </div>
@@ -160,11 +159,14 @@
                 <span class="bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-0.5 rounded">月累積平均</span>
             </div>
             <div class="mb-2"><span class="text-3xl font-bold text-gray-800"><span id="cemsValue">-</span> <span class="text-sm font-normal text-gray-500">ppm</span></span></div>
-            <div class="relative w-full h-8 bg-gray-100 rounded-lg mt-2 mb-1">
+            
+            <div class="relative w-full h-8 bg-gray-100 rounded-lg mt-6 mb-1">
                 <div class="absolute top-0 bottom-0 border-l-2 border-dashed border-blue-500 z-20" id="cemsTargetLine" style="left: 0%"></div>
                 <div class="absolute -top-6 text-xs font-bold text-blue-600 transform -translate-x-1/2 whitespace-nowrap" id="cemsTargetLabel" style="left: 0%">目標 247</div>
+                
                 <div class="absolute top-0 bottom-0 w-1 bg-red-500 z-20" id="cemsLimitLine" style="left: 0%"></div>
                 <div class="absolute -top-6 text-xs font-bold text-red-600 transform -translate-x-1/2 whitespace-nowrap" id="cemsLimitLabel" style="left: 0%">上限 363</div>
+                
                 <div class="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-l-lg opacity-90" id="cemsBar" style="width: 0%"></div>
             </div>
             <div class="flex justify-between text-xs text-gray-400 mt-1 mb-3"><span>0</span><span>400 ppm</span></div>
@@ -270,9 +272,7 @@
     <script>
         const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQBqhzNkZ_EJSSxTKhdf038RbZ0vc7_4C84ACXoUj4Dtnu9MBaK0nq9IFaMPcY7ixfc_FZK5Kz9SG3u/pub?output=csv";
         
-        // 全域變數，儲存所有抓下來的資料
         let allRecords = [];
-        // 儲存圖表實例，以便更新時銷毀重建
         let charts = {};
 
         async function initDashboard() {
@@ -280,13 +280,9 @@
                 const rawData = await fetchData(GOOGLE_SHEET_CSV_URL);
                 if (!rawData || rawData.length < 10) throw new Error("資料讀取異常");
 
-                // 1. 解析所有資料
                 allRecords = parseCSV(rawData);
-                
-                // 2. 初始化下拉選單
                 populateSelectors();
 
-                // 3. 預設顯示最新月份的資料
                 if(allRecords.length > 0) {
                     const latest = allRecords[allRecords.length - 1];
                     document.getElementById('selYear').value = latest.year;
@@ -312,15 +308,12 @@
             const rows = csvText.split('\n').map(row => row.split(','));
             const data = [];
             
-            // 跳過標頭，從第 5 列 (Index 5) 開始
             for (let i = 5; i < rows.length; i++) {
                 const col = rows[i];
                 if (!col[0]) continue; 
 
                 const year = parseInt(col[0].trim());
                 const month = parseInt(col[1].trim());
-                
-                // 產生一個排序用的 key，例如 11301, 11412
                 const sortKey = year * 100 + month;
 
                 const record = {
@@ -347,14 +340,13 @@
                 };
                 data.push(record);
             }
-            // 確保資料依時間排序
             return data.sort((a, b) => a.sortKey - b.sortKey);
         }
 
         function populateSelectors() {
             const yearSet = new Set();
             allRecords.forEach(r => yearSet.add(r.year));
-            const years = Array.from(yearSet).sort((a,b) => b-a); // 降冪
+            const years = Array.from(yearSet).sort((a,b) => b-a);
 
             const selYear = document.getElementById('selYear');
             selYear.innerHTML = '';
@@ -375,62 +367,48 @@
             }
         }
 
-        // 當按下「更新」按鈕時觸發
         function updateViewFromSelector() {
             const y = parseInt(document.getElementById('selYear').value);
             const m = parseInt(document.getElementById('selMonth').value);
             
-            // 找到選定月份在 allRecords 中的索引
             const targetIndex = allRecords.findIndex(r => r.year === y && r.month === m);
-            
             if (targetIndex === -1) {
                 alert(`查無 ${y}年${m}月 的資料！`);
                 return;
             }
 
             const currentRecord = allRecords[targetIndex];
-            const prevRecord = targetIndex > 0 ? allRecords[targetIndex - 1] : currentRecord;
+            // 抓取下一筆資料 (如果有的話)
+            const nextRecord = (targetIndex < allRecords.length - 1) ? allRecords[targetIndex + 1] : null;
 
-            // 1. 更新文字與單一數值
-            updateTextData(currentRecord, prevRecord);
+            updateTextData(currentRecord, nextRecord);
 
-            // 2. 準備圖表資料
-            // A. 海淡/尿素：選定月 + 前5個月 (共6個月)
-            const range6Months = getSlice(targetIndex, 5, 0); // (index, lookback, lookforward)
-            
-            // B. 儲水量：選定月 + 前5個月 + 下1個月 (共7個月)
+            const range6Months = getSlice(targetIndex, 5, 0); 
             const rangeStorage = getSlice(targetIndex, 5, 1);
 
-            // C. 去年同期比較資料 (為 6個月趨勢圖準備)
-            // 邏輯：找出 range6Months 每一筆的 year-1 資料
             const lastYearData = range6Months.map(curr => {
                 const match = allRecords.find(r => r.year === (curr.year - 1) && r.month === curr.month);
-                return match ? match : { water: 0, urea: 0, year: curr.year-1, month: curr.month }; // 若無資料補0
+                return match ? match : { water: 0, urea: 0, year: curr.year-1, month: curr.month }; 
             });
 
-            // 3. 繪製圖表
             drawWaterChart(range6Months, lastYearData);
             drawUreaChart(range6Months, lastYearData);
             drawStorageChart(rangeStorage, currentRecord);
         }
 
-        // 輔助函式：取得從 currentIndex 回推 lookback 個月，往後 lookforward 個月的陣列
         function getSlice(currentIndex, lookback, lookforward) {
             const start = Math.max(0, currentIndex - lookback);
             const end = Math.min(allRecords.length, currentIndex + lookforward + 1);
             return allRecords.slice(start, end);
         }
 
-        function updateTextData(curr, prev) {
+        function updateTextData(curr, next) {
             // Header
             document.getElementById('headerSubtitle').textContent = `報告人：高振凱 課長 | 數據基準：${curr.year}年${curr.month}月`;
-            const today = new Date();
-            document.getElementById('currentDate').textContent = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
 
             // Water Text
             document.getElementById('waterLabel').textContent = `${curr.year}年${curr.month}月產量`;
             document.getElementById('waterValue').textContent = curr.water.toLocaleString();
-            // 計算 YoY (找去年同月)
             const lastYearMatch = allRecords.find(r => r.year === (curr.year - 1) && r.month === curr.month);
             if(lastYearMatch && lastYearMatch.water > 0) {
                 const growth = ((curr.water - lastYearMatch.water) / lastYearMatch.water * 100).toFixed(1);
@@ -442,19 +420,30 @@
                 document.getElementById('waterGrowth').innerHTML = `<span class="text-gray-400 text-sm">無去年資料</span>`;
             }
 
-            // Storage Text
-            document.getElementById('storageRangeLabel').textContent = `${prev.month}月 vs ${curr.month}月`;
-            document.getElementById('storageCurrentDate').textContent = `${curr.month}月`;
-            document.getElementById('storageVolume').textContent = curr.volume.toLocaleString();
-            document.getElementById('storageLevel').textContent = curr.level;
-            const volDiff = curr.volume - prev.volume;
-            const diffEl = document.getElementById('storageDiff');
-            if (volDiff < 0) {
-                diffEl.innerHTML = `<i class="fa-solid fa-arrow-down mr-1"></i> ${Math.abs(volDiff).toLocaleString()}`;
-                diffEl.className = "text-xl font-bold text-orange-600";
+            // Storage Text (Logic Updated)
+            document.getElementById('storageRangeLabel').textContent = `本月 vs 下月`;
+            document.getElementById('storageCurrentVol').textContent = curr.volume.toLocaleString() + ' 噸';
+            
+            if (next) {
+                document.getElementById('storageNextDate').textContent = `${next.month}月`;
+                document.getElementById('storageNextVolume').textContent = next.volume.toLocaleString();
+                document.getElementById('storageNextLevel').textContent = next.level;
+
+                const volDiff = next.volume - curr.volume;
+                const diffEl = document.getElementById('storageDiff');
+                if (volDiff < 0) {
+                    diffEl.innerHTML = `<i class="fa-solid fa-arrow-down mr-1"></i> ${Math.abs(volDiff).toLocaleString()}`;
+                    diffEl.className = "text-2xl font-bold text-orange-600";
+                } else {
+                    diffEl.innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${volDiff.toLocaleString()}`;
+                    diffEl.className = "text-2xl font-bold text-blue-600";
+                }
             } else {
-                diffEl.innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${volDiff.toLocaleString()}`;
-                diffEl.className = "text-xl font-bold text-blue-600";
+                document.getElementById('storageNextDate').textContent = "下月";
+                document.getElementById('storageNextVolume').textContent = "待輸入";
+                document.getElementById('storageNextLevel').textContent = "-";
+                document.getElementById('storageDiff').textContent = "--";
+                document.getElementById('storageDiff').className = "text-2xl font-bold text-gray-300";
             }
 
             // Conductivity
@@ -468,7 +457,7 @@
             const lastYearUrea = allRecords.find(r => r.year === (curr.year - 1) && r.month === curr.month);
             if(lastYearUrea && lastYearUrea.urea > 0) {
                 const uGrowth = ((curr.urea - lastYearUrea.urea) / lastYearUrea.urea * 100).toFixed(1);
-                const colorClass = uGrowth >= 0 ? 'text-red-500' : 'text-green-600'; // 增加顯示紅色
+                const colorClass = uGrowth >= 0 ? 'text-red-500' : 'text-green-600';
                 document.getElementById('ureaGrowth').className = `text-lg font-bold flex items-center justify-end ${colorClass}`;
                 document.getElementById('ureaGrowth').innerHTML = `<i class="fa-solid fa-arrow-up mr-1"></i> ${uGrowth}%`;
             } else {
@@ -498,13 +487,10 @@
             document.getElementById('schedDesc2').textContent = curr.schedDesc2;
         }
 
-        // --- Chart Functions ---
-
         function drawWaterChart(dataCurr, dataPrev) {
             const ctx = document.getElementById('waterChart').getContext('2d');
             if(charts['water']) charts['water'].destroy();
 
-            // 產生標籤 (以今年為主)
             const labels = dataCurr.map(d => `${d.month}月`);
 
             charts['water'] = new Chart(ctx, {
@@ -585,16 +571,13 @@
             const ctx = document.getElementById('storageChart').getContext('2d');
             if(charts['storage']) charts['storage'].destroy();
 
-            // 標籤：如果 rangeData 包含未來月份 (例如選12月，有抓到明年1月)，顯示該月份
-            // 如果 CSV 還沒填下個月，rangeData 就不會有那一筆，圖表就只顯示到本月
             const labels = rangeData.map(d => `${d.month}月`);
             const data = rangeData.map(d => d.volume);
 
-            // 顏色邏輯：過去月份(灰) / 選定月份(藍) / 未來月份(淺藍，如果有的話)
             const bgColors = rangeData.map(d => {
-                if (d.year === currentRecord.year && d.month === currentRecord.month) return '#06b6d4'; // 當月
-                if (d.sortKey > currentRecord.sortKey) return '#a5f3fc'; // 未來
-                return '#94a3b8'; // 過去
+                if (d.year === currentRecord.year && d.month === currentRecord.month) return '#06b6d4'; 
+                if (d.sortKey > currentRecord.sortKey) return '#a5f3fc'; 
+                return '#94a3b8'; 
             });
 
             charts['storage'] = new Chart(ctx, {

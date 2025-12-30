@@ -67,7 +67,7 @@
         <div class="card bg-white p-6 rounded-xl shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold text-blue-700"><i class="fa-solid fa-water mr-2"></i> 海淡造水量</h2>
-                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">近6個月趨勢</span>
+                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">近6個月 #1 vs #2</span>
             </div>
             <div class="relative h-48"><canvas id="waterChart"></canvas></div>
             <div class="mt-4 border-t pt-4">
@@ -134,7 +134,7 @@
         <div class="card bg-white p-6 rounded-xl shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold text-indigo-700"><i class="fa-solid fa-flask mr-2"></i> 尿素使用量</h2>
-                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded">近6個月趨勢</span>
+                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded">近6個月 (含強度)</span>
             </div>
             <div class="relative h-48"><canvas id="ureaChart"></canvas></div>
             <div class="mt-4 border-t pt-4">
@@ -161,10 +161,8 @@
             <div class="relative w-full h-8 bg-gray-100 rounded-lg mt-6 mb-1">
                 <div class="absolute top-0 bottom-0 border-l-2 border-dashed border-blue-500 z-20" style="left: 61.75%"></div>
                 <div class="absolute -top-6 text-xs font-bold text-blue-600 transform -translate-x-1/2 whitespace-nowrap" style="left: 61.75%">目標 247</div>
-                
                 <div class="absolute top-0 bottom-0 w-1 bg-red-500 z-20" style="left: 90.75%"></div>
                 <div class="absolute -top-6 text-xs font-bold text-red-600 transform -translate-x-1/2 whitespace-nowrap" style="left: 90.75%">上限 363</div>
-                
                 <div class="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-l-lg opacity-90" id="cemsBar" style="width: 0%"></div>
             </div>
             <div class="flex justify-between text-xs text-gray-400 mt-1 mb-3"><span>0</span><span>400 ppm</span></div>
@@ -241,7 +239,7 @@
 
         <div class="card bg-white p-6 rounded-xl shadow-sm md:col-span-2 lg:col-span-3">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold text-purple-700"><i class="fa-solid fa-calendar-days mr-2"></i> 重點行程與業務規劃</h2>
+                <h2 class="text-lg font-bold text-purple-700"><i class="fa-solid fa-calendar-days mr-2"></i> 其他環化報告項目</h2>
             </div>
             <div class="flex flex-col gap-0">
                  <div class="flex items-center py-4 border-b border-gray-100 last:border-0">
@@ -318,6 +316,9 @@
                     sortKey: sortKey,
                     year: year, 
                     month: month,
+                    // 新增解析 #1, #2 機 (Index 2, 3)
+                    water1: parseFloat(col[2]) || 0,
+                    water2: parseFloat(col[3]) || 0,
                     water: parseFloat(col[4]) || 0,
                     level: parseFloat(col[7]) || 0,
                     volume: parseFloat(col[8]) || 0,
@@ -325,6 +326,8 @@
                     condSea: parseFloat(col[11]) || 0,
                     condRO: parseFloat(col[12]) || 0,
                     urea: parseFloat(col[16]) || 0,
+                    // 新增解析 尿素強度 (Index 17)
+                    ureaIntensity: parseFloat(col[17]) || 0,
                     cems: parseFloat(col[21]) || 0,
                     temp: parseFloat(col[23]) || 0,
                     cwmsFlow: parseFloat(col[25]) || 0,
@@ -400,7 +403,6 @@
         }
 
         function updateTextData(curr, next) {
-            // Header
             document.getElementById('headerSubtitle').textContent = `報告人：高振凱 課長 | 數據基準：${curr.year}年${curr.month}月`;
 
             // Water Text
@@ -417,15 +419,13 @@
                 document.getElementById('waterGrowth').innerHTML = `<span class="text-gray-400 text-sm">無去年資料</span>`;
             }
 
-            // Storage Text (Modified Labels)
+            // Storage Text
             document.getElementById('storageRangeLabel').textContent = `本月 vs 下月`;
             document.getElementById('storageCurrentVol').textContent = curr.volume.toLocaleString() + ' 噸';
-            
             if (next) {
                 document.getElementById('storageNextDate').textContent = `${next.month}月`;
                 document.getElementById('storageNextVolume').textContent = next.volume.toLocaleString();
                 document.getElementById('storageNextLevel').textContent = next.level;
-
                 const volDiff = next.volume - curr.volume;
                 const diffEl = document.getElementById('storageDiff');
                 if (volDiff < 0) {
@@ -464,7 +464,6 @@
             // CEMS & CWMS
             document.getElementById('cemsValue').textContent = curr.cems;
             document.getElementById('cemsBar').style.width = `${(curr.cems / 400) * 100}%`;
-            
             const limits = { cod: 100, ss: 30, oil: 10, flow: 40, temp: 42 };
             document.getElementById('cwmsCODVal').textContent = curr.cwmsCOD;
             document.getElementById('cwmsCODBar').style.width = `${Math.min((curr.cwmsCOD / limits.cod) * 100, 100)}%`;
@@ -484,6 +483,8 @@
             document.getElementById('schedDesc2').textContent = curr.schedDesc2;
         }
 
+        // --- Chart Functions (Updated) ---
+
         function drawWaterChart(dataCurr, dataPrev) {
             const ctx = document.getElementById('waterChart').getContext('2d');
             if(charts['water']) charts['water'].destroy();
@@ -498,18 +499,23 @@
                         {
                             label: '去年同期',
                             data: dataPrev.map(d => d.water),
-                            backgroundColor: '#e2e8f0',
-                            order: 2,
-                            barPercentage: 0.6,
-                            categoryPercentage: 0.8
+                            backgroundColor: '#e2e8f0', // Gray
+                            stack: 'lastYear', // Separate stack
+                            order: 2
                         },
                         {
-                            label: '今年',
-                            data: dataCurr.map(d => d.water),
-                            backgroundColor: '#3b82f6',
-                            order: 1,
-                            barPercentage: 0.6,
-                            categoryPercentage: 0.8
+                            label: '#1 機',
+                            data: dataCurr.map(d => d.water1),
+                            backgroundColor: '#3b82f6', // Blue
+                            stack: 'thisYear',
+                            order: 1
+                        },
+                        {
+                            label: '#2 機',
+                            data: dataCurr.map(d => d.water2),
+                            backgroundColor: '#1d4ed8', // Darker Blue
+                            stack: 'thisYear',
+                            order: 1
                         }
                     ]
                 },
@@ -519,7 +525,10 @@
                         legend: { display: true, align: 'end' },
                         tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.raw.toLocaleString() + ' 噸' } }
                     },
-                    scales: { y: { display: false }, x: { grid: { display: false } } }
+                    scales: { 
+                        y: { display: false }, 
+                        x: { grid: { display: false }, stacked: true } // X軸堆疊開啟
+                    }
                 }
             });
         }
@@ -536,20 +545,31 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: '去年同期',
+                            label: '去年用量',
                             data: dataPrev.map(d => d.urea),
                             backgroundColor: '#94a3b8',
-                            order: 2,
-                            barPercentage: 0.6,
-                            categoryPercentage: 0.8
+                            order: 3,
+                            yAxisID: 'y'
                         },
                         {
-                            label: '今年',
+                            label: '今年用量',
                             data: dataCurr.map(d => d.urea),
                             backgroundColor: '#6366f1',
+                            order: 2,
+                            yAxisID: 'y'
+                        },
+                        // 新增：折線圖 (強度)
+                        {
+                            label: '強度 (kg/千度)',
+                            data: dataCurr.map(d => d.ureaIntensity),
+                            type: 'line',
+                            borderColor: '#f97316', // Orange
+                            borderWidth: 2,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#f97316',
+                            pointRadius: 4,
                             order: 1,
-                            barPercentage: 0.6,
-                            categoryPercentage: 0.8
+                            yAxisID: 'y1' // 使用右側 Y 軸
                         }
                     ]
                 },
@@ -557,9 +577,24 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: { 
                         legend: { display: true, align: 'end' },
-                        tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + c.raw.toLocaleString() + ' 噸' } }
+                        tooltip: { 
+                            callbacks: { 
+                                label: (c) => {
+                                    if(c.dataset.yAxisID === 'y1') return c.dataset.label + ': ' + c.raw;
+                                    return c.dataset.label + ': ' + c.raw.toLocaleString() + ' 噸';
+                                } 
+                            } 
+                        }
                     },
-                    scales: { y: { display: false }, x: { grid: { display: false } } }
+                    scales: { 
+                        y: { display: false }, // 左軸隱藏 (用量)
+                        y1: { 
+                            display: false, // 右軸隱藏 (強度) - 保持畫面簡潔，數據看 tooltip
+                            position: 'right',
+                            grid: { display: false }
+                        },
+                        x: { grid: { display: false } } 
+                    }
                 }
             });
         }
@@ -593,9 +628,35 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
                         legend: { display: false },
-                        tooltip: { callbacks: { label: (c) => c.raw.toLocaleString() + ' 噸' } }
+                        tooltip: { callbacks: { label: (c) => c.raw.toLocaleString() + ' 噸' } },
+                        // 新增：Annotation 畫滿水位線
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    yMin: 15000,
+                                    yMax: 15000,
+                                    borderColor: 'rgba(255, 99, 132, 0.6)',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5],
+                                    label: {
+                                        display: true,
+                                        content: '滿水位 15000',
+                                        position: 'start',
+                                        backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                                        font: { size: 10 }
+                                    }
+                                }
+                            }
+                        }
                     },
-                    scales: { y: { display: false }, x: { grid: { display: false } } }
+                    scales: { 
+                        y: { 
+                            display: false, 
+                            max: 18000 // 設定 Y 軸最大值稍大於 15000，確保線條不會頂天
+                        }, 
+                        x: { grid: { display: false } } 
+                    }
                 }
             });
         }

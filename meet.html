@@ -33,14 +33,14 @@
         </div>
     </div>
 
-    <header class="mb-8 flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-600">
+    <header class="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-600">
         <div class="mb-4 md:mb-0">
             <h1 class="text-2xl font-bold text-gray-900" id="headerTitle">廠務會議 - 環化課業務報告</h1>
             <p class="text-sm text-gray-500 mt-1" id="headerSubtitle">數據載入中...</p>
         </div>
         
         <div class="flex flex-col items-end gap-3">
-            <div id="dateSelector" class="flex gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200 no-print">
+            <div id="dateSelector" class="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200 no-print">
                 <div class="flex items-center">
                     <label class="text-xs font-bold text-gray-500 mr-2">基準年度</label>
                     <select id="selYear" class="bg-white border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-20 p-1">
@@ -52,19 +52,17 @@
                         </select>
                 </div>
                 <button onclick="updateViewFromSelector()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm transition-colors">
-                    <i class="fa-solid fa-filter mr-1"></i>更新
+                    <i class="fa-solid fa-filter mr-1"></i>
                 </button>
-            </div>
-
-            <div class="flex items-center gap-4">
-                <button onclick="window.print()" class="no-print bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow inline-flex items-center transition-colors text-sm">
-                    <i class="fa-solid fa-file-pdf mr-2"></i> PDF
+                <div class="w-px h-6 bg-gray-300 mx-1"></div>
+                <button onclick="window.print()" class="text-gray-600 hover:text-red-600 font-bold py-1 px-2 rounded text-sm transition-colors" title="匯出 PDF">
+                    <i class="fa-solid fa-file-pdf text-xl"></i>
                 </button>
             </div>
         </div>
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="dashboardContent" style="opacity: 0.5;">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="dashboardContent" style="opacity: 0.5;">
 
         <div class="card bg-white p-6 rounded-xl shadow-sm">
             <div class="flex items-center justify-between mb-4">
@@ -95,12 +93,12 @@
             <div class="mt-4 border-t pt-4">
                 <div class="flex justify-between items-start">
                     <div class="w-1/2">
-                        <p class="text-xs text-gray-500">預測下月增減</p>
+                        <p class="text-xs text-gray-500">最新增減</p>
                         <p class="text-2xl font-bold text-gray-300" id="storageDiff">--</p> 
                         <p class="text-xs text-gray-400 mt-2">本月: <span id="storageCurrentVol" class="font-medium">-</span></p>
                     </div>
                     <div class="w-1/2 text-right">
-                        <p class="text-xs text-gray-500">預測下月水位 (<span id="storageNextDate">--</span>)</p>
+                        <p class="text-xs text-gray-500">最新儲水量 (<span id="storageNextDate">--</span>)</p>
                         <p class="text-3xl font-bold text-purple-600 leading-tight">
                             <span id="storageNextVolume">--</span>
                             <span class="text-sm text-purple-500 font-medium">噸</span>
@@ -161,11 +159,11 @@
             <div class="mb-2"><span class="text-3xl font-bold text-gray-800"><span id="cemsValue">-</span> <span class="text-sm font-normal text-gray-500">ppm</span></span></div>
             
             <div class="relative w-full h-8 bg-gray-100 rounded-lg mt-6 mb-1">
-                <div class="absolute top-0 bottom-0 border-l-2 border-dashed border-blue-500 z-20" id="cemsTargetLine" style="left: 0%"></div>
-                <div class="absolute -top-6 text-xs font-bold text-blue-600 transform -translate-x-1/2 whitespace-nowrap" id="cemsTargetLabel" style="left: 0%">目標 247</div>
+                <div class="absolute top-0 bottom-0 border-l-2 border-dashed border-blue-500 z-20" style="left: 61.75%"></div>
+                <div class="absolute -top-6 text-xs font-bold text-blue-600 transform -translate-x-1/2 whitespace-nowrap" style="left: 61.75%">目標 247</div>
                 
-                <div class="absolute top-0 bottom-0 w-1 bg-red-500 z-20" id="cemsLimitLine" style="left: 0%"></div>
-                <div class="absolute -top-6 text-xs font-bold text-red-600 transform -translate-x-1/2 whitespace-nowrap" id="cemsLimitLabel" style="left: 0%">上限 363</div>
+                <div class="absolute top-0 bottom-0 w-1 bg-red-500 z-20" style="left: 90.75%"></div>
+                <div class="absolute -top-6 text-xs font-bold text-red-600 transform -translate-x-1/2 whitespace-nowrap" style="left: 90.75%">上限 363</div>
                 
                 <div class="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-l-lg opacity-90" id="cemsBar" style="width: 0%"></div>
             </div>
@@ -378,7 +376,6 @@
             }
 
             const currentRecord = allRecords[targetIndex];
-            // 抓取下一筆資料 (如果有的話)
             const nextRecord = (targetIndex < allRecords.length - 1) ? allRecords[targetIndex + 1] : null;
 
             updateTextData(currentRecord, nextRecord);
@@ -420,7 +417,7 @@
                 document.getElementById('waterGrowth').innerHTML = `<span class="text-gray-400 text-sm">無去年資料</span>`;
             }
 
-            // Storage Text (Logic Updated)
+            // Storage Text (Modified Labels)
             document.getElementById('storageRangeLabel').textContent = `本月 vs 下月`;
             document.getElementById('storageCurrentVol').textContent = curr.volume.toLocaleString() + ' 噸';
             

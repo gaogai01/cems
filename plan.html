@@ -1,0 +1,457 @@
+import React, { useState, useEffect } from 'react';
+import { Calendar, AlertCircle, CheckCircle2, Activity, Settings, Droplets, Wind, Factory, Fish, RefreshCw, ChevronRight, User, Tag, DollarSign, Clock, Gavel, CalendarCheck, Hourglass } from 'lucide-react';
+
+// ==========================================
+// 使用者設定區
+// ==========================================
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsMoQ3GMZ9HzajrcmObUhGorQHb7KEwfhuk3XWMv-J1w18lLTWbAq2Xretas2s2T8JNXjrCbGgnT1G/pub?output=csv";
+
+const DetailedProcurementGantt = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // 定義 9 個細部階段
+  const STAGES = {
+    1: { name: '公開徵求', short: '徵求', color: 'bg-slate-300', text: 'text-slate-800' },
+    2: { name: '三性成案簽', short: '成案', color: 'bg-yellow-200', text: 'text-yellow-900' },
+    3: { name: '契約審核', short: '審核', color: 'bg-yellow-400', text: 'text-yellow-950' },
+    4: { name: '底價單', short: '底價', color: 'bg-yellow-600', text: 'text-white' },
+    5: { name: '公告開標', short: '開標', color: 'bg-orange-500', text: 'text-white' },
+    6: { name: '交貨期', short: '交貨', color: 'bg-blue-300', text: 'text-blue-900' },
+    7: { name: '安裝/執行', short: '安裝', color: 'bg-blue-500', text: 'text-white' }, 
+    8: { name: '試運轉', short: '試車', color: 'bg-blue-700', text: 'text-white' },
+    9: { name: '驗收工作', short: '驗收', color: 'bg-green-600', text: 'text-white' },
+  };
+
+  const months = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+
+  // 根據名字產生固定的顏色 class
+  const getOwnerColor = (name) => {
+    if (!name) return 'bg-slate-100 text-slate-600 border-slate-200';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = [
+      'bg-red-100 text-red-800 border-red-200',
+      'bg-orange-100 text-orange-800 border-orange-200',
+      'bg-amber-100 text-amber-800 border-amber-200',
+      'bg-green-100 text-green-800 border-green-200',
+      'bg-teal-100 text-teal-800 border-teal-200',
+      'bg-cyan-100 text-cyan-800 border-cyan-200',
+      'bg-blue-100 text-blue-800 border-blue-200',
+      'bg-indigo-100 text-indigo-800 border-indigo-200',
+      'bg-purple-100 text-purple-800 border-purple-200',
+      'bg-pink-100 text-pink-800 border-pink-200',
+    ];
+    const index = Math.abs(hash % colors.length);
+    return colors[index];
+  };
+
+  // 預設範例資料
+  const defaultProjects = [
+    {
+      id: 1,
+      name: "範例：海洋豐裕計劃",
+      description: "1、魚苗放流\n2. 生態調查\n3、成果報告",
+      owner: "陳小明",
+      type: "勞務",
+      currentStage: 2,
+      startOffset: 0,
+      budget: "85萬",
+      awardAmount: "82萬",
+      awardDate: "115/03/15",
+      deadline: "115/10/30",
+      stages: [
+        { id: 1, duration: 1.0 }, { id: 2, duration: 0.5 }, { id: 3, duration: 0.5 }, 
+        { id: 4, duration: 0.5 }, { id: 5, duration: 0.5 }, { id: 6, duration: 0 },
+        { id: 7, duration: 6.0 }, { id: 8, duration: 0 }, { id: 9, duration: 1.0 }, 
+      ]
+    }
+  ];
+
+  const [projects, setProjects] = useState(defaultProjects);
+
+  const getIcon = (text) => {
+    if (text.includes('生態') || text.includes('魚') || text.includes('海洋')) return <Fish className="w-6 h-6 text-blue-500" />;
+    if (text.includes('空') || text.includes('氣')) return <Wind className="w-6 h-6 text-cyan-500" />;
+    if (text.includes('水') || text.includes('廢')) return <Droplets className="w-6 h-6 text-blue-400" />;
+    return <Factory className="w-6 h-6 text-gray-600" />;
+  };
+
+  const getStageLabel = (stageId, type) => {
+    if (stageId !== 7) return STAGES[stageId].short;
+    return type.includes('勞務') ? '執行' : '安裝';
+  };
+
+  const parseCSVData = (text) => {
+    const rows = [];
+    let currentRow = [];
+    let currentCell = '';
+    let inQuotes = false;
+    
+    const cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    for (let i = 0; i < cleanText.length; i++) {
+      const char = cleanText[i];
+      const nextChar = cleanText[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          currentCell += '"';
+          i++; 
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        currentRow.push(currentCell.trim());
+        currentCell = '';
+      } else if (char === '\n' && !inQuotes) {
+        currentRow.push(currentCell.trim());
+        if (currentRow.length > 1 || currentRow[0] !== '') {
+            rows.push(currentRow);
+        }
+        currentRow = [];
+        currentCell = '';
+      } else {
+        currentCell += char;
+      }
+    }
+    
+    if (currentCell || currentRow.length > 0) {
+      currentRow.push(currentCell.trim());
+      if (currentRow.length > 1 || currentRow[0] !== '') {
+          rows.push(currentRow);
+      }
+    }
+    
+    return rows;
+  };
+
+  const fetchData = async () => {
+    if (!GOOGLE_SHEET_CSV_URL) return;
+
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const response = await fetch(GOOGLE_SHEET_CSV_URL);
+      if (!response.ok) throw new Error('網路回應異常');
+      const text = await response.text();
+      const rawRows = parseCSVData(text);
+      
+      const data = rawRows.slice(1).map((cols, index) => {
+        if (cols.length < 5) return null;
+
+        const stages = [];
+        for (let i = 1; i <= 9; i++) {
+          const duration = parseFloat(cols[9 + i]) || 0; 
+          stages.push({ id: i, duration });
+        }
+
+        return {
+          id: index + 1,
+          name: cols[0],
+          description: cols[1],
+          owner: cols[2],
+          type: cols[3],
+          currentStage: parseInt(cols[4]) || 1,
+          startOffset: parseFloat(cols[5]) || 0,
+          budget: cols[6],
+          awardAmount: cols[7],
+          awardDate: cols[8],
+          deadline: cols[9],
+          stages: stages,
+          icon: getIcon(cols[0] + cols[1])
+        };
+      }).filter(item => item !== null);
+      
+      if (data.length > 0) {
+        setProjects(data);
+        setLastUpdated(new Date().toLocaleString());
+      } else {
+        throw new Error('CSV 資料為空或格式錯誤');
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setFetchError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-4 font-sans text-slate-800">
+      
+      {/* 標題區 */}
+      <header className="mb-6 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+              <Activity className="w-10 h-10 text-blue-600" />
+              環化課 2026 年度採購發包進度管控表
+            </h1>
+            <div className="text-slate-500 mt-2 flex flex-col sm:flex-row gap-3 text-base">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 w-fit">
+                尖山發電廠
+              </span>
+              <span className="flex items-center gap-1">資料來源：Google 試算表</span>
+              {lastUpdated && <span className="text-sm text-slate-400 self-center">| 最後更新: {lastUpdated}</span>}
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 max-w-xl justify-end">
+            <div className="text-sm font-bold text-slate-400 w-full text-right mb-1">階段說明</div>
+            {Object.values(STAGES).map((stage, idx) => (
+              <div key={idx} className={`flex items-center px-3 py-1.5 rounded text-xs font-medium ${stage.color} ${stage.text}`}>
+                {stage.short}
+              </div>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* 甘特圖主區域 */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+        
+        {/* 表頭區塊 */}
+        <div className="flex border-b border-slate-200 bg-slate-100/50">
+          <div className="w-[320px] flex-shrink-0 p-4 text-base font-bold text-slate-700 border-r border-slate-200 bg-slate-100">
+            採購案件資訊
+          </div>
+          <div className="flex-1 grid grid-cols-12"> 
+             {months.map((m, i) => (
+                <div key={i} className={`p-4 text-sm font-bold text-center text-slate-600 ${i !== 11 ? 'border-r border-slate-200' : ''}`}>
+                  {m}
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* 資料內容 */}
+        <div className="flex flex-col">
+           {projects.map((project) => {
+             const totalDuration = project.stages.reduce((acc, s) => acc + s.duration, 0);
+             const visibleStages = project.stages.filter(s => s.duration > 0);
+
+             return (
+               <div key={project.id} className="flex border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                  {/* 左側固定欄位內容 */}
+                  <div className="w-[320px] flex-shrink-0 p-4 border-r border-slate-200 flex flex-col justify-center min-h-[220px]">
+                      {/* 案名與 Icon */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="p-2 mt-0.5 bg-white rounded-lg border border-slate-200 shadow-sm flex-shrink-0">
+                          {project.icon || getIcon(project.description || '')}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-slate-900 text-base leading-snug mb-1 whitespace-normal break-words">
+                            {project.name}
+                          </div>
+                          
+                          {/* 說明欄位 */}
+                          <div className="text-sm font-medium text-slate-600 leading-snug mt-1.5">
+                            {project.description && project.description.includes('\n') ? (
+                              <div className="flex flex-col gap-1.5">
+                                {project.description.split('\n').map((line, idx) => {
+                                  const cleanLine = line.replace(/^[\d]+[、\.]\s*/, '');
+                                  if (!cleanLine.trim()) return null;
+                                  return (
+                                    <div key={idx} className="flex items-start gap-2">
+                                       <span className="flex-shrink-0 w-4 h-4 rounded bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center mt-0.5 border border-blue-200">
+                                         {idx + 1}
+                                       </span>
+                                       <span className="flex-1 pt-0.5">{cleanLine}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span className="whitespace-pre-line break-words">{project.description}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 承辦人與類別 */}
+                      <div className="flex flex-wrap items-center gap-2 mb-4">
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold border ${getOwnerColor(project.owner)}`}>
+                          <User className="w-3.5 h-3.5" />
+                          {project.owner || '未定'}
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          <Tag className="w-3.5 h-3.5" />
+                          {project.type || '未分類'}
+                        </div>
+                      </div>
+
+                      {/* 預算與金額資訊 (字體加大+圖示) */}
+                      <div className="flex flex-col gap-2 mb-3">
+                        {project.budget && (
+                          <div className="flex items-center gap-2" title="預算金額">
+                            <div className="p-1 bg-emerald-100 rounded text-emerald-600">
+                              <DollarSign size={14} />
+                            </div>
+                            <span className="text-slate-500 text-xs font-bold">預算:</span>
+                            <span className="font-mono font-bold text-slate-800 text-sm">{project.budget}</span>
+                          </div>
+                        )}
+                        {project.awardAmount && (
+                          <div className="flex items-center gap-2" title="決標金額">
+                            <div className="p-1 bg-blue-100 rounded text-blue-600">
+                              <Gavel size={14} />
+                            </div>
+                            <span className="text-slate-500 text-xs font-bold">決標:</span>
+                            <span className="font-mono font-bold text-blue-700 text-sm">{project.awardAmount}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 日期資訊 (字體加大+圖示) */}
+                      <div className="flex flex-col gap-2">
+                        {project.awardDate && (
+                          <div className="flex items-center gap-2" title="決標日期">
+                            <div className="p-1 bg-slate-100 rounded text-slate-500">
+                              <CalendarCheck size={14} />
+                            </div>
+                            <span className="text-slate-500 text-xs font-bold">決標日:</span>
+                            <span className="font-mono font-bold text-slate-600 text-sm">{project.awardDate}</span>
+                          </div>
+                        )}
+                        {project.deadline && (
+                          <div className="flex items-center gap-2" title="期限日期">
+                            <div className="p-1 bg-red-50 rounded text-red-500">
+                              <Hourglass size={14} />
+                            </div>
+                            <span className="text-slate-500 text-xs font-bold">期限:</span>
+                            <span className="font-mono font-bold text-red-600 text-sm">{project.deadline}</span>
+                          </div>
+                        )}
+                      </div>
+                  </div>
+
+                  {/* 右側甘特圖區域 */}
+                  <div className="flex-1 relative">
+                      {/* 網格線背景 */}
+                      <div className="absolute inset-0 grid grid-cols-12 w-full h-full pointer-events-none">
+                          {months.map((_, i) => (
+                            <div key={i} className={`border-r border-slate-200 h-full ${i % 2 === 0 ? 'bg-slate-50/60' : ''}`}></div>
+                          ))}
+                      </div>
+
+                      {/* 甘特圖 Bar */}
+                      <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-20 flex items-center">
+                          <div 
+                            className="flex h-12 shadow-sm relative w-full"
+                            style={{
+                              marginLeft: `${(project.startOffset / 12) * 100}%`,
+                              width: `${(totalDuration / 12) * 100}%`
+                            }}
+                          >
+                            {visibleStages.map((stage, visibleIdx) => {
+                              const isCurrent = project.currentStage === stage.id;
+                              const stageInfo = STAGES[stage.id];
+                              const label = getStageLabel(stage.id, project.type || '');
+                              
+                              const isSmall = stage.duration < 0.5;
+                              const isEven = visibleIdx % 2 === 0;
+
+                              return (
+                                <div 
+                                  key={stage.id}
+                                  className={`${stageInfo.color} h-full flex flex-col items-center justify-center relative border-r border-white/20 last:border-0 transition-all hover:brightness-95 cursor-help first:rounded-l-md last:rounded-r-md group/segment`}
+                                  style={{ flex: stage.duration }}
+                                >
+                                  {/* === 情況 1: 大格子 (>= 0.5個月) === */}
+                                  {!isSmall ? (
+                                     <div className={`relative w-full h-full flex items-center justify-center`}>
+                                       {/* 美化版工期圓圈 (加大、白底深灰字、陰影) */}
+                                       <div className="absolute -top-3 left-0 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-md z-20 pointer-events-none transform -translate-x-1/2 ring-2 ring-white/50">
+                                          <span className="text-[11px] font-bold text-slate-600 leading-none">{stage.duration}</span>
+                                       </div>
+                                       
+                                       <span className={`text-xs font-bold ${stageInfo.text} drop-shadow-sm px-1 truncate`}>{label}</span>
+                                     </div>
+                                  ) : (
+                                     // === 情況 2: 小格子 (< 0.5個月) ===
+                                     <div className={`absolute left-1/2 -translate-x-1/2 flex items-center z-10 w-max
+                                        ${isEven ? '-top-10 flex-col-reverse' : '-bottom-10 flex-col'} 
+                                     `}>
+                                        <div className="w-px h-3 bg-slate-400"></div>
+
+                                        <div className={`bg-white/95 backdrop-blur-sm border border-slate-200 px-1.5 py-0.5 rounded shadow-sm text-[10px] text-slate-600 font-bold leading-tight text-center z-20 relative
+                                           ${isCurrent ? 'ring-1 ring-red-400' : ''}
+                                        `}>
+                                          {label}
+                                          <div className="text-[9px] text-slate-400 font-normal">{stage.duration}月</div>
+                                        </div>
+                                     </div>
+                                  )}
+
+                                  {/* 當前進度指標 */}
+                                  {isCurrent && (
+                                    <div className="absolute -top-[22px] left-1/2 -translate-x-1/2 z-30 drop-shadow-md flex flex-col items-center animate-bounce">
+                                      <svg width="20" height="20" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 12L0 0H12L6 12Z" fill="#DC2626" stroke="white" strokeWidth="1"/>
+                                      </svg>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                      </div>
+                  </div>
+               </div>
+             );
+           })}
+        </div>
+      </div>
+
+      {/* 底部說明 */}
+      <div className="mt-6 bg-slate-100 p-5 rounded-xl border border-slate-200 text-sm text-slate-600">
+        <h3 className="font-bold flex items-center gap-2 mb-3 text-slate-800 text-base">
+          <Settings className="w-5 h-5" />
+          Google 試算表欄位檢查 (共 19 欄)
+        </h3>
+        <p className="mb-3 text-slate-500">
+          已優化金額與日期顯示（加大字體與新增圖示），工期圓圈已加大並加上立體陰影效果。
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <ul className="list-decimal list-inside space-y-1 font-medium font-mono">
+            <li>案名 (A)</li>
+            <li>說明 (B)</li>
+            <li>承辦人 (C)</li>
+            <li>採購類別 (D)</li>
+            <li>當前階段 (E)</li>
+          </ul>
+          <ul className="list-decimal list-inside space-y-1 font-medium font-mono" start="6">
+            <li>起始月份 (F)</li>
+            <li>預算金額 (G)</li>
+            <li>決標金額 (H)</li>
+            <li>決標日期 (I)</li>
+            <li>期限日期 (J)</li>
+          </ul>
+           <ul className="list-decimal list-inside space-y-1 font-medium font-mono" start="11">
+            <li>徵求期 (K)</li>
+            <li>三性成案 (L)</li>
+            <li>契約審核 (M)</li>
+            <li>底價單 (N)</li>
+            <li>開標期 (O)</li>
+          </ul>
+          <ul className="list-decimal list-inside space-y-1 font-medium font-mono" start="16">
+            <li>交貨期 (P)</li>
+            <li>安裝期 (Q)</li>
+            <li>試運轉 (R)</li>
+            <li>驗收期 (S)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DetailedProcurementGantt;

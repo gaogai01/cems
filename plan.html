@@ -8,15 +8,15 @@
     <!-- 引入 Tailwind CSS (樣式庫) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 引入 React 和 ReactDOM (核心引擎) -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 React 和 ReactDOM (核心引擎) - 鎖定穩定版本 -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     
     <!-- 引入 Babel (讓瀏覽器看懂 JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 引入 Lucide React Icons (圖示庫 UMD 版) -->
-    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.min.js"></script>
+    <!-- 引入 Lucide React Icons (圖示庫) - 改用 0.292.0 穩定版以解決 forwardRef 錯誤 -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide-react.min.js"></script>
 
     <style>
         /* 自定義滾動條樣式，讓畫面更精緻 */
@@ -37,22 +37,41 @@
         body {
             background-color: #f8fafc; /* slate-50 */
         }
+        /* 避免讀取時的閃爍 */
+        .loading-cloak {
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        .loaded {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
     <!-- React 應用程式掛載點 -->
-    <div id="root"></div>
+    <div id="root" class="loading-cloak"></div>
 
     <!-- 主程式碼 -->
     <script type="text/babel">
         // 從全域變數中解構出需要的工具
         const { useState, useEffect } = React;
-        // Lucide Icons 在 UMD 模式下通常掛載在 window.lucideReact
+        
+        // 安全獲取 Lucide Icons，避免因為載入失敗導致整頁崩潰
+        const LucideIcons = window.lucideReact || {};
         const { 
             Calendar, AlertCircle, CheckCircle2, Activity, Settings, 
             Droplets, Wind, Factory, Fish, RefreshCw, ChevronRight, 
             User, Tag, DollarSign, Clock, Gavel, CalendarCheck, Hourglass 
-        } = window.lucideReact;
+        } = LucideIcons;
+
+        // 如果圖示庫載入失敗的備用組件 (Fallback)
+        const IconFallback = () => <span style={{width: 24, height: 24, display: 'inline-block', background: '#ccc', borderRadius: 4}}></span>;
+        
+        // 輔助函式：安全渲染圖示
+        const SafeIcon = (IconComponent, props) => {
+            if (!IconComponent) return null;
+            return <IconComponent {...props} />;
+        };
 
         // ==========================================
         // 使用者設定區
@@ -64,6 +83,11 @@
             const [fetchError, setFetchError] = useState(null);
             const [lastUpdated, setLastUpdated] = useState(null);
             const [projects, setProjects] = useState([]);
+
+            // 畫面載入動畫
+            useEffect(() => {
+                document.getElementById('root').classList.add('loaded');
+            }, []);
 
             // 定義 9 個細部階段
             const STAGES = {
@@ -105,10 +129,11 @@
 
             const getIcon = (text) => {
                 const t = text || '';
-                if (t.includes('生態') || t.includes('魚') || t.includes('海洋')) return <Fish className="w-6 h-6 text-blue-500" />;
-                if (t.includes('空') || t.includes('氣')) return <Wind className="w-6 h-6 text-cyan-500" />;
-                if (t.includes('水') || t.includes('廢')) return <Droplets className="w-6 h-6 text-blue-400" />;
-                return <Factory className="w-6 h-6 text-gray-600" />;
+                // 這裡使用 SafeIcon 確保不會因為圖示載入失敗而報錯
+                if (t.includes('生態') || t.includes('魚') || t.includes('海洋')) return SafeIcon(Fish, {className:"w-6 h-6 text-blue-500"});
+                if (t.includes('空') || t.includes('氣')) return SafeIcon(Wind, {className:"w-6 h-6 text-cyan-500"});
+                if (t.includes('水') || t.includes('廢')) return SafeIcon(Droplets, {className:"w-6 h-6 text-blue-400"});
+                return SafeIcon(Factory, {className:"w-6 h-6 text-gray-600"});
             };
 
             const getStageLabel = (stageId, type) => {
@@ -193,7 +218,7 @@
                     awardDate: cols[8],
                     deadline: cols[9],
                     stages: stages,
-                    icon: getIcon(cols[0] + cols[1])
+                    icon: null // Icon is handled in render
                     };
                 }).filter(item => item !== null);
                 
@@ -223,7 +248,7 @@
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-                        <Activity className="w-10 h-10 text-blue-600" />
+                        {SafeIcon(Activity, {className: "w-10 h-10 text-blue-600"})}
                         環化課 2026 年度採購發包進度管控表
                         </h1>
                         <div className="text-slate-500 mt-2 flex flex-col sm:flex-row gap-3 text-base">
@@ -276,7 +301,7 @@
                                 {/* 案名與 Icon */}
                                 <div className="flex items-start gap-3 mb-3">
                                     <div className="p-2 mt-0.5 bg-white rounded-lg border border-slate-200 shadow-sm flex-shrink-0">
-                                    {project.icon || getIcon(project.description || '')}
+                                    {getIcon(project.description || '')}
                                     </div>
                                     <div className="min-w-0 flex-1">
                                     <div className="font-bold text-slate-900 text-base leading-snug mb-1 whitespace-normal break-words">
@@ -310,11 +335,11 @@
                                 {/* 承辦人與類別 */}
                                 <div className="flex flex-wrap items-center gap-2 mb-4">
                                     <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold border ${getOwnerColor(project.owner)}`}>
-                                    <User className="w-3.5 h-3.5" />
+                                    {SafeIcon(User, {className: "w-3.5 h-3.5"})}
                                     {project.owner || '未定'}
                                     </div>
                                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                    <Tag className="w-3.5 h-3.5" />
+                                    {SafeIcon(Tag, {className: "w-3.5 h-3.5"})}
                                     {project.type || '未分類'}
                                     </div>
                                 </div>
@@ -324,7 +349,7 @@
                                     {project.budget && (
                                     <div className="flex items-center gap-2" title="預算金額">
                                         <div className="p-1 bg-emerald-100 rounded text-emerald-600">
-                                        <DollarSign size={14} />
+                                        {SafeIcon(DollarSign, {size: 14})}
                                         </div>
                                         <span className="text-slate-500 text-xs font-bold">預算:</span>
                                         <span className="font-mono font-bold text-slate-800 text-sm">{project.budget}</span>
@@ -333,7 +358,7 @@
                                     {project.awardAmount && (
                                     <div className="flex items-center gap-2" title="決標金額">
                                         <div className="p-1 bg-blue-100 rounded text-blue-600">
-                                        <Gavel size={14} />
+                                        {SafeIcon(Gavel, {size: 14})}
                                         </div>
                                         <span className="text-slate-500 text-xs font-bold">決標:</span>
                                         <span className="font-mono font-bold text-blue-700 text-sm">{project.awardAmount}</span>
@@ -346,7 +371,7 @@
                                     {project.awardDate && (
                                     <div className="flex items-center gap-2" title="決標日期">
                                         <div className="p-1 bg-slate-100 rounded text-slate-500">
-                                        <CalendarCheck size={14} />
+                                        {SafeIcon(CalendarCheck, {size: 14})}
                                         </div>
                                         <span className="text-slate-500 text-xs font-bold">決標日:</span>
                                         <span className="font-mono font-bold text-slate-600 text-sm">{project.awardDate}</span>
@@ -355,7 +380,7 @@
                                     {project.deadline && (
                                     <div className="flex items-center gap-2" title="期限日期">
                                         <div className="p-1 bg-red-50 rounded text-red-500">
-                                        <Hourglass size={14} />
+                                        {SafeIcon(Hourglass, {size: 14})}
                                         </div>
                                         <span className="text-slate-500 text-xs font-bold">期限:</span>
                                         <span className="font-mono font-bold text-red-600 text-sm">{project.deadline}</span>
@@ -445,7 +470,7 @@
                 {/* 底部說明 */}
                 <div className="mt-6 bg-slate-100 p-5 rounded-xl border border-slate-200 text-sm text-slate-600">
                     <h3 className="font-bold flex items-center gap-2 mb-3 text-slate-800 text-base">
-                    <Settings className="w-5 h-5" />
+                    {SafeIcon(Settings, {className: "w-5 h-5"})}
                     Google 試算表欄位檢查 (共 19 欄)
                     </h3>
                     <p className="mb-3 text-slate-500">

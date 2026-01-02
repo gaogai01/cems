@@ -424,12 +424,16 @@
                                             {/* === 情況 1: 大格子 (>= 0.5個月) === */}
                                             {!isSmall ? (
                                                 <div className={`relative w-full h-full flex items-center justify-center`}>
-                                                {/* 美化版工期圓圈 (加大、白底深灰字、陰影) */}
-                                                <div className="absolute -top-3 left-0 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-md z-20 pointer-events-none transform -translate-x-1/2 ring-2 ring-white/50">
-                                                    <span className="text-[11px] font-bold text-slate-600 leading-none">{stage.duration}</span>
-                                                </div>
-                                                
-                                                <span className={`text-xs font-bold ${stageInfo.text} drop-shadow-sm px-1 truncate`}>{label}</span>
+                                                    {/* 工期標籤 (同色系長方形圓角，中上位置) */}
+                                                    <div className={`absolute -top-3 left-1/2 transform -translate-x-1/2 flex items-center justify-center 
+                                                        px-1.5 py-0.5 rounded-md shadow-sm border border-white z-20 pointer-events-none whitespace-nowrap
+                                                        ${stageInfo.color} ${stageInfo.text}
+                                                    `}>
+                                                        <span className="text-[10px] font-bold leading-none">{stage.duration}月</span>
+                                                    </div>
+                                                    
+                                                    {/* 階段名稱 */}
+                                                    <span className={`text-xs font-bold ${stageInfo.text} drop-shadow-sm px-1 truncate`}>{label}</span>
                                                 </div>
                                             ) : (
                                                 // === 情況 2: 小格子 (< 0.5個月) ===
@@ -438,11 +442,12 @@
                                                 `}>
                                                     <div className="w-px h-3 bg-slate-400"></div>
 
-                                                    <div className={`bg-white/95 backdrop-blur-sm border border-slate-200 px-1.5 py-0.5 rounded shadow-sm text-[10px] text-slate-600 font-bold leading-tight text-center z-20 relative
+                                                    <div className={`backdrop-blur-sm border border-white px-1.5 py-0.5 rounded shadow-sm text-[10px] font-bold leading-tight text-center z-20 relative
+                                                        ${stageInfo.color} ${stageInfo.text}
                                                         ${isCurrent ? 'ring-1 ring-red-400' : ''}
                                                     `}>
                                                     {label}
-                                                    <div className="text-[9px] text-slate-400 font-normal">{stage.duration}月</div>
+                                                    <div className={`text-[9px] font-normal opacity-80 ${stageInfo.text}`}>{stage.duration}月</div>
                                                     </div>
                                                 </div>
                                             )}

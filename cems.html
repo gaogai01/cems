@@ -365,43 +365,138 @@
                 diffEl.innerHTML = `<span style="color:var(--text-sub)">昨日: ${oldLoad.toLocaleString()}</span> <span class="${diffClass}">${icon} ${Math.abs(diffPercent).toFixed(1)}%</span>`;
             } else { diffEl.innerText = "無昨日數據"; }
         }
+// === 1. 定義汙染物參數 (包含顏色、偏移量、Y軸設定) ===
+        const POLLUTANT_CONFIG = {
+            so2:  { offset: 1,  label: 'SO2 (ppm)',  color: '#29b6f6' },
+            nox:  { offset: 6,  label: 'NOx (ppm)',  color: '#ffea00' },
+            opac: { offset: 10, label: 'OPAC (%)',   color: '#bdbdbd' },
+            temp: { offset: 14, label: 'Temp (°C)',  color: '#ff9800' }, // 修正：溫度 offset 為 14
+            load: { offset: 25, label: 'Load (KW)',  color: '#00e676', yAxisID: 'y1' }, // Load 用右軸
+            urea: { offset: 26, label: 'Urea (L/hr)',color: '#ff1744' }
+        };
+
+        // === 2. 更新圖表數據 (多選邏輯) ===
         window.updateChartFromHistory = function() {
             if (globalHistoryData.length === 0) return;
-            const machineId = parseInt(document.getElementById('chartMachine').value); const pollutant = document.getElementById('chartPollutant').value; const range = document.getElementById('chartRange').value; const dateInput = document.getElementById('chartDate').value;
-            const ITEMS_PER_MACHINE = 27; const baseIndex = (machineId - 1) * ITEMS_PER_MACHINE; let offset = 0; let labelName = "";
-            if (pollutant === 'so2') { offset = 1; labelName = `SO2 (ppm)`; } else if (pollutant === 'nox') { offset = 6; labelName = `NOx (ppm)`; } else if (pollutant === 'opac') { offset = 10; labelName = `OPAC (%)`; } else if (pollutant === 'temp') { offset = 14; labelName = `TEMP(度)`; }else if (pollutant === 'load') { offset = 25; labelName = `Load (kw)`; } else if (pollutant === 'urea') { offset = 26; labelName = `Urea (L/hr)`; }
-            const chartData = []; let minVal = Infinity, maxVal = -Infinity, sumVal = 0, count = 0; let minPoint = null, maxPoint = null;
-            let endTime = dateInput ? new Date(dateInput) : new Date(); if(dateInput) endTime.setHours(23,59,59,999);
+
+            const machineId = parseInt(document.getElementById('chartMachine').value);
+            const range = document.getElementById('chartRange').value;
+            const dateInput = document.getElementById('chartDate').value;
+
+            // 1. 找出所有被勾選的項目
+            const checkedBoxes = document.querySelectorAll('.pollutant-check:checked');
+            if (checkedBoxes.length === 0) {
+                alert("請至少選擇一個監測項目");
+                return;
+            }
+
+            // 2. 設定時間範圍
+            let endTime = dateInput ? new Date(dateInput) : new Date();
+            if (dateInput) endTime.setHours(23, 59, 59, 999);
             const startTime = new Date(endTime);
-            if (range === '24h') startTime.setTime(endTime.getTime() - 24 * 60 * 60 * 1000); if (range === '7d') startTime.setDate(endTime.getDate() - 7); if (range === '30d') startTime.setDate(endTime.getDate() - 30);
-            globalHistoryData.forEach(row => {
-                const time = new Date(row.t);
-                if (time >= startTime && time <= endTime) {
-                    const parts = row.d.split(','); const val = parts[baseIndex + offset];
-                    if (val !== undefined) {
-                        const numVal = parseFloat(val) || 0; chartData.push({ x: time, y: numVal });
-                        if (numVal < minVal) { minVal = numVal; minPoint = {x: time, y: numVal}; }
-                        if (numVal > maxVal) { maxVal = numVal; maxPoint = {x: time, y: numVal}; }
-                        sumVal += numVal; count++;
+            if (range === '24h') startTime.setTime(endTime.getTime() - 24 * 60 * 60 * 1000);
+            if (range === '7d') startTime.setDate(endTime.getDate() - 7);
+            if (range === '30d') startTime.setDate(endTime.getDate() - 30);
+
+            const ITEMS_PER_MACHINE = 27;
+            const baseIndex = (machineId - 1) * ITEMS_PER_MACHINE;
+            
+            // 3. 準備多個 Datasets
+            const datasets = [];
+            let useRightAxis = false; // 標記是否需要啟用右軸
+
+            checkedBoxes.forEach(checkbox => {
+                const key = checkbox.value;
+                const config = POLLUTANT_CONFIG[key];
+                const dataPoints = [];
+
+                globalHistoryData.forEach(row => {
+                    const time = new Date(row.t);
+                    if (time >= startTime && time <= endTime) {
+                        const parts = row.d.split(',');
+                        const val = parts[baseIndex + config.offset];
+                        if (val !== undefined) {
+                            dataPoints.push({ x: time, y: parseFloat(val) || 0 });
+                        }
+                    }
+                });
+
+                if (dataPoints.length > 0) {
+                    datasets.push({
+                        label: config.label,
+                        data: dataPoints,
+                        borderColor: config.color,
+                        backgroundColor: config.color, // Tooltip 顏色
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        tension: 0.3,
+                        yAxisID: config.yAxisID || 'y' // 預設用左軸 'y'，Load 用右軸 'y1'
+                    });
+                    if (config.yAxisID === 'y1') useRightAxis = true;
+                }
+            });
+
+            drawChart(datasets, useRightAxis);
+        };
+
+        // === 3. 繪製圖表 (支援雙 Y 軸) ===
+        function drawChart(datasets, useRightAxis) {
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            const isLight = document.body.classList.contains('light-mode');
+            const gridColor = isLight ? '#dddddd' : 'rgba(255,255,255,0.1)';
+            const textColor = isLight ? '#666666' : '#aaaaaa';
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'hour', tooltipFormat: 'yyyy-MM-dd HH:mm' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true,
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: '數值', color: textColor }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: useRightAxis, // 只有當選了 Load 時才顯示右軸
+                            position: 'right',
+                            beginAtZero: true,
+                            grid: { drawOnChartArea: false }, // 右軸不畫網格線，避免混亂
+                            ticks: { color: '#00e676' }, // 綠色字體對應 Load
+                            title: { display: useRightAxis, text: '負載 (KW)', color: '#00e676' }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: textColor } },
+                        tooltip: {
+                            backgroundColor: isLight ? '#fff' : '#333',
+                            titleColor: isLight ? '#000' : '#fff',
+                            bodyColor: isLight ? '#000' : '#fff',
+                            borderColor: '#ccc',
+                            borderWidth: 1
+                        }
                     }
                 }
             });
-            const avgVal = count > 0 ? (sumVal / count) : 0;
-            drawChart(labelName, chartData, minVal, maxVal, avgVal, minPoint, maxPoint);
-        };
-        function drawChart(label, dataPoints, min, max, avg, minPoint, maxPoint) {
-            const ctx = document.getElementById('historyChart').getContext('2d'); if (chartInstance) chartInstance.destroy();
-            const isLight = document.body.classList.contains('light-mode');
-            const gridColor = isLight ? '#dddddd' : 'rgba(255,255,255,0.1)'; const textColor = isLight ? '#666666' : '#aaaaaa';
-            const datasets = [{ label: label, data: dataPoints, borderColor: '#00e676', backgroundColor: 'rgba(0, 230, 118, 0.1)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, fill: true, tension: 0.3 }];
-            if (dataPoints.length > 0) {
-                datasets.push({ label: `平均 (${avg.toFixed(1)})`, data: [{x: dataPoints[0].x, y: avg}, {x: dataPoints[dataPoints.length-1].x, y: avg}], borderColor: isLight ? '#666' : '#fff', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
-                datasets.push({ label: `最小 (${min.toFixed(1)})`, data: [{x: dataPoints[0].x, y: min}, {x: dataPoints[dataPoints.length-1].x, y: min}], borderColor: '#29b6f6', borderWidth: 1, borderDash: [2, 2], pointRadius: 0, fill: false });
-                datasets.push({ label: `最大 (${max.toFixed(1)})`, data: [{x: dataPoints[0].x, y: max}, {x: dataPoints[dataPoints.length-1].x, y: max}], borderColor: '#ff1744', borderWidth: 1, borderDash: [2, 2], pointRadius: 0, fill: false });
-                if (minPoint) datasets.push({ label: 'Min', type: 'scatter', data: [minPoint], backgroundColor: '#29b6f6', pointRadius: 5 });
-                if (maxPoint) datasets.push({ label: 'Max', type: 'scatter', data: [maxPoint], backgroundColor: '#ff1744', pointRadius: 5 });
-            }
-            chartInstance = new Chart(ctx, { type: 'line', data: { datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { type: 'time', time: { unit: 'hour', tooltipFormat: 'yyyy-MM-dd HH:mm' }, grid: { color: gridColor }, ticks: { color: textColor } }, y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } } }, plugins: { legend: { labels: { color: textColor } }, tooltip: { backgroundColor: isLight ? '#fff' : '#333', titleColor: isLight ? '#000' : '#fff', bodyColor: isLight ? '#000' : '#fff', borderColor: '#ccc', borderWidth: isLight ? 1 : 0 } } } });
         }
         function updateChartTheme(isLight) {
             const gridColor = isLight ? '#dddddd' : 'rgba(255,255,255,0.1)'; const textColor = isLight ? '#666666' : '#aaaaaa';

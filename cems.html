@@ -336,7 +336,7 @@
             if (globalHistoryData.length === 0) return;
             const machineId = parseInt(document.getElementById('chartMachine').value); const pollutant = document.getElementById('chartPollutant').value; const range = document.getElementById('chartRange').value; const dateInput = document.getElementById('chartDate').value;
             const ITEMS_PER_MACHINE = 27; const baseIndex = (machineId - 1) * ITEMS_PER_MACHINE; let offset = 0; let labelName = "";
-            if (pollutant === 'so2') { offset = 1; labelName = `SO2 (ppm)`; } else if (pollutant === 'nox') { offset = 6; labelName = `NOx (ppm)`; } else if (pollutant === 'opac') { offset = 10; labelName = `OPAC (%)`; } else if (pollutant === 'load') { offset = 25; labelName = `Load (kw)`; } else if (pollutant === 'urea') { offset = 26; labelName = `Urea (L/hr)`; }
+            if (pollutant === 'so2') { offset = 1; labelName = `SO2 (ppm)`; } else if (pollutant === 'nox') { offset = 6; labelName = `NOx (ppm)`; } else if (pollutant === 'opac') { offset = 10; labelName = `OPAC (%)`; } else if (pollutant === 'temp') { offset = 14; labelName = `TEMP(度)`; }else if (pollutant === 'load') { offset = 25; labelName = `Load (kw)`; } else if (pollutant === 'urea') { offset = 26; labelName = `Urea (L/hr)`; }
             const chartData = []; let minVal = Infinity, maxVal = -Infinity, sumVal = 0, count = 0; let minPoint = null, maxPoint = null;
             let endTime = dateInput ? new Date(dateInput) : new Date(); if(dateInput) endTime.setHours(23,59,59,999);
             const startTime = new Date(endTime);

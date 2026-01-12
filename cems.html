@@ -80,21 +80,54 @@
         </table>
     </div>
 
-    <div class="chart-controls">
-        <label>趨勢圖設定：</label>
+<div class="chart-controls">
+    <div class="control-group">
+        <label class="fw-bold">機組：</label>
         <select id="chartMachine">
-            <option value="1">#1 號機</option><option value="2">#2 號機</option><option value="3">#3 號機</option><option value="4">#4 號機</option><option value="5">#5 號機</option><option value="6">#6 號機</option><option value="7">#7 號機</option><option value="8">#8 號機</option><option value="9">#9 號機</option><option value="10">#10 號機</option><option value="11">#11 號機</option><option value="12">#12 號機</option>
+            <option value="1">#1</option><option value="2">#2</option><option value="3">#3</option>
+            <option value="4">#4</option><option value="5">#5</option><option value="6">#6</option>
+            <option value="7">#7</option><option value="8">#8</option><option value="9">#9</option>
+            <option value="10">#10</option><option value="11">#11</option><option value="12">#12</option>
         </select>
-        <select id="chartPollutant">
-            <option value="so2">SO2 (ppm)</option><option value="nox">NOx (ppm)</option><option value="opac">OPAC (%)</option><option value="temp">TEMP(度)</option><option value="load">Load (kw)</option><option value="urea">Urea (L/hr)</option>
-        </select>
-        <select id="chartRange">
-            <option value="24h">每日 (24H)</option><option value="7d">每週 (7D)</option><option value="30d">每月 (30D)</option>
-        </select>
-        <label>結束日期：</label>
-        <input type="date" id="chartDate">
-        <button onclick="updateChartFromHistory()" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">更新圖表</button>
     </div>
+
+    <div class="control-group">
+        <label class="fw-bold">監測項目 (可多選)：</label>
+        <div class="checkbox-group">
+            <label><input type="checkbox" class="pollutant-check" value="so2"> SO2</label>
+            <label><input type="checkbox" class="pollutant-check" value="nox" checked> NOx</label>
+            <label><input type="checkbox" class="pollutant-check" value="opac"> OPAC</label>
+            <label><input type="checkbox" class="pollutant-check" value="temp"> Temp</label>
+            <label><input type="checkbox" class="pollutant-check" value="urea" checked> Urea</label>
+            <label><input type="checkbox" class="pollutant-check" value="load"> Load</label>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label class="fw-bold">範圍：</label>
+        <select id="chartRange">
+            <option value="24h">24H</option>
+            <option value="7d">7天</option>
+            <option value="30d">30天</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <input type="date" id="chartDate">
+        <button onclick="updateChartFromHistory()" class="btn-update">更新圖表</button>
+    </div>
+</div>
+
+<style>
+    .chart-controls {
+        display: flex; flex-wrap: wrap; gap: 15px; align-items: center;
+        background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;
+    }
+    .control-group { display: flex; align-items: center; gap: 5px; }
+    .checkbox-group { display: flex; gap: 10px; background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 4px; }
+    .checkbox-group label { cursor: pointer; display: flex; align-items: center; gap: 3px; font-size: 0.9rem; }
+    .btn-update { padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+</style>
 
     <div class="chart-container">
         <canvas id="historyChart"></canvas>

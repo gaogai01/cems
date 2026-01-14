@@ -31,7 +31,7 @@
             background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
             background-size: 20px 20px;
             color: var(--text-dark);
-            line-height: 1.4; /* Slightly tighter line height */
+            line-height: 1.4;
             padding: 20px;
         }
 
@@ -45,7 +45,7 @@
             position: relative;
             overflow: hidden;
             border-top: 10px solid var(--primary-red);
-            min-height: 297mm; /* Simulate A4 height on screen */
+            min-height: 297mm;
         }
 
         /* Decorative Corners */
@@ -103,9 +103,9 @@
         /* Header Section */
         header {
             text-align: center;
-            margin-bottom: 25px; /* Reduced */
+            margin-bottom: 25px;
             border-bottom: 2px solid var(--gold);
-            padding-bottom: 15px; /* Reduced */
+            padding-bottom: 15px;
         }
 
         h1 {
@@ -145,7 +145,7 @@
 
         /* Schedule Section */
         .schedule-section {
-            margin-bottom: 20px; /* Reduced */
+            margin-bottom: 20px;
         }
 
         .section-title {
@@ -167,7 +167,7 @@
         }
 
         .schedule-table th, .schedule-table td {
-            padding: 8px 10px; /* Compact padding */
+            padding: 8px 10px;
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
             vertical-align: top;
@@ -225,47 +225,10 @@
             margin-top: 2px;
         }
 
-        /* Highlight Boxes */
-        .highlight-box {
-            background: white;
-            border: 1px dashed var(--gold);
-            border-radius: 6px;
-            padding: 10px 15px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .highlight-icon {
-            font-size: 1.5rem;
-            color: var(--primary-red);
-            background: var(--light-gold);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .highlight-content h3 {
-            color: var(--primary-red);
-            margin-bottom: 2px;
-            font-family: 'Noto Serif TC', serif;
-            font-size: 1rem;
-        }
-        .highlight-content p {
-            font-size: 0.9rem;
-            color: #444;
-            margin: 0;
-        }
-
         /* Staff Grid */
         .staff-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* More compact */
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             gap: 10px;
         }
 
@@ -302,18 +265,139 @@
             padding-top: 10px;
         }
 
-        /* Responsive */
+        /* =========================================
+           MOBILE OPTIMIZATION (Card View)
+           ========================================= */
         @media (max-width: 768px) {
-            .paper-container {
-                padding: 15px;
-                min-height: auto;
+            body {
+                padding: 0;
+                background: #f3f4f6; /* Simplified background */
             }
-            .schedule-table thead { display: none; }
-            .schedule-table, .schedule-table tbody, .schedule-table tr, .schedule-table td { display: block; width: 100%; }
-            .schedule-table tr { margin-bottom: 10px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; background:white;}
-            .schedule-table td { padding: 5px 0; border: none; }
-            .time-cell { border-bottom: 1px dashed #eee !important; width:100%; }
-            .highlight-box { flex-direction: column; text-align: center; }
+
+            .paper-container {
+                padding: 20px 15px;
+                max-width: 100%;
+                min-height: auto;
+                box-shadow: none;
+                border-top: none; /* Remove top red border on mobile for clean look */
+            }
+
+            /* Header adjustments */
+            h1 { font-size: 1.6rem; }
+            .subtitle { font-size: 1.1rem; }
+            .meta-info { gap: 10px; font-size: 0.85rem; flex-direction: column; align-items: center;}
+            
+            /* Table to Card Transformation */
+            .schedule-table, .schedule-table tbody {
+                display: block;
+                width: 100%;
+            }
+
+            .schedule-table thead {
+                display: none; /* Hide standard headers */
+            }
+
+            .schedule-table tr {
+                display: flex;
+                flex-direction: column;
+                background: white;
+                margin-bottom: 15px;
+                border-radius: 12px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+                border: 1px solid #e5e7eb;
+                overflow: hidden; /* Important for time-cell background */
+            }
+            
+            /* Remove default striping to control card color */
+            .schedule-table tr:nth-child(even) { background-color: #fff; }
+
+            .schedule-table td {
+                display: block;
+                width: 100% !important; /* Force full width */
+                border-bottom: none;
+                padding: 8px 15px;
+            }
+
+            /* 1. Time Cell - Becomes the Card Header */
+            .time-cell {
+                background-color: var(--primary-red);
+                color: #fff;
+                width: 100% !important;
+                padding: 8px 15px;
+                display: flex;
+                align-items: center;
+                font-size: 1.1rem;
+            }
+            /* Add Clock Icon */
+            .time-cell::before {
+                content: "\f017"; /* FontAwesome Clock */
+                font-family: "Font Awesome 6 Free";
+                font-weight: 900;
+                margin-right: 8px;
+                opacity: 0.8;
+            }
+
+            /* 2. Program Cell - Main Content */
+            .program-cell {
+                padding-top: 15px;
+                padding-bottom: 5px;
+            }
+            .program-cell strong {
+                font-size: 1.2rem;
+                color: var(--primary-red);
+            }
+            .program-cell small {
+                font-size: 0.95rem;
+                margin-top: 4px;
+            }
+
+            /* 3. Performer Cell - With Icon */
+            .performer-cell {
+                display: flex;
+                align-items: flex-start;
+                padding-top: 5px;
+                padding-bottom: 5px;
+                color: #444;
+            }
+            .performer-cell::before {
+                content: "\f0c0"; /* FontAwesome Users */
+                font-family: "Font Awesome 6 Free";
+                font-weight: 900;
+                margin-right: 10px;
+                color: var(--gold);
+                width: 20px;
+                text-align: center;
+                margin-top: 3px;
+            }
+
+            /* 4. Note Cell - With Icon and background */
+            .note-cell {
+                background-color: #f9fafb;
+                border-top: 1px dashed #eee;
+                margin-top: 5px;
+                padding: 10px 15px;
+                color: #666;
+                display: flex;
+                align-items: flex-start;
+            }
+            .note-cell::before {
+                content: "\f05a"; /* FontAwesome Info Circle */
+                font-family: "Font Awesome 6 Free";
+                font-weight: 900;
+                margin-right: 10px;
+                color: var(--text-gray);
+                width: 20px;
+                text-align: center;
+                margin-top: 2px;
+            }
+
+            /* Fix Highlight inside Note */
+            .note-highlight { display: inline-block; margin-top: 5px; }
+
+            /* Staff Grid Mobile */
+            .staff-grid {
+                grid-template-columns: 1fr 1fr; /* 2 columns on mobile */
+            }
         }
 
         /* =========================================
@@ -322,14 +406,14 @@
         @media print {
             @page {
                 size: A4;
-                margin: 8mm 10mm; /* Narrow margins: Top/Bot 8mm, Left/Right 10mm */
+                margin: 8mm 10mm;
             }
 
             body {
                 background: none;
                 padding: 0;
                 margin: 0;
-                font-size: 10pt; /* Base font size */
+                font-size: 10pt;
                 line-height: 1.2;
             }
             
@@ -355,7 +439,7 @@
             h1 { font-size: 16pt; margin-bottom: 2px; }
             .subtitle { font-size: 12pt; margin-bottom: 2px; padding: 2px 10px; background: none; border: 1px solid #eee; }
             .meta-info { gap: 15px; font-size: 9pt; }
-            .meta-item i { color: #000; } /* Save color ink if needed, or keep gold */
+            .meta-item i { color: #000; }
 
             /* Compact Sections */
             .schedule-section { margin-bottom: 8px; break-inside: avoid; }
@@ -366,39 +450,44 @@
                 border-left-width: 3px;
             }
 
-            /* Compact Table */
+            /* Reset Table for Print (Overwrite Mobile Styles if conflicting) */
+            .schedule-table thead { display: table-header-group !important; }
+            .schedule-table, .schedule-table tbody, .schedule-table tr, .schedule-table td {
+                display: table-cell; /* Revert mobile 'block' */
+                width: auto !important;
+            }
+            .schedule-table { display: table; width: 100%; }
+            .schedule-table tr { display: table-row; background: none !important; border: none; box-shadow: none; border-radius: 0; margin: 0; }
+            
             .schedule-table th, .schedule-table td {
-                padding: 3px 6px; /* Very tight padding */
+                padding: 3px 6px;
                 border-bottom: 1px solid #ccc;
             }
             .schedule-table th {
-                background-color: #f3f4f6 !important; /* Light gray for print */
+                background-color: #f3f4f6 !important;
                 color: #000 !important;
                 border-bottom: 1px solid #000;
                 font-size: 9pt;
                 -webkit-print-color-adjust: exact;
             }
-            .time-cell { width: 50px; font-size: 10pt; }
-            .program-cell strong { font-size: 10pt; }
-            .program-cell small { font-size: 8pt; margin-top: 0; }
-            .performer-cell { font-size: 9pt; width: 22%; } /* Fixed width helps layout */
-            .note-cell { font-size: 8pt; width: 30%; }
             
-            /* Remove background stripes to save ink and clarity */
-            .schedule-table tr:nth-child(even), .schedule-table tr:hover { background-color: transparent !important; }
+            /* Revert Mobile Cell Styles for Print */
+            .time-cell { width: 50px; font-size: 10pt; background: none !important; color: #000 !important; padding: 3px 6px !important; display: table-cell; }
+            .time-cell::before { display: none; } /* Hide mobile icons */
+            
+            .program-cell { padding: 3px 6px !important; }
+            .program-cell strong { font-size: 10pt; color: #000; }
+            .program-cell small { font-size: 8pt; margin-top: 0; }
+            
+            .performer-cell { font-size: 9pt; width: 22%; display: table-cell; padding: 3px 6px !important; color: #000; }
+            .performer-cell::before { display: none; }
+            
+            .note-cell { font-size: 8pt; width: 30%; background: none !important; border: none !important; display: table-cell; padding: 3px 6px !important; color: #000; margin: 0; }
+            .note-cell::before { display: none; }
+            
+            .schedule-table tr:nth-child(even) { background-color: transparent !important; }
 
-            /* Compact Highlight Box */
-            .highlight-box {
-                padding: 5px 10px;
-                margin-bottom: 10px;
-                border: 1px solid #999;
-                break-inside: avoid;
-            }
-            .highlight-icon { width: 25px; height: 25px; font-size: 12pt; background: none; }
-            .highlight-content h3 { font-size: 10pt; }
-            .highlight-content p { font-size: 9pt; }
-
-            /* Compact Staff Grid - Force Horizontal flow */
+            /* Compact Staff Grid */
             .staff-grid {
                 display: flex;
                 flex-wrap: wrap;
@@ -409,7 +498,7 @@
                 border: 1px solid #ddd;
                 border-left-width: 2px;
                 background: none !important;
-                flex: 0 0 auto; /* Don't stretch */
+                flex: 0 0 auto;
                 width: auto;
             }
             .staff-role { font-size: 7pt; display: inline-block; margin-right: 4px; color: #666; }
@@ -426,14 +515,12 @@
 </head>
 <body>
 
-    <!-- Print Button -->
     <button class="fab-print" onclick="window.print()" title="列印或儲存為PDF">
         <i class="fa-solid fa-print"></i>
         <span class="fab-tooltip">列印 / 下載 PDF</span>
     </button>
 
     <div class="paper-container">
-        <!-- Deco Corners -->
         <div class="corner-deco corner-tl"></div>
         <div class="corner-deco corner-br"></div>
 
@@ -458,7 +545,6 @@
         </header>
 
         <main>
-            <!-- Part 1: Morning -->
             <section class="schedule-section">
                 <h2 class="section-title"><i class="fa-solid fa-sun" style="margin-right:10px; font-size:0.8em;"></i> 暖場與開幕 (11:10 - 11:40)</h2>
                 <table class="schedule-table">
@@ -507,7 +593,6 @@
                 </table>
             </section>
 
-            <!-- Part 2: Lunch & Music -->
             <section class="schedule-section">
                 <h2 class="section-title"><i class="fa-solid fa-utensils" style="margin-right:10px; font-size:0.8em;"></i> 餐宴與國樂 (11:41 - 12:15)</h2>
                 <table class="schedule-table">
@@ -540,7 +625,6 @@
                 </table>
             </section>
 
-            <!-- Part 3: Show Time -->
             <section class="schedule-section">
                 <h2 class="section-title"><i class="fa-solid fa-microphone-lines" style="margin-right:10px; font-size:0.8em;"></i> 勁歌熱舞 (12:15 - 13:25)</h2>
                 <table class="schedule-table">
@@ -599,7 +683,6 @@
                 </table>
             </section>
 
-            <!-- Part 4: Closing -->
             <section class="schedule-section">
                 <h2 class="section-title"><i class="fa-solid fa-flag-checkered" style="margin-right:10px; font-size:0.8em;"></i> 圓滿閉幕 (13:25)</h2>
                 <table class="schedule-table">
@@ -621,7 +704,6 @@
                 </table>
             </section>
 
-            <!-- Staff List -->
             <section class="schedule-section" style="background-color: #f9fafb; padding: 10px; border-radius: 8px; border: 1px solid #eee;">
                 <h3 style="margin-bottom: 5px; color: var(--text-gray); font-size: 1rem;">
                     <i class="fa-solid fa-users-gear"></i> 場地組

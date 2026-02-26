@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>尖山發電廠環化課 - 2026年度採購發包進度管控表</title>
+    <title>尖山發電廠115年度採購發包進度管控表</title>
     
     <!-- 引入 Tailwind CSS (樣式庫) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,7 @@
     <!-- 引入 Babel (讓瀏覽器看懂 JSX) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 引入 Lucide React Icons (圖示庫) - 改用 0.292.0 穩定版以解決 forwardRef 錯誤 -->
+    <!-- 引入 Lucide React Icons (圖示庫) - 穩定版 -->
     <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide-react.min.js"></script>
 
     <style>
@@ -53,21 +53,18 @@
 
     <!-- 主程式碼 -->
     <script type="text/babel">
-        // 從全域變數中解構出需要的工具
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
         
-        // 安全獲取 Lucide Icons，避免因為載入失敗導致整頁崩潰
+        // 安全獲取 Lucide Icons
         const LucideIcons = window.lucideReact || {};
         const { 
             Calendar, AlertCircle, CheckCircle2, Activity, Settings, 
             Droplets, Wind, Factory, Fish, RefreshCw, ChevronRight, 
-            User, Tag, DollarSign, Clock, Gavel, CalendarCheck, Hourglass 
+            User, Tag, DollarSign, Clock, Gavel, CalendarCheck, Hourglass, Building
         } = LucideIcons;
 
-        // 如果圖示庫載入失敗的備用組件 (Fallback)
         const IconFallback = () => <span style={{width: 24, height: 24, display: 'inline-block', background: '#ccc', borderRadius: 4}}></span>;
         
-        // 輔助函式：安全渲染圖示
         const SafeIcon = (IconComponent, props) => {
             if (!IconComponent) return null;
             return <IconComponent {...props} />;
@@ -83,14 +80,27 @@
             const [fetchError, setFetchError] = useState(null);
             const [lastUpdated, setLastUpdated] = useState(null);
             const [projects, setProjects] = useState([]);
+            
+            // 下拉選單過濾狀態
+            const [selectedDept, setSelectedDept] = useState('全部');
 
-            // 畫面載入動畫
             useEffect(() => {
                 document.getElementById('root').classList.add('loaded');
             }, []);
 
+            // 萃取所有不重複的主辦部門，供下拉選單使用
+            const departments = useMemo(() => {
+                const depts = projects.map(p => p.department).filter(d => d && d.trim() !== '');
+                return ['全部', ...new Set(depts)];
+            }, [projects]);
+
+            // 依據選取的部門進行過濾
+            const filteredProjects = useMemo(() => {
+                if (selectedDept === '全部') return projects;
+                return projects.filter(p => p.department === selectedDept);
+            }, [projects, selectedDept]);
+
             // 定義 9 個細部階段
-            // 新增 border 和 labelColor 屬性以支援白底彩框樣式
             const STAGES = {
                 1: { name: '公開徵求', short: '徵求', color: 'bg-slate-300', text: 'text-slate-800', border: 'border-slate-400', labelColor: 'text-slate-600' },
                 2: { name: '三性成案簽', short: '成案', color: 'bg-yellow-200', text: 'text-yellow-900', border: 'border-yellow-400', labelColor: 'text-yellow-700' },
@@ -105,7 +115,6 @@
 
             const months = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
 
-            // 根據名字產生固定的顏色 class
             const getOwnerColor = (name) => {
                 if (!name) return 'bg-slate-100 text-slate-600 border-slate-200';
                 let hash = 0;
@@ -130,7 +139,6 @@
 
             const getIcon = (text) => {
                 const t = text || '';
-                // 這裡使用 SafeIcon 確保不會因為圖示載入失敗而報錯
                 if (t.includes('生態') || t.includes('魚') || t.includes('海洋')) return SafeIcon(Fish, {className:"w-6 h-6 text-blue-500"});
                 if (t.includes('空') || t.includes('氣')) return SafeIcon(Wind, {className:"w-6 h-6 text-cyan-500"});
                 if (t.includes('水') || t.includes('廢')) return SafeIcon(Droplets, {className:"w-6 h-6 text-blue-400"});
@@ -198,33 +206,41 @@
                 const rawRows = parseCSVData(text);
                 
                 const data = rawRows.slice(1).map((cols, index) => {
-                    if (cols.length < 5) return null;
+                    // 基本防呆：至少要有 6 欄
+                    if (cols.length < 6) return null;
 
                     const stages = [];
                     for (let i = 1; i <= 9; i++) {
-                    const duration = parseFloat(cols[9 + i]) || 0; 
-                    stages.push({ id: i, duration });
+                        // 從第 L 欄(index 11)開始是工期
+                        const duration = parseFloat(cols[10 + i]) || 0; 
+                        stages.push({ id: i, duration });
                     }
 
                     return {
-                    id: index + 1,
-                    name: cols[0],
-                    description: cols[1],
-                    owner: cols[2],
-                    type: cols[3],
-                    currentStage: parseInt(cols[4]) || 1,
-                    startOffset: parseFloat(cols[5]) || 0,
-                    budget: cols[6],
-                    awardAmount: cols[7],
-                    awardDate: cols[8],
-                    deadline: cols[9],
-                    stages: stages,
-                    icon: null // Icon is handled in render
+                        id: index + 1,
+                        name: cols[0],             // A: 案名
+                        description: cols[1],      // B: 說明
+                        owner: cols[2],            // C: 承辦人
+                        type: cols[3],             // D: 採購類別
+                        department: cols[4],       // E: 主辦部門
+                        currentProgressMonth: parseFloat(cols[5]) || 0, // F: 進度月份 (改為精確的小數月份)
+                        startOffset: parseFloat(cols[6]) || 0, // G: 起始月份
+                        budget: cols[7],           // H: 預算金額
+                        awardAmount: cols[8],      // I: 決標金額
+                        awardDate: cols[9],        // J: 決標日期
+                        deadline: cols[10],        // K: 期限日期
+                        stages: stages,
+                        icon: null // Icon is handled in render
                     };
                 }).filter(item => item !== null);
                 
                 if (data.length > 0) {
                     setProjects(data);
+                    // 如果原先選的部門不在新資料中，切回'全部'
+                    const newDepts = ['全部', ...new Set(data.map(p => p.department).filter(d => d && d.trim() !== ''))];
+                    if (!newDepts.includes(selectedDept)) {
+                        setSelectedDept('全部');
+                    }
                     setLastUpdated(new Date().toLocaleString());
                 } else {
                     throw new Error('CSV 資料為空或格式錯誤');
@@ -250,18 +266,36 @@
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
                         {SafeIcon(Activity, {className: "w-10 h-10 text-blue-600"})}
-                        尖山發電廠 115 年度採購發包進度管控表
+                        尖山發電廠115年度採購發包進度管控表
                         </h1>
-                        <div className="text-slate-500 mt-2 flex flex-col sm:flex-row gap-3 text-base">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 w-fit">
-                            尖山發電廠
-                        </span>
-                        <span className="flex items-center gap-1">資料來源：Google 試算表</span>
-                        {lastUpdated && <span className="text-sm text-slate-400 self-center">| 最後更新: {lastUpdated}</span>}
+                        
+                        <div className="mt-3 flex flex-wrap items-center gap-4">
+                            {/* 主辦部門過濾下拉選單 */}
+                            <div className="flex items-center gap-2 bg-blue-50/50 px-3 py-1.5 rounded-lg border border-blue-100">
+                                {SafeIcon(Building, {className: "w-4 h-4 text-blue-600"})}
+                                <span className="text-sm font-bold text-slate-700">主辦部門:</span>
+                                <select 
+                                    className="bg-white border border-slate-300 rounded text-sm px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-medium cursor-pointer"
+                                    value={selectedDept}
+                                    onChange={(e) => setSelectedDept(e.target.value)}
+                                >
+                                    {departments.map(dept => (
+                                        <option key={dept} value={dept}>{dept}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex items-center gap-3 text-sm">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                    顯示筆數: {filteredProjects.length} 筆
+                                </span>
+                                <span className="text-slate-500">資料來源：Google 試算表</span>
+                                {lastUpdated && <span className="text-slate-400">| 最後更新: {lastUpdated}</span>}
+                            </div>
                         </div>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2 max-w-xl justify-end">
+                    <div className="flex flex-wrap gap-2 max-w-xl justify-end self-end">
                         <div className="text-sm font-bold text-slate-400 w-full text-right mb-1">階段說明</div>
                         {Object.values(STAGES).map((stage, idx) => (
                         <div key={idx} className={`flex items-center px-3 py-1.5 rounded text-xs font-medium ${stage.color} ${stage.text}`}>
@@ -289,16 +323,21 @@
                     </div>
                     </div>
 
-                    {/* 資料內容 */}
+                    {/* 資料內容 - 顯示過濾後的專案 */}
                     <div className="flex flex-col">
-                    {projects.map((project) => {
+                    {filteredProjects.length === 0 && (
+                        <div className="p-8 text-center text-slate-500">
+                            目前該部門無相關採購專案資料
+                        </div>
+                    )}
+                    {filteredProjects.map((project) => {
                         const totalDuration = project.stages.reduce((acc, s) => acc + s.duration, 0);
                         const visibleStages = project.stages.filter(s => s.duration > 0);
 
                         return (
                         <div key={project.id} className="flex border-b border-slate-100 hover:bg-slate-50 transition-colors group">
                             {/* 左側固定欄位內容 */}
-                            <div className="w-[320px] flex-shrink-0 p-4 border-r border-slate-200 flex flex-col justify-center min-h-[220px]">
+                            <div className="w-[320px] flex-shrink-0 p-4 border-r border-slate-200 flex flex-col justify-center min-h-[230px]">
                                 {/* 案名與 Icon */}
                                 <div className="flex items-start gap-3 mb-3">
                                     <div className="p-2 mt-0.5 bg-white rounded-lg border border-slate-200 shadow-sm flex-shrink-0">
@@ -310,7 +349,7 @@
                                     </div>
                                     
                                     {/* 說明欄位 */}
-                                    <div className="text-sm font-medium text-slate-600 leading-snug mt-1.5">
+                                    <div className="text-sm font-medium text-slate-600 leading-snug mt-1.5 mb-2">
                                         {project.description && project.description.includes('\n') ? (
                                         <div className="flex flex-col gap-1.5">
                                             {project.description.split('\n').map((line, idx) => {
@@ -333,8 +372,14 @@
                                     </div>
                                 </div>
 
-                                {/* 承辦人與類別 */}
+                                {/* 承辦人與類別、部門 */}
                                 <div className="flex flex-wrap items-center gap-2 mb-4">
+                                    {project.department && (
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                        {SafeIcon(Building, {className: "w-3.5 h-3.5"})}
+                                        {project.department}
+                                        </div>
+                                    )}
                                     <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold border ${getOwnerColor(project.owner)}`}>
                                     {SafeIcon(User, {className: "w-3.5 h-3.5"})}
                                     {project.owner || '未定'}
@@ -345,7 +390,7 @@
                                     </div>
                                 </div>
 
-                                {/* 預算與金額資訊 (字體加大+圖示) */}
+                                {/* 預算與金額資訊 */}
                                 <div className="flex flex-col gap-2 mb-3">
                                     {project.budget && (
                                     <div className="flex items-center gap-2" title="預算金額">
@@ -367,7 +412,7 @@
                                     )}
                                 </div>
 
-                                {/* 日期資訊 (字體加大+圖示) */}
+                                {/* 日期資訊 */}
                                 <div className="flex flex-col gap-2">
                                     {project.awardDate && (
                                     <div className="flex items-center gap-2" title="決標日期">
@@ -399,7 +444,7 @@
                                     ))}
                                 </div>
 
-                                {/* 甘特圖 Bar */}
+                                {/* 甘特圖 Bar 容器 */}
                                 <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-20 flex items-center">
                                     <div 
                                         className="flex h-12 shadow-sm relative w-full"
@@ -409,7 +454,6 @@
                                         }}
                                     >
                                         {visibleStages.map((stage, visibleIdx) => {
-                                        const isCurrent = project.currentStage === stage.id;
                                         const stageInfo = STAGES[stage.id];
                                         const label = getStageLabel(stage.id, project.type || '');
                                         
@@ -425,7 +469,7 @@
                                             {/* === 情況 1: 大格子 (>= 0.5個月) === */}
                                             {!isSmall ? (
                                                 <div className={`relative w-full h-full flex items-center justify-center`}>
-                                                    {/* 工期標籤 (修改: 白底、粗彩框、同色系文字、稍大字體) */}
+                                                    {/* 工期標籤 */}
                                                     <div className={`absolute -top-3.5 left-1/2 transform -translate-x-1/2 flex items-center justify-center 
                                                         px-2 py-0.5 rounded-md shadow-sm bg-white border-2 z-20 pointer-events-none whitespace-nowrap
                                                         ${stageInfo.border}
@@ -433,7 +477,7 @@
                                                         <span className={`text-[11px] font-bold leading-none ${stageInfo.labelColor}`}>{stage.duration}月</span>
                                                     </div>
                                                     
-                                                    {/* 階段名稱 (修改: 進度內文字加大 text-xs -> text-sm) */}
+                                                    {/* 階段名稱 */}
                                                     <span className={`text-sm font-bold ${stageInfo.text} drop-shadow-sm px-1 truncate`}>{label}</span>
                                                 </div>
                                             ) : (
@@ -443,29 +487,40 @@
                                                 `}>
                                                     <div className="w-px h-3 bg-slate-400"></div>
 
-                                                    {/* 小工期標籤同步樣式 (白底彩框) */}
                                                     <div className={`bg-white border-2 px-1.5 py-0.5 rounded shadow-sm text-[10px] font-bold leading-tight text-center z-20 relative
                                                         ${stageInfo.border} ${stageInfo.labelColor}
-                                                        ${isCurrent ? 'ring-1 ring-red-400' : ''}
                                                     `}>
                                                     {label}
                                                     <div className={`text-[9px] font-normal opacity-80 ${stageInfo.labelColor}`}>{stage.duration}月</div>
                                                     </div>
                                                 </div>
                                             )}
-
-                                            {/* 當前進度指標 */}
-                                            {isCurrent && (
-                                                <div className="absolute -top-[22px] left-1/2 -translate-x-1/2 z-30 drop-shadow-md flex flex-col items-center animate-bounce">
-                                                <svg width="20" height="20" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M6 12L0 0H12L6 12Z" fill="#DC2626" stroke="white" strokeWidth="1"/>
-                                                </svg>
-                                                </div>
-                                            )}
                                             </div>
                                         );
                                         })}
                                     </div>
+
+                                    {/* 絕對座標：當前進度月份紅線與指標 */}
+                                    {project.currentProgressMonth > 0 && (
+                                        <div 
+                                            className="absolute top-0 bottom-0 z-30 pointer-events-none"
+                                            style={{ left: `${((project.currentProgressMonth - 1) / 12) * 100}%` }}
+                                        >
+                                            {/* 垂直基準線 */}
+                                            <div className="absolute top-0 bottom-0 -translate-x-1/2 w-[2px] bg-red-500/60 shadow-[0_0_4px_rgba(239,68,68,0.5)]"></div>
+                                            
+                                            {/* 倒三角指標 */}
+                                            <div className="absolute -top-7 left-1/2 -translate-x-1/2 drop-shadow-md flex flex-col items-center animate-bounce">
+                                                <div className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm mb-0.5 whitespace-nowrap">
+                                                    進度
+                                                </div>
+                                                <svg width="16" height="16" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M6 12L0 0H12L6 12Z" fill="#DC2626" stroke="white" strokeWidth="1.5"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </div>
                             </div>
                         </div>
@@ -478,38 +533,41 @@
                 <div className="mt-6 bg-slate-100 p-5 rounded-xl border border-slate-200 text-sm text-slate-600">
                     <h3 className="font-bold flex items-center gap-2 mb-3 text-slate-800 text-base">
                     {SafeIcon(Settings, {className: "w-5 h-5"})}
-                    Google 試算表欄位檢查 (共 19 欄)
+                    Google 試算表欄位檢查 (更新為 20 欄)
                     </h3>
-                    <p className="mb-3 text-slate-500">
-                    此版本為單一檔案網頁版，可直接下載使用。資料將自動連線讀取 Google 試算表。
+                    <p className="mb-3 text-slate-500 font-bold text-red-600">
+                    注意：F 欄已改為「進度月份」，請輸入數字（例：3.5 表示落在 3 月正中間），確保紅線指標精準顯示。
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs">
                         <li>案名 (A)</li>
                         <li>說明 (B)</li>
                         <li>承辦人 (C)</li>
                         <li>採購類別 (D)</li>
-                        <li>當前階段 (E)</li>
                     </ul>
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono" start="6">
-                        <li>起始月份 (F)</li>
-                        <li>預算金額 (G)</li>
-                        <li>決標金額 (H)</li>
-                        <li>決標日期 (I)</li>
-                        <li>期限日期 (J)</li>
+                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs" start="5">
+                        <li>主辦部門 (E)</li>
+                        <li className="text-red-600 font-bold">進度月份 (F)</li>
+                        <li>起始月份 (G)</li>
+                        <li>預算金額 (H)</li>
                     </ul>
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono" start="11">
-                        <li>徵求期 (K)</li>
-                        <li>三性成案 (L)</li>
-                        <li>契約審核 (M)</li>
-                        <li>底價單 (N)</li>
-                        <li>開標期 (O)</li>
+                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs" start="9">
+                        <li>決標金額 (I)</li>
+                        <li>決標日期 (J)</li>
+                        <li>期限日期 (K)</li>
+                        <li>徵求期 (L)</li>
                     </ul>
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono" start="16">
-                        <li>交貨期 (P)</li>
-                        <li>安裝期 (Q)</li>
-                        <li>試運轉 (R)</li>
-                        <li>驗收期 (S)</li>
+                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs" start="13">
+                        <li>三性成案 (M)</li>
+                        <li>契約審核 (N)</li>
+                        <li>底價單 (O)</li>
+                        <li>開標期 (P)</li>
+                    </ul>
+                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs" start="17">
+                        <li>交貨期 (Q)</li>
+                        <li>安裝期 (R)</li>
+                        <li>試運轉 (S)</li>
+                        <li>驗收期 (T)</li>
                     </ul>
                     </div>
                 </div>

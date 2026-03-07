@@ -53,14 +53,14 @@
 
     <!-- 主程式碼 -->
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
         
         // 安全獲取 Lucide Icons
         const LucideIcons = window.lucideReact || {};
         const { 
             Calendar, AlertCircle, CheckCircle2, Activity, Settings, 
-            Droplets, Wind, Factory, Fish, RefreshCw, ChevronRight, 
-            User, Tag, DollarSign, Clock, Gavel, CalendarCheck, Hourglass, Building
+            Droplets, Wind, Factory, Fish, RefreshCw, ChevronRight, ChevronDown,
+            User, Tag, DollarSign, Clock, Gavel, CalendarCheck, Hourglass, Building, Filter
         } = LucideIcons;
 
         const IconFallback = () => <span style={{width: 24, height: 24, display: 'inline-block', background: '#ccc', borderRadius: 4}}></span>;
@@ -68,6 +68,81 @@
         const SafeIcon = (IconComponent, props) => {
             if (!IconComponent) return null;
             return <IconComponent {...props} />;
+        };
+
+        // ==========================================
+        // 輔助組件：多選下拉選單 (MultiSelectDropdown)
+        // ==========================================
+        const MultiSelectDropdown = ({ label, icon: IconComponent, options, selectedValues, onChange }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const dropdownRef = useRef(null);
+
+            // 點擊外部關閉選單
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                        setIsOpen(false);
+                    }
+                };
+                if (isOpen) {
+                    document.addEventListener('mousedown', handleClickOutside);
+                }
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [isOpen]);
+
+            // 切換單一選項
+            const toggleOption = (opt) => {
+                if (selectedValues.includes(opt)) {
+                    onChange(selectedValues.filter(v => v !== opt));
+                } else {
+                    onChange([...selectedValues, opt]);
+                }
+            };
+
+            const isAll = selectedValues.length === 0;
+            const displayText = isAll ? '全部' : `已選 ${selectedValues.length} 項`;
+
+            return (
+                <div className="relative inline-block text-left" ref={dropdownRef}>
+                    <button 
+                        onClick={() => setIsOpen(!isOpen)}
+                        className={`flex items-center gap-2 bg-white border hover:bg-slate-50 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shadow-sm
+                            ${!isAll ? 'border-blue-400 text-blue-700 bg-blue-50/30' : 'border-slate-300 text-slate-700'}`}
+                    >
+                        {SafeIcon(IconComponent, {className: `w-4 h-4 ${!isAll ? 'text-blue-600' : 'text-slate-500'}`})}
+                        <span>{label}: {displayText}</span>
+                        {SafeIcon(ChevronDown, {className: `w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''} ${!isAll ? 'text-blue-500' : 'text-slate-400'}`})}
+                    </button>
+
+                    {isOpen && (
+                        <div className="absolute left-0 top-full mt-1.5 w-max min-w-[200px] bg-white border border-slate-200 shadow-xl rounded-lg z-50 py-1.5 flex flex-col max-h-[60vh] overflow-y-auto">
+                            {/* 全選開關 */}
+                            <label className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100 font-bold text-slate-700">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isAll} 
+                                    onChange={() => onChange([])} 
+                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                />
+                                全選 (不篩選)
+                            </label>
+                            
+                            {/* 各別選項 */}
+                            {options.map(opt => (
+                                <label key={opt} className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 cursor-pointer text-slate-600 transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={!isAll && selectedValues.includes(opt)} 
+                                        onChange={() => toggleOption(opt)} 
+                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    {opt}
+                                </label>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
         };
 
         // ==========================================
@@ -81,24 +156,58 @@
             const [lastUpdated, setLastUpdated] = useState(null);
             const [projects, setProjects] = useState([]);
             
-            // 下拉選單過濾狀態
-            const [selectedDept, setSelectedDept] = useState('全部');
+            // 過濾狀態 (空陣列代表全選)
+            const [selectedDepts, setSelectedDepts] = useState([]);
+            const [selectedTypes, setSelectedTypes] = useState([]);
+            const [selectedBudgets, setSelectedBudgets] = useState([]);
 
             useEffect(() => {
                 document.getElementById('root').classList.add('loaded');
             }, []);
 
-            // 萃取所有不重複的主辦部門，供下拉選單使用
+            // 解析預算字串為數字 (單位：萬)
+            const parseBudget = (budgetStr) => {
+                if (!budgetStr || budgetStr.trim() === '') return null;
+                const numStr = budgetStr.replace(/,/g, '').replace(/[^\d.]/g, '');
+                if (numStr === '') return null;
+                return parseFloat(numStr) || 0;
+            };
+
+            // 取得預算對應的級距文字
+            const getBudgetLabel = (val) => {
+                if (val === null) return '未標示';
+                if (val < 15) return '15萬元以下'; 
+                if (val >= 15 && val < 150) return '15~150萬元';
+                if (val >= 150 && val < 1000) return '150萬元~1000萬元';
+                if (val >= 1000 && val < 5000) return '1000萬元~5000萬元';
+                return '5000萬元以上';
+            };
+
+            // 產生動態選項選單
             const departments = useMemo(() => {
-                const depts = projects.map(p => p.department).filter(d => d && d.trim() !== '');
-                return ['全部', ...new Set(depts)];
+                return [...new Set(projects.map(p => p.department).filter(d => d && d.trim() !== ''))];
             }, [projects]);
 
-            // 依據選取的部門進行過濾
+            const types = useMemo(() => {
+                return [...new Set(projects.map(p => p.type).filter(t => t && t.trim() !== ''))];
+            }, [projects]);
+
+            // 固定的預算級距選項
+            const budgetOptions = ['15萬元以下', '15~150萬元', '150萬元~1000萬元', '1000萬元~5000萬元', '5000萬元以上', '未標示'];
+
+            // 依據多重條件過濾專案
             const filteredProjects = useMemo(() => {
-                if (selectedDept === '全部') return projects;
-                return projects.filter(p => p.department === selectedDept);
-            }, [projects, selectedDept]);
+                return projects.filter(p => {
+                    const matchDept = selectedDepts.length === 0 || selectedDepts.includes(p.department);
+                    const matchType = selectedTypes.length === 0 || selectedTypes.includes(p.type);
+                    
+                    const bVal = parseBudget(p.budget);
+                    const bLabel = getBudgetLabel(bVal);
+                    const matchBudget = selectedBudgets.length === 0 || selectedBudgets.includes(bLabel);
+                    
+                    return matchDept && matchType && matchBudget;
+                });
+            }, [projects, selectedDepts, selectedTypes, selectedBudgets]);
 
             // 定義 9 個細部階段
             const STAGES = {
@@ -206,41 +315,34 @@
                 const rawRows = parseCSVData(text);
                 
                 const data = rawRows.slice(1).map((cols, index) => {
-                    // 基本防呆：至少要有 6 欄
                     if (cols.length < 6) return null;
 
                     const stages = [];
                     for (let i = 1; i <= 9; i++) {
-                        // 從第 L 欄(index 11)開始是工期
                         const duration = parseFloat(cols[10 + i]) || 0; 
                         stages.push({ id: i, duration });
                     }
 
                     return {
                         id: index + 1,
-                        name: cols[0],             // A: 案名
-                        description: cols[1],      // B: 說明
-                        owner: cols[2],            // C: 承辦人
-                        type: cols[3],             // D: 採購類別
-                        department: cols[4],       // E: 主辦部門
-                        currentProgressMonth: parseFloat(cols[5]) || 0, // F: 進度月份 (改為精確的小數月份)
-                        startOffset: parseFloat(cols[6]) || 0, // G: 起始月份
-                        budget: cols[7],           // H: 預算金額
-                        awardAmount: cols[8],      // I: 決標金額
-                        awardDate: cols[9],        // J: 決標日期
-                        deadline: cols[10],        // K: 期限日期
+                        name: cols[0],             
+                        description: cols[1],      
+                        owner: cols[2],            
+                        type: cols[3],             
+                        department: cols[4],       
+                        currentProgressMonth: parseFloat(cols[5]) || 0, 
+                        startOffset: parseFloat(cols[6]) || 0, 
+                        budget: cols[7],           
+                        awardAmount: cols[8],      
+                        awardDate: cols[9],        
+                        deadline: cols[10],        
                         stages: stages,
-                        icon: null // Icon is handled in render
+                        icon: null 
                     };
                 }).filter(item => item !== null);
                 
                 if (data.length > 0) {
                     setProjects(data);
-                    // 如果原先選的部門不在新資料中，切回'全部'
-                    const newDepts = ['全部', ...new Set(data.map(p => p.department).filter(d => d && d.trim() !== ''))];
-                    if (!newDepts.includes(selectedDept)) {
-                        setSelectedDept('全部');
-                    }
                     setLastUpdated(new Date().toLocaleString());
                 } else {
                     throw new Error('CSV 資料為空或格式錯誤');
@@ -258,51 +360,65 @@
             }, []);
 
             return (
-                <div className="min-h-screen bg-slate-50 p-4 font-sans text-slate-800">
+                <div className="min-h-screen bg-slate-50 p-4 font-sans text-slate-800 pb-16">
                 
                 {/* 標題區 */}
                 <header className="mb-6 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-                        {SafeIcon(Activity, {className: "w-10 h-10 text-blue-600"})}
-                        尖山發電廠115年度採購發包進度管控表
-                        </h1>
+                        <div>
+                            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+                            {SafeIcon(Activity, {className: "w-10 h-10 text-blue-600"})}
+                            尖山發電廠115年度採購發包進度管控表
+                            </h1>
+                        </div>
                         
-                        <div className="mt-3 flex flex-wrap items-center gap-4">
-                            {/* 主辦部門過濾下拉選單 */}
-                            <div className="flex items-center gap-2 bg-blue-50/50 px-3 py-1.5 rounded-lg border border-blue-100">
-                                {SafeIcon(Building, {className: "w-4 h-4 text-blue-600"})}
-                                <span className="text-sm font-bold text-slate-700">主辦部門:</span>
-                                <select 
-                                    className="bg-white border border-slate-300 rounded text-sm px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 font-medium cursor-pointer"
-                                    value={selectedDept}
-                                    onChange={(e) => setSelectedDept(e.target.value)}
-                                >
-                                    {departments.map(dept => (
-                                        <option key={dept} value={dept}>{dept}</option>
-                                    ))}
-                                </select>
+                        <div className="flex flex-wrap gap-2 max-w-xl justify-end self-end">
+                            <div className="text-sm font-bold text-slate-400 w-full text-right mb-1">階段說明</div>
+                            {Object.values(STAGES).map((stage, idx) => (
+                            <div key={idx} className={`flex items-center px-3 py-1.5 rounded text-xs font-medium ${stage.color} ${stage.text}`}>
+                                {stage.short}
                             </div>
+                            ))}
+                        </div>
+                    </div>
 
-                            <div className="flex items-center gap-3 text-sm">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                                    顯示筆數: {filteredProjects.length} 筆
-                                </span>
-                                <span className="text-slate-500">資料來源：Google 試算表</span>
-                                {lastUpdated && <span className="text-slate-400">| 最後更新: {lastUpdated}</span>}
-                            </div>
+                    {/* 新增：高級多選篩選控制列 */}
+                    <div className="mt-6 flex flex-wrap items-center gap-3 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                        <div className="text-sm font-bold text-slate-500 flex items-center gap-1.5 mr-2">
+                            {SafeIcon(Filter, {className: "w-4 h-4"})}
+                            資料篩選:
                         </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 max-w-xl justify-end self-end">
-                        <div className="text-sm font-bold text-slate-400 w-full text-right mb-1">階段說明</div>
-                        {Object.values(STAGES).map((stage, idx) => (
-                        <div key={idx} className={`flex items-center px-3 py-1.5 rounded text-xs font-medium ${stage.color} ${stage.text}`}>
-                            {stage.short}
+                        
+                        <MultiSelectDropdown 
+                            label="主辦部門" 
+                            icon={Building} 
+                            options={departments} 
+                            selectedValues={selectedDepts} 
+                            onChange={setSelectedDepts} 
+                        />
+                        
+                        <MultiSelectDropdown 
+                            label="採購類別" 
+                            icon={Tag} 
+                            options={types} 
+                            selectedValues={selectedTypes} 
+                            onChange={setSelectedTypes} 
+                        />
+                        
+                        <MultiSelectDropdown 
+                            label="預算金額" 
+                            icon={DollarSign} 
+                            options={budgetOptions} 
+                            selectedValues={selectedBudgets} 
+                            onChange={setSelectedBudgets} 
+                        />
+                        
+                        <div className="ml-auto flex items-center gap-3 text-sm">
+                            <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold bg-blue-100 text-blue-800 border border-blue-200 shadow-sm">
+                                符合條件: {filteredProjects.length} 筆
+                            </span>
+                            {lastUpdated && <span className="text-slate-400 font-medium">更新時間: {lastUpdated}</span>}
                         </div>
-                        ))}
-                    </div>
                     </div>
                 </header>
 
@@ -323,11 +439,12 @@
                     </div>
                     </div>
 
-                    {/* 資料內容 - 顯示過濾後的專案 */}
+                    {/* 資料內容 */}
                     <div className="flex flex-col">
                     {filteredProjects.length === 0 && (
-                        <div className="p-8 text-center text-slate-500">
-                            目前該部門無相關採購專案資料
+                        <div className="p-12 text-center text-slate-400 font-medium text-lg flex flex-col items-center">
+                            {SafeIcon(AlertCircle, {className: "w-12 h-12 mb-3 opacity-50"})}
+                            未找到符合篩選條件的專案
                         </div>
                     )}
                     {filteredProjects.map((project) => {
@@ -529,48 +646,6 @@
                     </div>
                 </div>
 
-                {/* 底部說明 */}
-                <div className="mt-6 bg-slate-100 p-5 rounded-xl border border-slate-200 text-sm text-slate-600">
-                    <h3 className="font-bold flex items-center gap-2 mb-3 text-slate-800 text-base">
-                    {SafeIcon(Settings, {className: "w-5 h-5"})}
-                    Google 試算表欄位檢查 (更新為 20 欄)
-                    </h3>
-                    <p className="mb-3 text-slate-500 font-bold text-red-600">
-                    注意：F 欄已改為「進度月份」，請輸入數字（例：3.5 表示落在 3 月正中間），確保紅線指標精準顯示。
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs">
-                        <li>案名 (A)</li>
-                        <li>說明 (B)</li>
-                        <li>承辦人 (C)</li>
-                        <li>採購類別 (D)</li>
-                    </ul>
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs" start="5">
-                        <li>主辦部門 (E)</li>
-                        <li className="text-red-600 font-bold">進度月份 (F)</li>
-                        <li>起始月份 (G)</li>
-                        <li>預算金額 (H)</li>
-                    </ul>
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs" start="9">
-                        <li>決標金額 (I)</li>
-                        <li>決標日期 (J)</li>
-                        <li>期限日期 (K)</li>
-                        <li>徵求期 (L)</li>
-                    </ul>
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs" start="13">
-                        <li>三性成案 (M)</li>
-                        <li>契約審核 (N)</li>
-                        <li>底價單 (O)</li>
-                        <li>開標期 (P)</li>
-                    </ul>
-                    <ul className="list-decimal list-inside space-y-1 font-medium font-mono text-xs" start="17">
-                        <li>交貨期 (Q)</li>
-                        <li>安裝期 (R)</li>
-                        <li>試運轉 (S)</li>
-                        <li>驗收期 (T)</li>
-                    </ul>
-                    </div>
-                </div>
                 </div>
             );
         };

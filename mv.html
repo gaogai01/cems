@@ -27,6 +27,10 @@
         input[type=range]::-webkit-slider-thumb:active {
             transform: scale(1.1);
         }
+        .script-description-box {
+            border-left: 4px solid #3b82f6;
+            background: linear-gradient(to right, #eff6ff, transparent);
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-20">
@@ -95,14 +99,14 @@
 
                 <div class="relative h-16 mb-10 px-2">
                     <div id="timeline-bg" class="absolute top-1/2 -translate-y-1/2 w-full h-6 bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
-                        <!-- Sections will be injected here -->
+                        <!-- Sections injected here via JS -->
                     </div>
                     <input type="range" id="time-slider" min="0" max="900" value="0" class="absolute top-1/2 -translate-y-1/2 w-full h-10 bg-transparent appearance-none cursor-pointer z-30">
                     <div id="time-progress" class="absolute top-1/2 -translate-y-1/2 h-6 bg-blue-600 rounded-l-full pointer-events-none z-10 shadow-[0_0_15px_rgba(37,99,235,0.4)]" style="width: 0%"></div>
                 </div>
 
                 <div id="jump-buttons" class="grid grid-cols-5 gap-3">
-                    <!-- Jump buttons injected here -->
+                    <!-- Jump buttons injected here via JS -->
                 </div>
             </div>
         </div>
@@ -112,7 +116,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div class="lg:col-span-2">
                     <div id="active-content" class="bg-white rounded-[3rem] overflow-hidden shadow-sm border border-slate-200">
-                        <!-- Unit content injected here -->
+                        <!-- Unit content injected here via JS -->
                     </div>
                 </div>
 
@@ -140,24 +144,25 @@
 
                     <div class="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden">
                         <h3 class="font-black mb-6 flex items-center gap-2 text-lg uppercase tracking-tight text-blue-400">
-                            <i data-lucide="check-circle-2" class="w-5 h-5"></i> 技術驗收標竿
+                            <i data-lucide="award" class="w-5 h-5 text-amber-400"></i> 114年度榮耀里程碑
                         </h3>
-                        <ul class="space-y-5">
-                            <li class="flex gap-3">
-                                <div class="w-2 h-2 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
-                                <div>
-                                    <div class="text-sm font-bold">4K UHD @60fps</div>
-                                    <div class="text-xs text-white/50">超高畫質專業錄製</div>
-                                </div>
-                            </li>
-                            <li class="flex gap-3">
-                                <div class="w-2 h-2 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
-                                <div>
-                                    <div class="text-sm font-bold">專業國語配音</div>
-                                    <div class="text-xs text-white/50">符合台電專有名詞規範</div>
-                                </div>
-                            </li>
-                        </ul>
+                        <div class="text-xs space-y-3 text-white/70">
+                            <div class="bg-white/10 p-4 rounded-2xl border border-blue-500/30 backdrop-blur-sm">
+                                <p class="text-blue-400 font-black mb-1 text-sm italic">五星獎 ★★★★★</p>
+                                <p class="text-white font-bold">114年 水環境巡守隊</p>
+                            </div>
+                            <div class="bg-white/10 p-4 rounded-2xl border border-emerald-500/30 backdrop-blur-sm">
+                                <p class="text-emerald-400 font-black mb-1 text-sm">認養特優🏆</p>
+                                <p class="text-white font-bold">114年 尖山沙灘認養</p>
+                            </div>
+                            <div class="bg-white/10 p-4 rounded-2xl border border-emerald-500/30 backdrop-blur-sm">
+                                <p class="text-emerald-400 font-black mb-1 text-sm">認養特優🏆</p>
+                                <p class="text-white font-bold">114年 空氣品質淨化區</p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-6 border-t border-white/10 text-[10px] opacity-50 italic">
+                            註：包含尖山公園(2.2公頃)及相對公園(0.3公頃)之維護與管理。
+                        </div>
                     </div>
                 </div>
             </div>
@@ -169,10 +174,12 @@
             {
                 id: 0,
                 title: "1. 歷史傳承與未來展望",
+                durationMin: 2,
                 durationSec: 120,
                 startTime: 0,
                 icon: "history",
                 color: "bg-blue-900",
+                description: "從建廠初期的荒蕪影像開始，透過黑白與彩色影像的緩緩過渡，勾勒出尖山電廠作為澎湖電力支柱的奮鬥史。訪談穿插老廠長的感言與現任廠長的宏圖，展現傳承的重量與轉型的決心。",
                 core: [
                     { label: "歷史回顧", content: "採訪歷屆廠長 (2~3人)，結合建廠歷史影像與數位化老照片。" },
                     { label: "未來願景", content: "拍攝現任廠長與副廠長之訪談，展現嚴謹之經營管理態度與轉型願景。" }
@@ -182,10 +189,12 @@
             {
                 id: 1,
                 title: "2. 發電流程介紹",
-                durationSec: 240,
+                durationMin: 3.5,
+                durationSec: 210,
                 startTime: 120,
                 icon: "zap",
                 color: "bg-amber-600",
+                description: "聚焦於龐大精密的柴油機組，利用高速攝影與滑軌技術，捕捉活塞運動與機械律動之美。透過 3D 動畫拆解內燃機構造，讓生硬的物理發電原理轉化為視覺化的流暢工藝過程。",
                 core: [
                     { label: "燃料運用", content: "起停機使用柴油，運轉使用 0.5% 低硫重油，減少 SO2 排放。" },
                     { label: "機組規格", content: "一期英國 MB (10,443 kW)；二期德國 MAN (11,000 kW)。" }
@@ -195,41 +204,51 @@
             {
                 id: 2,
                 title: "3. 強韌電網",
-                durationSec: 210,
-                startTime: 360,
+                durationMin: 3,
+                durationSec: 180,
+                startTime: 330,
                 icon: "activity",
                 color: "bg-cyan-700",
+                description: "以電脈衝般的動畫特效展示電力從尖山出發，流經變電所，溫暖澎湖大街小巷的過程。重點強調再生能源併網及『台澎海底電纜』的雙向調度力量，象徵與台灣本島電力共享、綠能互補的戰略地位。",
                 core: [
-                    { label: "輸配電流程", content: "主變壓器升壓至 69KV，供予馬公與湖西。" },
-                    { label: "台澎海纜", content: "161kV 纜線綠能回送與雙向調度功能。" }
+                    { label: "輸配電流程", content: "主變壓器升壓至 69KV，供予馬公與湖西變電所。" },
+                    { label: "再生能源整合", content: "介紹澎湖優質風場與高日照時數，尖山電廠作為調度中心穩定調節綠能併網。" },
+                    { label: "台澎海纜", content: "161kV 纜線具備綠能回送與雙向調度功能，確保全島電網強韌性。" }
                 ],
-                visuals: ["【動畫】電力輸送流程圖", "【動畫】跨海調度資訊圖表", "綠能場域空拍"]
+                visuals: ["【動畫】電力輸送流程圖", "【動畫】模擬再生能源併網與海纜調度圖表", "風力發電與光電板空拍畫面"]
             },
             {
                 id: 3,
                 title: "4. 環境治理",
-                durationSec: 180,
-                startTime: 570,
+                durationMin: 3.5,
+                durationSec: 210,
+                startTime: 510,
                 icon: "leaf",
                 color: "bg-green-700",
+                description: "硬體與場域的透明科學展示。除廠內的 SCR 脫硝與海淡機技術外，畫面大開大闔，延伸至電廠外廣闊的綠地與潔淨海岸，以具體的認養面積與特優獎項，證實台電對澎湖環境的實質貢獻。",
                 core: [
                     { label: "防治系統", content: "介紹 SCR 脫硝系統與旋風集塵器。" },
-                    { label: "水資源", content: "海淡機「負壓蒸餾法」與三個效槽運作。" }
+                    { label: "水資源", content: "海淡機「負壓蒸餾法」與三個效槽運作。" },
+                    { label: "環境認養指標", content: "認養尖山至林投道路(2.2km)、尖山沙灘(1km)及空品區(2.5公頃，含尖山及相對公園)。" },
+                    { label: "場域獲獎榮譽", content: "榮獲 114 年【認養尖山沙灘特優】、【空氣品質淨化區認養特優】。" }
                 ],
-                visuals: ["【動畫】SCR 淨化原理", "空拍認養沙灘與綠地", "獲獎紀錄動態排列"]
+                visuals: ["【動畫】SCR 淨化原理", "空拍視角展現道路綠帶與公園廣角美景", "114年特優獎座與認養地圖疊影特效"]
             },
             {
                 id: 4,
                 title: "5. 社會與生態",
-                durationSec: 150,
-                startTime: 750,
+                durationMin: 3,
+                durationSec: 180,
+                startTime: 720,
                 icon: "users",
                 color: "bg-rose-700",
+                description: "影片的情感高潮。將焦點從「設施」轉向「人」。透過水環境巡守隊的汗水、各部門組成的社會關懷志工走入村落的背影，以及澎湖荸薺的生機，傳遞台電人與土地共好的溫度。",
                 core: [
-                    { label: "社區關懷", content: "紀錄 100 年起舉辦之長者訪視、圍爐活動。" },
-                    { label: "生態復育", content: "台電八大物種「澎湖荸薺」故事與採收紀錄。" }
+                    { label: "社會關懷與村里認養", content: "成立「社會關懷類志工」，由電廠內各部門分別認養湖西鄉各村落，深耕在地，落實獨居長者三節訪視、年貨採買與圍爐活動（自民國 100 年起）。" },
+                    { label: "環保志工行動", content: "展現廠內同仁組成的「環保志工水環境巡守隊」長期投入淨灘與巡查，並標示榮獲 114 年【五星獎】殊榮。" },
+                    { label: "生態復育", content: "台電八大物種「澎湖荸薺」故事與採收紀錄，強調物種珍稀性與在地復育成果。" }
                 ],
-                visuals: ["溫馨互動笑容捕捉", "【微距】澎湖荸薺特寫", "人文紀實畫面"]
+                visuals: ["志工走入村落服務與長者互動特寫", "志工隊巡守與淨灘紀實畫面", "【微距】澎湖荸薺特寫與口感說明"]
             }
         ];
 
@@ -256,10 +275,13 @@
             const btn = document.createElement('button');
             btn.onclick = () => updateTime(unit.startTime);
             btn.id = `btn-${unit.id}`;
-            btn.className = `py-3 px-4 rounded-2xl transition-all border-2 bg-white border-slate-100 text-slate-800 text-left`;
+            btn.className = `py-3 px-4 rounded-2xl transition-all border-2 bg-white border-slate-100 text-slate-800 text-left relative overflow-hidden`;
             btn.innerHTML = `
-                <div class="text-[10px] text-slate-400 font-bold">${formatTime(unit.startTime)}</div>
-                <div class="text-xs font-bold">${unit.title.split('. ')[1]}</div>
+                <div class="text-[10px] text-slate-400 font-bold flex justify-between">
+                    <span>${formatTime(unit.startTime)}</span>
+                    <span class="text-blue-500">${unit.durationMin} m</span>
+                </div>
+                <div class="text-xs font-bold truncate">${unit.title.split('. ')[1]}</div>
             `;
             jumpButtons.appendChild(btn);
         });
@@ -275,28 +297,41 @@
             // Update Active Content
             contentArea.innerHTML = `
                 <div class="${activeUnit.color} p-10 text-white relative">
-                    <div class="flex items-center gap-3 mb-6">
-                        <span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-xs font-black tracking-widest">SECTION ${activeUnit.id + 1}</span>
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-xs font-black tracking-widest uppercase">Section ${activeUnit.id + 1}</span>
+                        <div class="flex items-center gap-2 bg-white/10 px-4 py-1 rounded-full text-sm font-bold">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                            本單元時長：${activeUnit.durationMin} 分鐘
+                        </div>
                     </div>
-                    <h2 class="text-4xl font-black italic">${activeUnit.title}</h2>
+                    <h2 class="text-4xl font-black italic tracking-tighter">${activeUnit.title}</h2>
                 </div>
-                <div class="p-10 space-y-8">
+                <div class="p-10 space-y-10">
+                    <!-- Script Description Section -->
                     <div class="space-y-4">
-                        <h3 class="text-xl font-bold flex items-center gap-2"><div class="w-1.5 h-6 bg-blue-600"></div>核心內容</h3>
+                        <h3 class="text-xl font-bold flex items-center gap-2"><div class="w-1.5 h-6 bg-slate-800"></div>單元腳本描述</h3>
+                        <div class="p-6 script-description-box rounded-r-2xl text-slate-700 leading-relaxed italic text-lg">
+                            「${activeUnit.description}」
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h3 class="text-xl font-bold flex items-center gap-2"><div class="w-1.5 h-6 bg-blue-600"></div>核心內容與數據</h3>
                         <div class="grid gap-3">
                             ${activeUnit.core.map(c => `
-                                <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div class="text-xs font-bold text-blue-800 uppercase">${c.label}</div>
-                                    <div class="text-lg text-slate-700">${c.content}</div>
+                                <div class="p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-blue-200 transition-all">
+                                    <div class="text-xs font-bold text-blue-800 uppercase mb-1">${c.label}</div>
+                                    <div class="text-lg text-slate-700 font-medium">${c.content}</div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
+
                     <div class="space-y-4">
-                        <h3 class="text-xl font-bold flex items-center gap-2"><div class="w-1.5 h-6 bg-emerald-600"></div>畫面要求</h3>
+                        <h3 class="text-xl font-bold flex items-center gap-2"><div class="w-1.5 h-6 bg-emerald-600"></div>畫面後製要求</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             ${activeUnit.visuals.map(v => `
-                                <div class="p-4 rounded-xl border border-slate-100 flex items-center gap-3 ${v.includes('動畫') ? 'bg-emerald-50 border-emerald-100 font-bold' : ''}">
+                                <div class="p-4 rounded-xl border border-slate-100 flex items-center gap-3 ${v.includes('動畫') ? 'bg-emerald-50 border-emerald-100 font-bold text-emerald-900' : 'text-slate-600'}">
                                     <i data-lucide="${v.includes('動畫') ? 'box' : 'camera'}" class="w-5 h-5 opacity-50"></i>
                                     <span class="text-sm">${v}</span>
                                 </div>
@@ -310,9 +345,9 @@
             scriptData.forEach(u => {
                 const b = document.getElementById(`btn-${u.id}`);
                 if (u.id === activeUnit.id) {
-                    b.className = `${u.color} text-white py-3 px-4 rounded-2xl transition-all border-2 border-transparent shadow-xl -translate-y-1`;
+                    b.className = `${u.color} text-white py-3 px-4 rounded-2xl transition-all border-2 border-transparent shadow-xl -translate-y-1 scale-105 z-10`;
                 } else {
-                    b.className = `bg-white border-slate-100 text-slate-800 py-3 px-4 rounded-2xl transition-all border-2 hover:bg-slate-50`;
+                    b.className = `bg-white border-slate-100 text-slate-800 py-3 px-4 rounded-2xl transition-all border-2 hover:bg-slate-50 hover:border-slate-300`;
                 }
             });
 

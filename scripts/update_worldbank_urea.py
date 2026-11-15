@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Fetch the latest World Bank Pink Sheet monthly urea price into JSON."""
 
-from datetime import datetime, timezone
 from html.parser import HTMLParser
 from io import BytesIO
 import json
@@ -101,7 +100,6 @@ def main():
         "sourceUrl": LANDING_URL,
         "dataUrl": workbook_url,
         "license": "CC BY 4.0",
-        "retrievedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "latest": observations[-1],
         "previous": observations[-2] if len(observations) > 1 else None,
     }

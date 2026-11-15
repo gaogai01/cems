@@ -36,7 +36,7 @@ def fetch(url):
 def parse_month(value):
     if value is None:
         return None
-    match = re.fullmatch(r"(\\d{4})M(\\d{1,2})", str(value).strip(), re.IGNORECASE)
+    match = re.fullmatch(r"(\d{4})M(\d{1,2})", str(value).strip(), re.IGNORECASE)
     if not match:
         return None
     year, month = int(match.group(1)), int(match.group(2))
@@ -61,12 +61,12 @@ def main():
         raise RuntimeError("The World Bank workbook no longer contains the 'Monthly Prices' sheet.")
 
     sheet = workbook["Monthly Prices"]
+    rows = list(sheet.iter_rows(values_only=True))
     header_row = None
     urea_column = None
-    for row_number, row in enumerate(sheet.iter_rows(values_only=True), start=1):
-        for column_number, cell in enumerate(row, start=1):
-            text = str(cell or "").strip().lower()
-            if text.startswith("urea") and ("mt" in text or "metric" in text):
+    for row_number, row in enumerate(rows):
+        for column_number, cell in enumerate(row):
+            if str(cell or "").strip().lower().startswith("urea"):
                 header_row = row_number
                 urea_column = column_number
                 break
@@ -76,13 +76,13 @@ def main():
         raise RuntimeError("Could not locate the urea price column in the World Bank workbook.")
 
     observations = []
-    for row in sheet.iter_rows(min_row=(header_row or 1) + 1, values_only=True):
+    for row in rows[header_row + 1:]:
         if not row:
             continue
         month = parse_month(row[0])
-        if not month or len(row) < urea_column:
+        if not month or len(row) <= urea_column:
             continue
-        raw_value = row[urea_column - 1]
+        raw_value = row[urea_column]
         try:
             value = float(raw_value)
         except (TypeError, ValueError):
@@ -107,7 +107,7 @@ def main():
     }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    OUTPUT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Updated World Bank urea price: {result['latest']['month']} = {result['latest']['value']} {result['unit']}")
 
 

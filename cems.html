@@ -257,8 +257,10 @@
         async function fetchRealtimeData() {
             try {
                 const response = await fetch(GAS_URL); const json = await response.json();
-                if (json.dataString) { renderTable(json.timestamp, json.dataString); calculateLoadComparison(); }
-            } catch (error) { console.error(error); document.getElementById('updateTime').innerText = "連線異常"; }
+                if (!json || !json.dataString) throw new Error("即時資料格式異常");
+                renderTable(json.timestamp, json.dataString);
+                calculateLoadComparison();
+            } catch (error) { console.error(error); document.getElementById('updateTime').innerText = "連線異常，表格資料可能已過期"; }
         }
 
         function renderTable(timestamp, rawString) {

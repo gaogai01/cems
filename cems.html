@@ -289,7 +289,7 @@
                 let statusCode = dataArray[baseIndex + 2];
                 const isRunning = statusCode === 'N';
                 let rowClass = isRunning ? 'status-run' : 'status-stop';
-                const statusLabel = isRunning ? '運轉' : `非正常運轉（狀態碼：${statusCode || '未知'}）`;
+                const statusLabel = isRunning ? '運轉' : `非運轉（狀態碼：${statusCode || '未知'}）`;
 
                 // 數值
                 let so2 = dataArray[baseIndex + 1];

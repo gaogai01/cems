@@ -20,13 +20,17 @@ function initDashboard() {
 
     // 設定報表預設月份 (當前月份)
     const reportInput = document.getElementById('waterReportMonth');
-    if(reportInput) {
-         reportInput.value = getLocalYearMonth();
-    }
+    if(reportInput) reportInput.value = getLocalYearMonth();
 
-    // 立即抓取一次，並設定排程
+    // 先顯示上次成功資料，讓畫面不必等 API 回應才出現
+    const cached = readDashboardCache();
+    if (cached && cached.data) renderDashboard(cached.data, true);
+
+    // 背景更新即時資料；避免慢回應時重複堆疊請求
     fetchData();
-    setInterval(fetchData, 10000); // 每 10 秒更新一次
+    if (!window.dashboardRefreshTimer) {
+        window.dashboardRefreshTimer = setInterval(fetchData, 10000);
+    }
 }
 
 function startApp() {
@@ -43,81 +47,111 @@ function startApp() {
 /**
  * 從後端 API 抓取即時數據
  */
-function fetchData() {
-    // 加上 timestamp 防止快取
-    fetch(API_URL + "?mode=read&t=" + new Date().getTime())
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            // 保留最後一次成功更新時間，供連線失敗時辨識資料新鮮度
-            if(data.timestamp) {
-                const timestampText = String(data.timestamp).trim();
-                const timeMatch = timestampText.match(/(?:T|\s)(\d{2}:\d{2}(?::\d{2})?)/);
-                lastSuccessfulUpdateText = timeMatch ? timeMatch[1] : timestampText;
-                document.getElementById('last-update').innerText = lastSuccessfulUpdateText;
-            }
+function readDashboardCache() {
+    try {
+        const raw = localStorage.getItem('wastewaterDashboardCacheV1');
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        console.warn("讀取本機快取失敗", e);
+        return null;
+    }
+}
 
-            // 產生 HTML 內容
-            let htmlContent = '';
-            
-            // 遍歷設定檔中的每個群組 (DASHBOARD_CONFIG 來自 config.js)
-            DASHBOARD_CONFIG.forEach(group => {
-                htmlContent += `
-                <div class="system-group ${group.className}">
-                    <div class="system-title">${group.title} <span>${group.items.length}</span></div>
-                    <div class="inner-grid">`;
+/**
+ * 從後端 API 抓取即時數據
+ */
+async function fetchData() {
+    if (window.dashboardFetchInProgress) return;
+    window.dashboardFetchInProgress = true;
 
-                // 遍歷群組內的每個卡片
-                group.items.forEach(item => {
-                    // --- 特殊處理：ACC 流量 (顯示 今日 / 昨日) ---
-                    if (group.id === "acc") {
-                        const todayRaw = data[item.col + "_DAILY"];
-                        const yesterdayRaw = data[item.col + "_YESTERDAY"];
-                        let today = todayRaw !== undefined && todayRaw !== null && todayRaw !== "" ? todayRaw : "--";
-                        let yesterday = yesterdayRaw !== undefined && yesterdayRaw !== null && yesterdayRaw !== "" ? yesterdayRaw : "--";
-                        
-                        // 組合顯示字串
-                        let displayVal = `${today} / <span style="font-size:0.8em; color:var(--text-sub);">${yesterday}</span>`;
+    try {
+        const response = await fetch(API_URL + "?mode=read&t=" + Date.now());
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (!data || typeof data !== "object") throw new Error("資料格式錯誤");
 
-                        // 使用今日流量來判斷警報狀態
-                        let statusClass = checkAlarm(item.col + "_DAILY", today);
-                        let gaugeHTML = getGaugeHTML(item.col + "_DAILY", today);
-
-                        htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML);
-                    } 
-                    // --- 一般數值處理 ---
-                    else {
-                        const rawVal = data[item.col] !== undefined && data[item.col] !== null ? data[item.col] : '--';
-                        let displayVal = rawVal;
-
-                        // 顯示值可四捨五入，但警報與儀表一律使用原始讀值
-                        const numericVal = Number(rawVal);
-                        if (rawVal !== '--' && Number.isFinite(numericVal) && String(rawVal).includes('.')) {
-                            displayVal = numericVal.toFixed(1);
-                            if(displayVal.endsWith('.0')) displayVal = displayVal.replace('.0', '');
-                        }
-
-                        let statusClass = checkAlarm(item.col, rawVal);
-                        let gaugeHTML = getGaugeHTML(item.col, rawVal);
-
-                        htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML);
-                    }
-                });
-                htmlContent += `</div></div>`;
-            });
-
-            // 將生成的 HTML 注入到頁面
-            document.getElementById('app').innerHTML = htmlContent;
-        })
-        .catch(err => {
-            console.error("Fetch error:", err);
-            const lastUpdateLabel = document.getElementById('last-update');
-            lastUpdateLabel.innerText = lastSuccessfulUpdateText
+        if(data.timestamp) {
+            const timestampText = String(data.timestamp).trim();
+            const timeMatch = timestampText.match(/(?:T|\\s)(\\d{2}:\\d{2}(?::\\d{2})?)/);
+            lastSuccessfulUpdateText = timeMatch ? timeMatch[1] : timestampText;
+        }
+        try {
+            localStorage.setItem('wastewaterDashboardCacheV1', JSON.stringify({
+                data,
+                savedAt: Date.now()
+            }));
+        } catch (e) {
+            console.warn("儲存本機快取失敗", e);
+        }
+        renderDashboard(data, false);
+    } catch (err) {
+        console.error("Fetch error:", err);
+        const lastUpdateLabel = document.getElementById('last-update');
+        const cached = readDashboardCache();
+        lastUpdateLabel.innerText = cached && lastSuccessfulUpdateText
+            ? `連線異常｜顯示快取資料｜最後資料時間：${lastSuccessfulUpdateText}`
+            : lastSuccessfulUpdateText
                 ? `連線異常｜最後成功更新：${lastSuccessfulUpdateText}（畫面可能已過期）`
                 : "連線異常｜尚無成功資料";
+    } finally {
+        window.dashboardFetchInProgress = false;
+    }
+}
+
+function renderDashboard(data, fromCache) {
+    if (data.timestamp) {
+        const timestampText = String(data.timestamp).trim();
+        const timeMatch = timestampText.match(/(?:T|\\s)(\\d{2}:\\d{2}(?::\\d{2})?)/);
+        const sourceTime = timeMatch ? timeMatch[1] : timestampText;
+        if (fromCache) {
+            lastSuccessfulUpdateText = sourceTime;
+            document.getElementById('last-update').innerText = `快取資料｜來源更新：${sourceTime}`;
+        } else {
+            lastSuccessfulUpdateText = sourceTime;
+            document.getElementById('last-update').innerText = sourceTime;
+        }
+    } else if (fromCache) {
+        document.getElementById('last-update').innerText = "顯示上次快取資料｜更新時間未知";
+    }
+
+    // 產生 HTML 內容
+    let htmlContent = '';
+    
+    // 遍歷設定檔中的每個群組 (DASHBOARD_CONFIG 來自 config.js)
+    DASHBOARD_CONFIG.forEach(group => {
+        htmlContent += `
+        <div class="system-group ${group.className}">
+            <div class="system-title">${group.title} <span>${group.items.length}</span></div>
+            <div class="inner-grid">`;
+
+        // 遍歷群組內的每個卡片
+        group.items.forEach(item => {
+            if (group.id === "acc") {
+                const todayRaw = data[item.col + "_DAILY"];
+                const yesterdayRaw = data[item.col + "_YESTERDAY"];
+                const today = todayRaw !== undefined && todayRaw !== null && todayRaw !== "" ? todayRaw : "--";
+                const yesterday = yesterdayRaw !== undefined && yesterdayRaw !== null && yesterdayRaw !== "" ? yesterdayRaw : "--";
+                const displayVal = `${today} / <span style="font-size:0.8em; color:var(--text-sub);">${yesterday}</span>`;
+                const statusClass = checkAlarm(item.col + "_DAILY", today);
+                const gaugeHTML = getGaugeHTML(item.col + "_DAILY", today);
+                htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML);
+            } else {
+                const rawVal = data[item.col] !== undefined && data[item.col] !== null ? data[item.col] : '--';
+                let displayVal = rawVal;
+                const numericVal = Number(rawVal);
+                if (rawVal !== '--' && Number.isFinite(numericVal) && String(rawVal).includes('.')) {
+                    displayVal = numericVal.toFixed(1);
+                    if(displayVal.endsWith('.0')) displayVal = displayVal.replace('.0', '');
+                }
+                const statusClass = checkAlarm(item.col, rawVal);
+                const gaugeHTML = getGaugeHTML(item.col, rawVal);
+                htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML);
+            }
         });
+        htmlContent += `</div></div>`;
+    });
+
+    document.getElementById('app').innerHTML = htmlContent;
 }
 
 /**

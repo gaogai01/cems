@@ -134,6 +134,12 @@
         auth.signInWithPopup(provider).catch(e => alert(e.message));
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[char]);
+    }
+
     function submitReg() {
         const user = auth.currentUser;
         const name = document.getElementById('reg-name').value;
@@ -178,10 +184,10 @@
             <div class="user-item">
                 <div class="user-info-row">
                     <div>
-                        <strong>${u.name}</strong> <span class="tag">${u.dept} ${u.title}</span>
+                        <strong>${escapeHtml(u.name)}</strong> <span class="tag">${escapeHtml(u.dept)} ${escapeHtml(u.title)}</span>
                         ${u.isAdmin ? '<span class="tag tag-admin">Admin</span>' : ''}
                     </div>
-                    <div style="font-size:0.8rem; color:#888;">${u.email}</div>
+                    <div style="font-size:0.8rem; color:#888;">${escapeHtml(u.email)}</div>
                 </div>
                 <div class="user-role-row">
                     ${isSelf ? '<span>超級管理員</span>' : `

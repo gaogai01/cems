@@ -42,10 +42,10 @@
             <div class="sub-val" id="boilerCountVal">含鍋爐: 0</div>
         </div>
         <div class="card urea">
-            <h3>總尿素用量</h3>
+            <h3>尿素推估日用量</h3>
             <div class="data-row"><span class="value" id="totalUreaVal">0.0</span><span class="unit">kL/日</span></div>
             <div class="gauge-container"><div class="gauge-bar" id="bar-urea"></div><div class="gauge-marker" id="marker-urea"></div></div>
-            <div class="sub-val">全廠合計</div>
+            <div class="sub-val">依目前流量外推，非當日累計</div>
         </div>
         <div class="card aqi">
             <h3>澎湖 AQI</h3>
@@ -73,7 +73,7 @@
         <table id="dataTable" style="display:none;">
             <thead>
                 <tr>
-                    <th>機組 #</th><th>SO2<br>(ppm)</th><th>NOx<br>(ppm)</th><th>OPAC<br>(%)</th><th>TEMP<br>(°C)</th><th>O2<br>(%)</th><th>Vel<br>(m/s)</th><th>Flow<br>(nm3/hr)</th><th>Load<br>(kw)</th><th>Urea<br>(L/hr)</th>
+                    <th>機組 / 狀態</th><th>SO2<br>(ppm)</th><th>NOx<br>(ppm)</th><th>OPAC<br>(%)</th><th>TEMP<br>(°C)</th><th>O2<br>(%)</th><th>Vel<br>(m/s)</th><th>Flow<br>(nm3/hr)</th><th>Load<br>(kw)</th><th>Urea<br>(L/hr)</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -92,15 +92,16 @@
     </div>
 
     <div class="control-group">
-        <label class="fw-bold">監測項目 (可多選)：</label>
+        <label class="fw-bold">監測項目（同單位可多選）：</label>
         <div class="checkbox-group">
             <label><input type="checkbox" class="pollutant-check" value="so2"> SO2</label>
             <label><input type="checkbox" class="pollutant-check" value="nox" checked> NOx</label>
             <label><input type="checkbox" class="pollutant-check" value="opac"> OPAC</label>
             <label><input type="checkbox" class="pollutant-check" value="temp"> Temp</label>
-            <label><input type="checkbox" class="pollutant-check" value="urea" checked> Urea</label>
+            <label><input type="checkbox" class="pollutant-check" value="urea"> Urea</label>
             <label><input type="checkbox" class="pollutant-check" value="load"> Load</label>
         </div>
+        <small id="chartMetricHint" role="status" style="font-size:0.8rem; color:var(--text-sub);">可多選相同單位的項目</small>
     </div>
 
     <div class="control-group">
@@ -128,6 +129,7 @@
     .checkbox-group label { cursor: pointer; display: flex; align-items: center; gap: 3px; font-size: 0.9rem; }
     .btn-update { padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
 </style>
+<div id="chartDataStatus" role="status" style="font-size:0.85rem; color:var(--text-sub); padding:4px 2px;"></div>
 
     <div class="chart-container">
         <canvas id="historyChart"></canvas>
@@ -172,6 +174,7 @@
     function startApp() {
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbwPLWcCJhnE_ZnnIbCgk9hNcjo6ikLDR_rzFGCiBFPamXapAj3e-fg1YiJo1THW08T4/exec';
         const LAT = 23.575; const LON = 119.665;
+        let lastSuccessfulCemsUpdateText = null;
         const THRESHOLDS = {
             so2: { warn: 120, limit: 133, max: 200 }, nox: { warn: 327, limit: 363, max: 400 }, opac: { warn: 8, limit: 40, max: 50 }, load: { warn: 8000, limit: 9000, max: 11000 }, urea: { warn: 200, limit: 360, max: 400 },
             powerCard: { max: 120000 }, unitsCard: { max: 12 }, ureaCard: { max: 50 }, aqiCard: { max: 150 }, tempCard: { max: 40 }, windCard: { max: 25 }
@@ -256,16 +259,25 @@
 
         async function fetchRealtimeData() {
             try {
-                const response = await fetch(GAS_URL); const json = await response.json();
+                const response = await fetch(GAS_URL);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const json = await response.json();
                 if (!json || !json.dataString) throw new Error("即時資料格式異常");
                 renderTable(json.timestamp, json.dataString);
                 calculateLoadComparison();
-            } catch (error) { console.error(error); document.getElementById('updateTime').innerText = "連線異常，表格資料可能已過期"; }
+            } catch (error) {
+                console.error(error);
+                const lastUpdate = lastSuccessfulCemsUpdateText
+                    ? `最後成功更新：${lastSuccessfulCemsUpdateText}；資料可能已過期`
+                    : "尚無成功讀取的即時資料";
+                document.getElementById('updateTime').innerText = `即時資料連線異常（${lastUpdate}）`;
+            }
         }
 
         function renderTable(timestamp, rawString) {
             document.getElementById('loading').style.display = 'none'; document.getElementById('dataTable').style.display = 'table';
-            document.getElementById('updateTime').innerText = "更新: " + new Date(timestamp).toLocaleTimeString();
+            lastSuccessfulCemsUpdateText = new Date(timestamp).toLocaleTimeString();
+            document.getElementById('updateTime').innerText = "更新: " + lastSuccessfulCemsUpdateText;
             const dataArray = rawString.split(','); const tbody = document.getElementById('tableBody'); tbody.innerHTML = "";
             const ITEMS_PER_MACHINE = 27; let runCount = 0; let boilerRunCount = 0; let totalGenLoad = 0; let totalUreaKLD = 0;
             let totals = { so2: 0, nox: 0, opac: 0, temp: 0, o2: 0, vel: 0, flow: 0, load: 0, urea: 0 };
@@ -274,8 +286,10 @@
                 let machineId = i + 1; let baseIndex = i * ITEMS_PER_MACHINE; if (baseIndex + 26 >= dataArray.length) break;
                 
                 // 提取關鍵欄位
-                let statusCode = dataArray[baseIndex + 2]; 
-                let rowClass = (statusCode === 'N') ? 'status-run' : 'status-stop';
+                let statusCode = dataArray[baseIndex + 2];
+                const isRunning = statusCode === 'N';
+                let rowClass = isRunning ? 'status-run' : 'status-stop';
+                const statusLabel = isRunning ? '運轉' : `非正常運轉（狀態碼：${statusCode || '未知'}）`;
 
                 // 數值
                 let so2 = dataArray[baseIndex + 1];
@@ -326,7 +340,7 @@
                 else cell_urea = `<span>${Math.round(urea)}</span>`;
 
                 tbody.innerHTML += `<tr class="${rowClass}">
-                    <td>#${machineId}</td>
+                    <td>#${machineId}<br><small>${statusLabel}</small></td>
                     <td>${cell_so2}</td>
                     <td>${cell_nox}</td>
                     <td>${cell_opac}</td>
@@ -351,7 +365,20 @@
         }
         
         async function fetchHistoryData() {
-            try { const response = await fetch(GAS_URL + "?type=history"); const json = await response.json(); if (Array.isArray(json)) { globalHistoryData = json; updateChartFromHistory(); calculateLoadComparison(); } } catch (error) { console.error("歷史資料錯誤", error); }
+            const status = document.getElementById('chartDataStatus');
+            try {
+                const response = await fetch(GAS_URL + "?type=history");
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const json = await response.json();
+                if (!Array.isArray(json)) throw new Error("歷史資料格式異常");
+                globalHistoryData = json;
+                if (status) status.innerText = `歷史資料已載入 ${json.length} 筆`;
+                updateChartFromHistory();
+                calculateLoadComparison();
+            } catch (error) {
+                console.error("歷史資料錯誤", error);
+                if (status) status.innerText = "歷史資料連線異常，圖表可能未更新";
+            }
         }
         function calculateLoadComparison() {
             if (globalHistoryData.length === 0 || currentTotalLoadVal === 0) return;
@@ -369,13 +396,31 @@
         }
 // === 1. 定義汙染物參數 (包含顏色、偏移量、Y軸設定) ===
         const POLLUTANT_CONFIG = {
-            so2:  { offset: 1,  label: 'SO2 (ppm)',  color: '#29b6f6' },
-            nox:  { offset: 6,  label: 'NOx (ppm)',  color: '#ffea00' },
-            opac: { offset: 10, label: 'OPAC (%)',   color: '#bdbdbd' },
-            temp: { offset: 14, label: 'Temp (°C)',  color: '#ff9800' }, // 修正：溫度 offset 為 14
-            load: { offset: 25, label: 'Load (KW)',  color: '#00e676', yAxisID: 'y1' }, // Load 用右軸
-            urea: { offset: 26, label: 'Urea (L/hr)',color: '#ff1744' }
+            so2:  { offset: 1,  label: 'SO2 (ppm)',  color: '#29b6f6', unit: 'ppm' },
+            nox:  { offset: 6,  label: 'NOx (ppm)',  color: '#ffea00', unit: 'ppm' },
+            opac: { offset: 10, label: 'OPAC (%)',   color: '#bdbdbd', unit: '%' },
+            temp: { offset: 14, label: 'Temp (°C)',  color: '#ff9800', unit: '°C' },
+            load: { offset: 25, label: 'Load (KW)',  color: '#00e676', yAxisID: 'y1', unit: 'kW' },
+            urea: { offset: 26, label: 'Urea (L/hr)',color: '#ff1744', unit: 'L/hr' }
         };
+
+        const chartMetricHint = document.getElementById('chartMetricHint');
+        document.querySelectorAll('.pollutant-check').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const selected = Array.from(document.querySelectorAll('.pollutant-check:checked'));
+                const units = new Set(selected.map(item => POLLUTANT_CONFIG[item.value].unit));
+                if (units.size > 1) {
+                    checkbox.checked = false;
+                    if (chartMetricHint) chartMetricHint.innerText = '不同單位不能混畫；請先取消目前選取項目。';
+                    return;
+                }
+                if (chartMetricHint) {
+                    chartMetricHint.innerText = selected.length
+                        ? `目前圖表單位：${POLLUTANT_CONFIG[selected[0].value].unit}`
+                        : '可多選相同單位的項目';
+                }
+            });
+        });
 
         // === 2. 更新圖表數據 (多選邏輯) ===
         window.updateChartFromHistory = function() {
@@ -391,6 +436,12 @@
                 alert("請至少選擇一個監測項目");
                 return;
             }
+            const selectedUnits = new Set(Array.from(checkedBoxes).map(box => POLLUTANT_CONFIG[box.value].unit));
+            if (selectedUnits.size > 1) {
+                if (chartMetricHint) chartMetricHint.innerText = '不同單位不能混畫；請重新選擇。';
+                return;
+            }
+            const chartUnit = POLLUTANT_CONFIG[checkedBoxes[0].value].unit;
 
             // 2. 設定時間範圍
             let endTime = dateInput ? new Date(dateInput) : new Date();
@@ -418,7 +469,11 @@
                         const parts = row.d.split(',');
                         const val = parts[baseIndex + config.offset];
                         if (val !== undefined) {
-                            dataPoints.push({ x: time, y: parseFloat(val) || 0 });
+                            const numericValue = Number(val);
+                            dataPoints.push({
+                                x: time,
+                                y: String(val).trim() !== '' && Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : null
+                            });
                         }
                     }
                 });
@@ -439,11 +494,11 @@
                 }
             });
 
-            drawChart(datasets, useRightAxis);
+            drawChart(datasets, useRightAxis, chartUnit);
         };
 
-        // === 3. 繪製圖表 (支援雙 Y 軸) ===
-        function drawChart(datasets, useRightAxis) {
+        // === 3. 繪製圖表 (支援負載右 Y 軸) ===
+        function drawChart(datasets, useRightAxis, chartUnit) {
             const ctx = document.getElementById('historyChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
 
@@ -475,7 +530,7 @@
                             beginAtZero: true,
                             grid: { color: gridColor },
                             ticks: { color: textColor },
-                            title: { display: true, text: '數值', color: textColor }
+                            title: { display: true, text: `數值（${chartUnit}）`, color: textColor }
                         },
                         y1: {
                             type: 'linear',
@@ -515,6 +570,7 @@
                 const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms`;
                 const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=us_aqi`;
                 const [weatherRes, aqiRes] = await Promise.all([fetch(weatherUrl), fetch(aqiUrl)]);
+                if (!weatherRes.ok || !aqiRes.ok) throw new Error("環境資料 API 回應異常");
                 const weatherData = await weatherRes.json(); const aqiData = await aqiRes.json();
                 document.getElementById('tempVal').innerText = weatherData.current.temperature_2m; updateGauge('marker-temp', weatherData.current.temperature_2m, THRESHOLDS.tempCard.max);
                 document.getElementById('windSpeed').innerText = weatherData.current.wind_speed_10m; updateGauge('marker-wind', weatherData.current.wind_speed_10m, THRESHOLDS.windCard.max);
@@ -525,7 +581,14 @@
                 let aqiText = "良好", aqiColor = "#29b6f6";
                 if(aqi > 50) { aqiText = "普通"; aqiColor = "#00e676"; } if(aqi > 100) { aqiText = "對敏感族群不健康"; aqiColor = "#ffeb3b"; } if(aqi > 150) { aqiText = "不健康"; aqiColor = "#ff1744"; }
                 const aqiEl = document.getElementById('aqiStatus'); aqiEl.innerText = aqiText; aqiEl.style.color = aqiColor;
-            } catch (error) { console.error("天氣讀取失敗:", error); }
+            } catch (error) {
+                console.error("天氣讀取失敗:", error);
+                document.getElementById('aqiVal').innerText = "--";
+                document.getElementById('aqiStatus').innerText = "環境資料連線異常";
+                document.getElementById('tempVal').innerText = "--";
+                document.getElementById('windSpeed').innerText = "--";
+                document.getElementById('windDir').innerText = "環境資料連線異常";
+            }
         }
 
         initGauges(); fetchRealtimeData(); fetchHistoryData(); fetchWeather();

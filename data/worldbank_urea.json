@@ -5,7 +5,6 @@
   "sourceUrl": "https://www.worldbank.org/en/research/commodity-markets",
   "dataUrl": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
   "license": "CC BY 4.0",
-  "retrievedAt": "2026-11-15",
   "latest": {
     "month": "2026-10",
     "value": 420.0

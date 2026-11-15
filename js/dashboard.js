@@ -1,6 +1,8 @@
 //廢水處理index.html的負責主畫面卡片渲染
 // js/dashboard.js
 
+let lastSuccessfulUpdateText = null;
+
 /**
  * 初始化儀表板
  * 1. 設定主題
@@ -44,11 +46,17 @@ function startApp() {
 function fetchData() {
     // 加上 timestamp 防止快取
     fetch(API_URL + "?mode=read&t=" + new Date().getTime())
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
         .then(data => {
-            // 更新最後更新時間
+            // 保留最後一次成功更新時間，供連線失敗時辨識資料新鮮度
             if(data.timestamp) {
-                document.getElementById('last-update').innerText = data.timestamp.split(' ')[1];
+                const timestampText = String(data.timestamp).trim();
+                const timeMatch = timestampText.match(/(?:T|\\s)(\\d{2}:\\d{2}(?::\\d{2})?)/);
+                lastSuccessfulUpdateText = timeMatch ? timeMatch[1] : timestampText;
+                document.getElementById('last-update').innerText = lastSuccessfulUpdateText;
             }
 
             // 產生 HTML 內容
@@ -105,7 +113,10 @@ function fetchData() {
         })
         .catch(err => {
             console.error("Fetch error:", err);
-            document.getElementById('last-update').innerText = "連線異常，畫面資料可能已過期";
+            const lastUpdateLabel = document.getElementById('last-update');
+            lastUpdateLabel.innerText = lastSuccessfulUpdateText
+                ? `連線異常｜最後成功更新：${lastSuccessfulUpdateText}（畫面可能已過期）`
+                : "連線異常｜尚無成功資料";
         });
 }
 

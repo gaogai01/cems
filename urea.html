@@ -104,7 +104,7 @@
 <div class="container">
 
     <div class="card">
-        <h2>國際尿素成本 <button onclick="loadWorldBankUreaPrice(true)" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">重新載入資料</button></h2>
+        <h2>國際尿素成本 <button onclick="loadWorldBankUreaPrice(true); loadBotUsdTwdRate()" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">重新載入資料</button></h2>
         <p style="font-size:0.8rem; color:#666; margin-bottom:8px;">* 世界銀行尿素月均價（USD/公噸，可手動調整）：</p>
         <table class="cost-table">
             <tr>
@@ -212,7 +212,7 @@
             if (!response.ok) throw new Error('HTTP ' + response.status);
             const payload = await response.json();
             const rate = Number(payload && payload.rate);
-            if (!Number.isFinite(rate) || rate <= 0 || !/^\\d{4}-\\d{2}-\\d{2}$/.test(payload.rateDate)) {
+            if (!Number.isFinite(rate) || rate <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(payload.rateDate)) {
                 throw new Error('資料格式錯誤');
             }
             exchangeRate = rate;

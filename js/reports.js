@@ -19,7 +19,7 @@ function generateWaterReport() {
               fetch(API_URL + "?mode=history").then(r => r.json());
     
     p.then(data => {
-        if(typeof window.cachedHistory === 'undefined' || !window.cachedHistory) window.cachedHistory = data;
+        cachedHistory = data;
         
         const [targetY, targetM] = monthStr.split('-').map(Number);
         const daysInMonth = new Date(targetY, targetM, 0).getDate();
@@ -101,7 +101,7 @@ function generateWaterReport() {
 // ============================================================
 function openOpReport() { 
     document.getElementById('opReportModal').style.display = 'block'; 
-    if(!document.getElementById('opReportMonth').value) document.getElementById('opReportMonth').value = new Date().toISOString().slice(0, 7);
+    if(!document.getElementById('opReportMonth').value) document.getElementById('opReportMonth').value = getLocalYearMonth();
 }
 function closeOpReport() { document.getElementById('opReportModal').style.display = 'none'; }
 
@@ -115,7 +115,7 @@ function generateOpReport() {
               fetch(API_URL + "?mode=history").then(r => r.json());
 
     p.then(data => {
-        if(typeof window.cachedHistory === 'undefined' || !window.cachedHistory) window.cachedHistory = data;
+        cachedHistory = data;
         const [targetY, targetM] = monthStr.split('-').map(Number);
         const daysInMonth = new Date(targetY, targetM, 0).getDate();
         

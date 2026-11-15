@@ -38,6 +38,7 @@
     </div>
 
     <div id="loading">資料載入中...</div>
+    <p id="dataFreshness" class="data-freshness" role="status" aria-live="polite"></p>
     
     <h3 class="section-title">發電機組 (#1 ~ #12)</h3>
     <div class="table-container">
@@ -115,12 +116,69 @@
                 rawData.egLimits = { upper: json.upperLimits || [], lower: json.lowerLimits || [] };
             }
 
+            updateFreshnessNotice();
             document.getElementById('loading').style.display = 'none';
             initControls();      
             renderOverviewTables(); 
         } catch (e) {
             console.error("Error:", e);
             document.getElementById('loading').innerText = "載入失敗";
+        }
+    }
+
+    const STALE_DATA_DAYS = 90;
+
+    function parseReportDate(value) {
+        const match = String(value ?? '').trim().match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})/);
+        if (!match) return null;
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const day = Number(match[3]);
+        const date = new Date(year, month - 1, day);
+        if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+        return date;
+    }
+
+    function normalizeDateKey(value) {
+        const date = parseReportDate(value);
+        if (!date) return null;
+        return [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(2, '0')
+        ].join('-');
+    }
+
+    function updateFreshnessNotice() {
+        const notice = document.getElementById('dataFreshness');
+        if (!notice) return;
+        const latest = { dg: null, eg: null };
+        rawData.data.forEach(row => {
+            const date = parseReportDate(row[0]);
+            if (!date) return;
+            const group = String(row[1] || '').toUpperCase().includes('EG') ? 'eg' : 'dg';
+            if (!latest[group] || date > latest[group]) latest[group] = date;
+        });
+
+        const label = date => date
+            ? date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate()
+            : '無資料';
+        const dates = [latest.dg, latest.eg].filter(Boolean);
+        notice.className = 'data-freshness';
+        if (!dates.length) {
+            notice.textContent = '目前沒有可辨識的化驗日期。';
+            return;
+        }
+
+        const newest = new Date(Math.max(...dates.map(date => date.getTime())));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const newestDay = new Date(newest.getFullYear(), newest.getMonth(), newest.getDate());
+        const ageDays = Math.floor((today - newestDay) / 86400000);
+        notice.textContent = '最新檢驗日：柴油機 ' + label(latest.dg) + '；緊急發電機 ' + label(latest.eg) + '。';
+        if (ageDays > STALE_DATA_DAYS) {
+            notice.classList.add('stale-warning');
+            notice.textContent += ' 最新資料已距今 ' + ageDays + ' 天，超過 ' + STALE_DATA_DAYS + ' 天，請確認是否有新化驗報告。';
         }
     }
 
@@ -378,17 +436,22 @@
         const pKey = document.getElementById('chartParam').value;
 
         if (selectedMachines.length === 0) {
-            if(chartInstance) chartInstance.data.datasets = []; chartInstance.update(); return;
+            if (chartInstance) {
+                chartInstance.data.datasets = [];
+                chartInstance.update();
+            }
+            return;
         }
 
         let datasets = [];
         let allLabels = new Set();
         const pIdx = rawData.headers.indexOf(pKey);
 
-        const isAllEG = selectedMachines.every(m => m.includes('EG'));
-        const limits = isAllEG ? rawData.egLimits : rawData.dgLimits;
-        const lower = limits ? parseFloat(limits.lower[pIdx]) : NaN;
-        const upper = limits ? parseFloat(limits.upper[pIdx]) : NaN;
+        const hasDG = selectedMachines.some(m => !String(m).toUpperCase().includes('EG'));
+        const hasEG = selectedMachines.some(m => String(m).toUpperCase().includes('EG'));
+        const limitGroups = [];
+        if (hasDG) limitGroups.push({ limits: rawData.dgLimits, prefix: hasEG ? '柴油機' : '', color: '#dc3545' });
+        if (hasEG) limitGroups.push({ limits: rawData.egLimits, prefix: hasDG ? '緊急發電機' : '', color: '#fd7e14' });
 
         selectedMachines.forEach((mId, index) => {
             const filteredData = rawData.data.filter(r => {
@@ -397,19 +460,26 @@
                 return isMachineMatch && isYearMatch;
             }).sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
-            filteredData.forEach(r => allLabels.add(r[0].split('T')[0]));
+            filteredData.forEach(r => {
+                const dateKey = normalizeDateKey(r[0]);
+                if (dateKey) allLabels.add(dateKey);
+            });
 
             const dataPoints = filteredData.map(r => {
-                const d = r[0].split('T')[0];
-                return { x: d, y: parseFloat(r[pIdx]) || null };
-            });
+                const dateKey = normalizeDateKey(r[0]);
+                const rawValue = r[pIdx];
+                const value = rawValue === '' || rawValue === null || rawValue === undefined
+                    ? NaN
+                    : parseFloat(rawValue);
+                return { x: dateKey, y: Number.isFinite(value) ? value : null };
+            }).filter(point => point.x);
 
             datasets.push({
                 label: mId,
                 data: dataPoints,
                 borderColor: LINE_COLORS[index % LINE_COLORS.length],
                 backgroundColor: LINE_COLORS[index % LINE_COLORS.length],
-                borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.1, spanGaps: true
+                borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.1, spanGaps: false
             });
         });
 
@@ -423,8 +493,21 @@
              ds.data = newData;
         });
 
-        if (!isNaN(upper)) datasets.push({ label: '上限', data: new Array(sortedLabels.length).fill(upper), borderColor: '#dc3545', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
-        if (!isNaN(lower)) datasets.push({ label: '下限', data: new Array(sortedLabels.length).fill(lower), borderColor: '#dc3545', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
+        limitGroups.forEach(group => {
+            const lower = group.limits && group.limits.lower ? parseFloat(group.limits.lower[pIdx]) : NaN;
+            const upper = group.limits && group.limits.upper ? parseFloat(group.limits.upper[pIdx]) : NaN;
+            const prefix = group.prefix ? group.prefix + ' ' : '';
+            if (!isNaN(upper)) datasets.push({
+                label: prefix + '上限',
+                data: new Array(sortedLabels.length).fill(upper),
+                borderColor: group.color, borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false
+            });
+            if (!isNaN(lower)) datasets.push({
+                label: prefix + '下限',
+                data: new Array(sortedLabels.length).fill(lower),
+                borderColor: group.color, borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false
+            });
+        });
 
         const ctx = document.getElementById('historyChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();

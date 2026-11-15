@@ -14,14 +14,26 @@ if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+function getLocalYearMonth(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[char]);
+}
+
 // ============================================================
 // 2. 定義權限與選單
 // ============================================================
 const ROLE_ACCESS = {
     'admin': ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html','try.html','admin.html'], //管理者
     'env':   ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html'], //環化課
-    'mech':  ['cems.html','oil.html'], //機械組
-    'ops':   ['index.html','cems.html', 'oil.html'], //運轉組
+    'mech':  ['oil.html'], //機械組：僅滑油
+    'ops':   ['cems.html', 'oil.html'], //運轉組：CEMS與滑油
     'guest': []
 };
 
@@ -137,7 +149,7 @@ function renderNavbar(userName, role, allowedPages) {
             ${menuHtml}
             ${adminBtnHtml}
             <div class="user-info">
-                <span>👤 ${userName}</span>
+                <span>👤 ${escapeHtml(userName)}</span>
                 <button class="btn-logout" onclick="logout()">登出</button>
             </div>
         </div>

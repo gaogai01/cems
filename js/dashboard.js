@@ -65,8 +65,10 @@ function fetchData() {
                 group.items.forEach(item => {
                     // --- 特殊處理：ACC 流量 (顯示 今日 / 昨日) ---
                     if (group.id === "acc") {
-                        let today = data[item.col + "_DAILY"] || "--";
-                        let yesterday = data[item.col + "_YESTERDAY"] || "--";
+                        const todayRaw = data[item.col + "_DAILY"];
+                        const yesterdayRaw = data[item.col + "_YESTERDAY"];
+                        let today = todayRaw !== undefined && todayRaw !== null && todayRaw !== "" ? todayRaw : "--";
+                        let yesterday = yesterdayRaw !== undefined && yesterdayRaw !== null && yesterdayRaw !== "" ? yesterdayRaw : "--";
                         
                         // 組合顯示字串
                         let displayVal = `${today} / <span style="font-size:0.8em; color:var(--text-sub);">${yesterday}</span>`;
@@ -79,21 +81,20 @@ function fetchData() {
                     } 
                     // --- 一般數值處理 ---
                     else {
-                        let val = data[item.col] !== undefined ? data[item.col] : '--';
-                        
-                        // 應用顯示限制 (如數值過大強制修正)
-                        val = applyDisplayLimit(item.col, val);
+                        const rawVal = data[item.col] !== undefined && data[item.col] !== null ? data[item.col] : '--';
+                        let displayVal = rawVal;
 
-                        // 小數點修整：如果是數字且有小數，取1位；如果是整數(如 .0)則去尾
-                        if (!isNaN(val) && val.toString().indexOf('.') !== -1) {
-                            val = parseFloat(val).toFixed(1);
-                            if(val.endsWith('.0')) val = val.replace('.0', '');
+                        // 顯示值可四捨五入，但警報與儀表一律使用原始讀值
+                        const numericVal = Number(rawVal);
+                        if (rawVal !== '--' && Number.isFinite(numericVal) && String(rawVal).includes('.')) {
+                            displayVal = numericVal.toFixed(1);
+                            if(displayVal.endsWith('.0')) displayVal = displayVal.replace('.0', '');
                         }
 
-                        let statusClass = checkAlarm(item.col, val);
-                        let gaugeHTML = getGaugeHTML(item.col, val);
+                        let statusClass = checkAlarm(item.col, rawVal);
+                        let gaugeHTML = getGaugeHTML(item.col, rawVal);
 
-                        htmlContent += generateCardHTML(statusClass, item.name, item.tag, val, item.unit, gaugeHTML);
+                        htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML);
                     }
                 });
                 htmlContent += `</div></div>`;
@@ -124,18 +125,6 @@ function generateCardHTML(statusClass, name, tag, valueDisplay, unit, gaugeHTML)
         </div>
         ${gaugeHTML}
     </div>`;
-}
-
-/**
- * 數值修正邏輯 (避免儀表誤讀數值過大)
- */
-function applyDisplayLimit(colName, value) {
-    let val = parseFloat(value);
-    if (isNaN(val)) return value;
-    if (colName === "SS018_VAL0" && val > 27) return 27;
-    if (colName === "COD018_VAL0" && val > 90) return 90;
-    if (colName === "OFD018_VAL0" && val > 10) return 9;
-    return value;
 }
 
 /**

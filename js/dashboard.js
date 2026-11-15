@@ -54,7 +54,7 @@ function fetchData() {
             // 保留最後一次成功更新時間，供連線失敗時辨識資料新鮮度
             if(data.timestamp) {
                 const timestampText = String(data.timestamp).trim();
-                const timeMatch = timestampText.match(/(?:T|\\s)(\\d{2}:\\d{2}(?::\\d{2})?)/);
+                const timeMatch = timestampText.match(/(?:T|\s)(\d{2}:\d{2}(?::\d{2})?)/);
                 lastSuccessfulUpdateText = timeMatch ? timeMatch[1] : timestampText;
                 document.getElementById('last-update').innerText = lastSuccessfulUpdateText;
             }

@@ -149,7 +149,7 @@ function fetchHistory() {
 
 const CATEGORIES = {
     'level': ['LIT000_VAL0','LI003_VAL0','LI012_VAL0','LI021_VAL0','LI022_VAL0','LI018_VAL0', 'LI011_VAL0'], 
-    'flow':  ['FI000B_Q_VAL0','FI000A_Q_VAL0','FI012_Q_VAL0','FI021W_Q_VAL0','FI018_Q_VAL0','FI018B_Q_VAL0','FI000B_Q_VAL0'], 
+    'flow':  ['FI000B_Q_VAL0','FI000A_Q_VAL0','FI003_Q_VAL0','FI012_Q_VAL0','FI021W_Q_VAL0','FI018_Q_VAL0','FI018B_Q_VAL0'], 
     'ph':    ['PHI015_VAL0','PHI013_VAL0','PHI014_VAL0','PHI017_VAL0','PHI018_VAL0'], 
     'quality': ['SS018_VAL0','COD018_VAL0','OFD018_VAL0', 'NH3N018_VAL0'], 
     'pac': ['LI044_VAL0','LI048_VAL0','LI049_VAL0','LI043_VAL0']
@@ -157,11 +157,10 @@ const CATEGORIES = {
 
 const TAG_NAMES = {
     'LIT000_VAL0': 'T05-01二段式API槽水位', 'LI003_VAL0': 'T05-04中間水槽水位', 'LI012_VAL0': 'T01-01調勻槽水位', 'LI021_VAL0': 'T02-01生活污水槽水位','LI022_VAL0': 'T02-02 SBR水位', 'LI018_VAL0': 'T01-07進水檢知槽水位',
-    'FI000B_Q_VAL0': '含油廢水進口流量','FI000A_Q_VAL0': '含油廢水出口流量', 'FI012_Q_VAL0': '事業廢水流量', 'FI021W_Q_VAL0': '生活污水流量', 'FI018_Q_VAL0': '放流水流量', 'FI018B_Q_VAL0': '回收水流量',
+    'FI000B_Q_VAL0': 'API進口累積流量','FI000A_Q_VAL0': 'API出口累積流量', 'FI003_Q_VAL0': 'DAF進口累積流量', 'FI012_Q_VAL0': '調勻槽出口累積流量', 'FI021W_Q_VAL0': '生活污水累積流量', 'FI018_Q_VAL0': '放流水累積流量', 'FI018B_Q_VAL0': '回收水累積流量',
     'PHI015_VAL0': '靜態攪拌管pH', 'PHI013_VAL0': '第一酸鹼槽PH', 'PHI014_VAL0': '膠凝槽PH', 'PHI017_VAL0': '第二酸鹼槽PH', 'PHI018_VAL0': '放流水PH',
     'SS018_VAL0': '放流水SS', 'COD018_VAL0': '放流水COD', 'OFD018_VAL0': '放流水油脂',
     'LI044_VAL0': '鹼槽液位', 'LI048_VAL0': '凝膠儲槽液位', 'LI049_VAL0': 'PAC儲槽液位', 'LI043_VAL0': '酸槽液位',
-    'FI000B_Q_VAL0': 'API進口累積', 'FI000A_Q_VAL0': 'API出口累積',
     'LI011_VAL0': 'T02-04回收水槽液位',
     'NH3N018_VAL0': '放流水氨氮'
 };

@@ -72,7 +72,7 @@ async function fetchData() {
 
         if(data.timestamp) {
             const timestampText = String(data.timestamp).trim();
-            const timeMatch = timestampText.match(/(?:T|\\s)(\\d{2}:\\d{2}(?::\\d{2})?)/);
+            const timeMatch = timestampText.match(/(?:T|\s)(\d{2}:\d{2}(?::\d{2})?)/);
             lastSuccessfulUpdateText = timeMatch ? timeMatch[1] : timestampText;
         }
         try {
@@ -101,7 +101,7 @@ async function fetchData() {
 function renderDashboard(data, fromCache) {
     if (data.timestamp) {
         const timestampText = String(data.timestamp).trim();
-        const timeMatch = timestampText.match(/(?:T|\\s)(\\d{2}:\\d{2}(?::\\d{2})?)/);
+        const timeMatch = timestampText.match(/(?:T|\s)(\d{2}:\d{2}(?::\d{2})?)/);
         const sourceTime = timeMatch ? timeMatch[1] : timestampText;
         if (fromCache) {
             lastSuccessfulUpdateText = sourceTime;

@@ -1,0 +1,8 @@
+{
+  "source": "臺灣銀行營業時間牌告匯率",
+  "sourceUrl": "https://rate.bot.com.tw/xrt/quote/ltm/USD/spot",
+  "currency": "USD/TWD",
+  "rateType": "即期賣出",
+  "rateDate": "2026-11-13",
+  "rate": 32.89
+}

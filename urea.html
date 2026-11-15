@@ -104,7 +104,7 @@
 <div class="container">
 
     <div class="card">
-        <h2>國際尿素成本 <button onclick="loadWorldBankUreaPrice(true)" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">更新月均價</button></h2>
+        <h2>國際尿素成本 <button onclick="loadWorldBankUreaPrice(true)" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">重新載入資料</button></h2>
         <p style="font-size:0.8rem; color:#666; margin-bottom:8px;">* 世界銀行尿素月均價（USD/公噸，可手動調整）：</p>
         <table class="cost-table">
             <tr>
@@ -207,7 +207,7 @@
     function markPriceManual() {
         isManualPrice = true;
         const meta = document.getElementById('ureaPriceMeta');
-        if (meta) meta.textContent = '已切換為手動報價；按「更新月均價」可重新載入世界銀行資料。';
+        if (meta) meta.textContent = '已切換為手動報價；按「重新載入資料」可重新讀取最新同步資料。';
     }
 
     async function loadWorldBankUreaPrice(force = false) {
@@ -240,7 +240,7 @@
                 meta.textContent = '資料基準月份：' + year + '年' + Number(month) + '月；月均價 USD ' + value + '/公噸' + changeNote + manualNote;
             }
         } catch (error) {
-            if (meta) meta.textContent = '無法取得最新月均價，沿用目前輸入值；可稍後按「更新月均價」重試。';
+            if (meta) meta.textContent = '無法取得最新月均價，沿用目前輸入值；可稍後按「重新載入資料」重試。';
             console.error('World Bank urea price load failed:', error);
         }
     }

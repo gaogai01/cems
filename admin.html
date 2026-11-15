@@ -83,6 +83,12 @@
     // ============================================================
     // 3. 主程式邏輯 (startApp) - 由 common.js 呼叫
     // ============================================================
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[char]);
+    }
+
     function startApp() {
         // 載入主題
         if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
@@ -113,8 +119,8 @@
                 if (diffMins <= 5) {
                     count++;
                     html += `<tr>
-                        <td>${u.name}</td>
-                        <td>${u.dept} ${u.title || ''}</td>
+                        <td>${escapeHtml(u.name)}</td>
+                        <td>${escapeHtml(u.dept)} ${escapeHtml(u.title || '')}</td>
                         <td>${lastSeenDate.toLocaleTimeString()}</td>
                         <td><span class="tag tag-online">Online</span></td>
                     </tr>`;
@@ -142,8 +148,8 @@
             const roleOptions = `
                 <option value="guest" ${u.role==='guest'?'selected':''}>停用</option>
                 <option value="env" ${u.role==='env'?'selected':''}>全開</option>
-                <option value="mech" ${u.role==='mech'?'selected':''}>空+油</option>
-                <option value="ops" ${u.role==='ops'?'selected':''}>水+空+油</option>
+                <option value="mech" ${u.role==='mech'?'selected':''}>僅滑油</option>
+                <option value="ops" ${u.role==='ops'?'selected':''}>CEMS＋滑油</option>
                 <option value="admin" ${u.role==='admin'?'selected':''}>全開+後台</option>
             `;
             
@@ -151,9 +157,9 @@
             if (!u.isApproved) {
                 pendingCount++;
                 pendingHtml += `<tr>
-                    <td>${u.name}</td>
-                    <td>${u.dept} ${u.title || ''}</td>
-                    <td>${u.email}</td>
+                    <td>${escapeHtml(u.name)}</td>
+                    <td>${escapeHtml(u.dept)} ${escapeHtml(u.title || '')}</td>
+                    <td>${escapeHtml(u.email)}</td>
                     <td><select id="role-p-${doc.id}">${roleOptions}</select></td>
                     <td><button class="btn-approve" onclick="approveUser('${doc.id}')">核准</button></td>
                 </tr>`;
@@ -161,9 +167,9 @@
 
             // 所有人員區
             allHtml += `<tr class="user-row">
-                <td class="u-name">${u.name}</td>
-                <td>${u.dept} ${u.title || ''}</td>
-                <td>${u.email}</td>
+                <td class="u-name">${escapeHtml(u.name)}</td>
+                <td>${escapeHtml(u.dept)} ${escapeHtml(u.title || '')}</td>
+                <td>${escapeHtml(u.email)}</td>
                 <td><select id="role-a-${doc.id}">${roleOptions}</select></td>
                 <td><button class="btn-update" onclick="updateUser('${doc.id}')">更新</button></td>
             </tr>`;

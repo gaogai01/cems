@@ -144,6 +144,7 @@
             <div><label>通知交貨 (天)</label><input type="number" id="leadTime" value="10" oninput="predictStock()"></div>
             <div><label>驗收期 (天)</label><input type="number" id="inspectTime" value="5" oninput="predictStock()"></div>
         </div>
+        <p id="ureaInventoryMeta" style="font-size:0.78rem;color:#666;margin:-6px 0 8px;">正在讀取每日巡查紀錄表…</p>
         <div class="horizontal-scroll">
             <table class="h-table" id="stockTable"></table>
         </div>
@@ -194,7 +195,7 @@
         loadBotUsdTwdRate();
         initConcChart();
         predictStock();
-        fetchChartData();
+        fetchUreaInventoryData();
     }
 
     function isWorkDay(date) {
@@ -401,36 +402,82 @@
         table.innerHTML = `<tr>${rowDates.join('')}</tr><tr>${rowWeeks.join('')}</tr><tr>${rowStocks.join('')}</tr><tr>${rowStatus.join('')}</tr>`;
     }
 
-    async function fetchChartData() {
+    async function fetchUreaInventoryData() {
+        const meta = document.getElementById('ureaInventoryMeta');
         try {
-            const res = await fetch(API_URL + "?mode=urea_stats");
-            const data = await res.json();
-            const usage113 = data["113"] || [154, 175, 174, 219, 193, 224, 285, 253, 258, 212, 184, 176];
-            const usage114 = data["114"] || [144, 140, 245, 315, 387, 372, 384, 365, 387, 338, null, null];
-            const costData = data["cost"] || [16.2, 16.1, 16.3, 16.5, 16.8, 16.7, 16.4, 16.3, 16.5, 16.6, null, null];
-            const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-
-            const ctx = document.getElementById('trendChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: months,
-                    datasets: [
-                        { label: '113年', data: usage113, backgroundColor: 'rgba(200, 200, 200, 0.5)', order: 3 },
-                        { label: '114年', data: usage114, backgroundColor: 'rgba(63, 81, 181, 0.8)', order: 2 },
-                        { label: '114年 單價', data: costData, borderColor: '#ff9800', type: 'line', yAxisID: 'y1', order: 1 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { position: 'left', title: {display:true, text:'噸'} },
-                        y1: { position: 'right', title: {display:true, text:'元'}, grid: {drawOnChartArea: false} }
-                    }
-                }
+            const user = auth.currentUser;
+            if (!user) throw new Error('尚未登入');
+            const token = await user.getIdToken();
+            const body = new URLSearchParams({ mode: 'urea_inventory', token: token });
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                body: body.toString()
             });
-        } catch (e) { console.error("圖表載入失敗", e); }
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const payload = await response.json();
+            if (payload.error) throw new Error(payload.error);
+            const stock = Number(payload.latestStock && payload.latestStock.value);
+            const average = Number(payload.averageDailyUsage);
+            if (!Number.isFinite(stock) || stock < 0 || !Number.isFinite(average) || average < 0) {
+                throw new Error('試算表回傳資料格式錯誤');
+            }
+            document.getElementById('currentStock').value = stock;
+            document.getElementById('dailyUsage').value = average.toFixed(2);
+            predictStock();
+            if (meta) {
+                meta.textContent = '資料來源：每日巡查紀錄表；庫存基準日 ' +
+                    payload.latestStock.date + '；日用量為最近 30 日平均（' +
+                    payload.usageWindow.start + ' 至 ' + payload.usageWindow.end + '）。';
+            }
+            renderUreaUsageChart(payload.usage || []);
+        } catch (error) {
+            if (meta) meta.textContent = '無法讀取試算表資料，請確認登入權限或稍後重試；目前保留手動輸入值。';
+            console.error('Urea inventory sheet load failed:', error);
+        }
+    }
+
+    function renderUreaUsageChart(usageRows) {
+        const monthly = {};
+        usageRows.forEach(function (row) {
+            const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row.date || ''));
+            const amount = Number(row.amount);
+            if (!match || !Number.isFinite(amount)) return;
+            const year = Number(match[1]);
+            const month = Number(match[2]) - 1;
+            const rocYear = year - 1911;
+            if (!monthly[rocYear]) monthly[rocYear] = Array(12).fill(null);
+            if (monthly[rocYear][month] === null) monthly[rocYear][month] = 0;
+            monthly[rocYear][month] += amount;
+        });
+
+        const years = Object.keys(monthly).sort(function (a, b) { return Number(a) - Number(b); });
+        const datasets = years.map(function (year, index) {
+            return {
+                label: year + '年',
+                data: monthly[year].map(function (value) { return value === null ? 0 : Number(value.toFixed(1)); }),
+                backgroundColor: index === years.length - 1 ? 'rgba(63, 81, 181, 0.8)' : 'rgba(160, 170, 190, 0.55)'
+            };
+        });
+
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: '尿素用量（公噸）' } }
+                },
+                plugins: {
+                    tooltip: { callbacks: { label: function (context) { return context.dataset.label + '：' + context.parsed.y + ' 公噸'; } } }
+                }
+            }
+        });
     }
 </script>
 </body>

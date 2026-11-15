@@ -19,7 +19,7 @@ function initDashboard() {
     // 設定報表預設月份 (當前月份)
     const reportInput = document.getElementById('waterReportMonth');
     if(reportInput) {
-         reportInput.value = new Date().toISOString().slice(0, 7);
+         reportInput.value = getLocalYearMonth();
     }
 
     // 立即抓取一次，並設定排程
@@ -32,7 +32,7 @@ function startApp() {
     document.getElementById('themeBtn').innerText = localStorage.getItem('theme') === 'dark' ? "☀️" : "🌓";
     
     // 初始化日期預設為當月
-    document.getElementById('waterReportMonth').value = new Date().toISOString().slice(0, 7);
+    document.getElementById('waterReportMonth').value = getLocalYearMonth();
 
     setInterval(fetchData, 5000);
     fetchData();
@@ -104,7 +104,7 @@ function fetchData() {
         })
         .catch(err => {
             console.error("Fetch error:", err);
-            document.getElementById('last-update').innerText = "連線異常";
+            document.getElementById('last-update').innerText = "連線異常，畫面資料可能已過期";
         });
 }
 

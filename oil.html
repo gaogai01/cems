@@ -170,15 +170,22 @@
             return;
         }
 
-        const newest = new Date(Math.max(...dates.map(date => date.getTime())));
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const newestDay = new Date(newest.getFullYear(), newest.getMonth(), newest.getDate());
-        const ageDays = Math.floor((today - newestDay) / 86400000);
         notice.textContent = '最新檢驗日：柴油機 ' + label(latest.dg) + '；緊急發電機 ' + label(latest.eg) + '。';
-        if (ageDays > STALE_DATA_DAYS) {
+        const staleGroups = [
+            { name: '柴油機', date: latest.dg },
+            { name: '緊急發電機', date: latest.eg }
+        ].filter(group => {
+            if (!group.date) return false;
+            const date = new Date(group.date.getFullYear(), group.date.getMonth(), group.date.getDate());
+            group.ageDays = Math.floor((today - date) / 86400000);
+            return group.ageDays > STALE_DATA_DAYS;
+        });
+        if (staleGroups.length) {
             notice.classList.add('stale-warning');
-            notice.textContent += ' 最新資料已距今 ' + ageDays + ' 天，超過 ' + STALE_DATA_DAYS + ' 天，請確認是否有新化驗報告。';
+            notice.textContent += ' 注意：' + staleGroups.map(group => group.name + '資料已距今 ' + group.ageDays + ' 天').join('；') +
+                '，超過 ' + STALE_DATA_DAYS + ' 天，請確認是否有新化驗報告。';
         }
     }
 

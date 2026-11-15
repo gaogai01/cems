@@ -43,7 +43,8 @@ function generateWaterReport() {
                 const s = dayStats[day];
                 for(let k in idx) {
                     let val = parseFloat(row[idx[k]]);
-                    if(!isNaN(val) && val > 0) { s[k][0] += val; s[k][1]++; }
+                    const validReading = Number.isFinite(val) && val >= 0 && (k !== 'ph' || val <= 14);
+                    if(validReading) { s[k][0] += val; s[k][1]++; }
                 }
             }
         });
@@ -153,11 +154,15 @@ function generateOpReport() {
                 // 水位 / 100
                 ['apiL', 'midL', 'indL', 'domL'].forEach(k => { let v = parseFloat(row[idx[k]]); if(!isNaN(v)) { s[k].s += (v/100); s[k].c++; } });
                 // 平均
-                ['mixP', 'ph1', 'flocP', 'ph2', 'disP', 'ss', 'cod', 'oil', 'nh3'].forEach(k => { let v = parseFloat(row[idx[k]]); if(!isNaN(v) && v>0) { s[k].s += v; s[k].c++; } });
+                ['mixP', 'ph1', 'flocP', 'ph2', 'disP', 'ss', 'cod', 'oil', 'nh3'].forEach(k => {
+                    let v = parseFloat(row[idx[k]]);
+                    const isPh = ['mixP', 'ph1', 'flocP', 'ph2', 'disP'].includes(k);
+                    if(Number.isFinite(v) && v >= 0 && (!isPh || v <= 14)) { s[k].s += v; s[k].c++; }
+                });
                 // 流量
                 ['oilQ', 'indQ', 'domQ', 'disQ', 'recQ'].forEach(k => {
                     let v = parseFloat(row[idx[k]]);
-                    if(!isNaN(v) && v > 0) { if(v > s[k].max) s[k].max = v; if(v < s[k].min) s[k].min = v; }
+                    if(Number.isFinite(v) && v >= 0) { if(v > s[k].max) s[k].max = v; if(v < s[k].min) s[k].min = v; }
                 });
             }
         });

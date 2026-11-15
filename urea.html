@@ -104,13 +104,13 @@
 <div class="container">
 
     <div class="card">
-        <h2>國際尿素成本 <button onclick="updatePrice()" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">更新</button></h2>
-        <p style="font-size:0.8rem; color:#666; margin-bottom:8px;">* 請輸入最新國際報價 (USD)：</p>
+        <h2>國際尿素成本 <button onclick="loadWorldBankUreaPrice()" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">更新月均價</button></h2>
+        <p style="font-size:0.8rem; color:#666; margin-bottom:8px;">* 世界銀行尿素月均價（USD/公噸，可手動調整）：</p>
         <table class="cost-table">
             <tr>
                 <td class="label">1. 國際報價</td>
                 <td class="value">
-                    <input type="number" id="usdPrice" value="325" class="input-usd" oninput="updatePrice()"> 
+                    <input type="number" id="usdPrice" value="325" class="input-usd" oninput="markPriceManual(); updatePrice()"> 
                     <span style="font-size:0.8rem;">USD/頓</span>
                 </td>
             </tr>
@@ -121,6 +121,8 @@
             <tr><td class="label">+ 關稅/保險/雜支</td><td class="value">+ <span id="taxMisc">1.6</span></td></tr>
             <tr class="total-row"><td class="label">預估到廠價</td><td class="value"><span id="finalPrice">16.1</span> <small>元/kg</small></td></tr>
         </table>
+        <p id="ureaPriceMeta" style="font-size:0.78rem; color:#666; line-height:1.5; margin:10px 0 0;">正在載入世界銀行月均價…</p>
+        <p style="font-size:0.75rem; color:#777; margin:4px 0 0;">資料來源：<a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener noreferrer">World Bank Commodity Price Data (Pink Sheet)</a>；CC BY 4.0。</p>
     </div>
 
     <div class="card">
@@ -184,8 +186,11 @@
     ];
 
     // 當 common.js 驗證成功後，會呼叫此函式
+    let isManualPrice = false;
+
     function startApp() {
         updatePrice();
+        loadWorldBankUreaPrice();
         initConcChart();
         predictStock();
         fetchChartData();
@@ -197,6 +202,39 @@
         if (day === 0 || day === 6) return false; 
         if (HOLIDAYS_2025.includes(dateStr)) return false; 
         return true;
+    }
+
+    function markPriceManual() {
+        isManualPrice = true;
+        const meta = document.getElementById('ureaPriceMeta');
+        if (meta) meta.textContent = '已切換為手動報價；按「更新月均價」可重新載入世界銀行資料。';
+    }
+
+    async function loadWorldBankUreaPrice() {
+        const meta = document.getElementById('ureaPriceMeta');
+        if (meta) meta.textContent = '正在更新世界銀行月均價…';
+        try {
+            const response = await fetch('data/worldbank_urea.json?ts=' + Date.now(), { cache: 'no-store' });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const payload = await response.json();
+            const latest = payload && payload.latest;
+            if (!latest || !/^\\d{4}-\\d{2}$/.test(latest.month) || !Number.isFinite(Number(latest.value)) || Number(latest.value) <= 0) {
+                throw new Error('資料格式錯誤');
+            }
+            if (!isManualPrice) {
+                document.getElementById('usdPrice').value = Number(latest.value).toFixed(1);
+                updatePrice();
+            }
+            if (meta) {
+                const [year, month] = latest.month.split('-');
+                const value = Number(latest.value).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                const manualNote = isManualPrice ? '（目前使用手動輸入值）' : '';
+                meta.textContent = '資料基準月份：' + year + '年' + Number(month) + '月；月均價 USD ' + value + '/公噸' + manualNote;
+            }
+        } catch (error) {
+            if (meta) meta.textContent = '無法取得最新月均價，沿用目前輸入值；可稍後按「更新月均價」重試。';
+            console.error('World Bank urea price load failed:', error);
+        }
     }
 
     function updatePrice() {

@@ -352,15 +352,15 @@
 
                 tbody.innerHTML += `<tr class="${rowClass}">
                     <td class="machine-cell"><span class="machine-number">#${machineId}</span><small class="machine-status ${isRunning ? 'machine-running' : 'machine-stopped'}">${statusLabel}</small></td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'so2')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'so2')">${content}</td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'nox')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'nox')">${content}</td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'opac')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'opac')">${content}</td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'temp')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'temp')">${content}</td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'o2')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'o2')">${content}</td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'vel')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'vel')">${content}</td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'flow')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'flow')">${content}</td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'load')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'load')">${content}</td>
-                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'urea')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'urea')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'so2')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'so2')">${cell_so2}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'nox')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'nox')">${cell_nox}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'opac')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'opac')">${cell_opac}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'temp')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'temp')">${cell_temp}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'o2')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'o2')">${cell_o2}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'vel')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'vel')">${cell_vel}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'flow')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'flow')">${Math.round(flow)}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'load')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'load')">${cell_load}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'urea')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'urea')">${cell_urea}</td>
                 </tr>`;
             }
 

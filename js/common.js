@@ -34,7 +34,7 @@ const ROLE_ACCESS = {
     'env':   ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html', 'monthly.html', 'meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'],
     'mech':  ['oil.html', 'meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'],
     'ops':   ['cems.html', 'oil.html', 'meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'],
-    'guest': []
+    'guest': ['meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html']
 };
 
 const ALL_PAGES = {

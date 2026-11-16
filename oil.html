@@ -93,36 +93,82 @@
 
     let rawData = { headers: [], cnHeaders: [], units: [], dgLimits: { upper: [], lower: [] }, egLimits: { upper: [], lower: [] }, data: [] };
     let chartInstance = null;
+    let controlsInitialized = false;
+    let machineGroupsCache = null;
+    let chartObserver = null;
+    const OIL_CACHE_KEY = 'oilReportCacheV1';
     const LINE_COLORS = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'];
 
     function startApp() {
         if(localStorage.getItem('oil_theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        loadCachedOilData();
         fetchData();
+    }
+
+    function normalizeOilResponse(json) {
+        if (!json || !Array.isArray(json.data)) throw new Error("報表資料格式錯誤");
+        if (json.dgLimits && json.egLimits) return json;
+        return {
+            headers: json.headers || [],
+            cnHeaders: json.cnHeaders || [],
+            units: json.units || [],
+            data: json.data || [],
+            dgLimits: { upper: json.upperLimits || [], lower: json.lowerLimits || [] },
+            egLimits: { upper: json.upperLimits || [], lower: json.lowerLimits || [] }
+        };
+    }
+
+    function applyOilData(json, fromCache = false) {
+        rawData = normalizeOilResponse(json);
+        machineGroupsCache = null;
+        updateFreshnessNotice(fromCache);
+        document.getElementById('loading').style.display = 'none';
+
+        if (!controlsInitialized) {
+            initControls();
+            controlsInitialized = true;
+            initializeChartOnDemand();
+        } else if (chartInstance) {
+            updateChart();
+        }
+        renderOverviewTables();
+    }
+
+    function loadCachedOilData() {
+        try {
+            const cached = JSON.parse(localStorage.getItem(OIL_CACHE_KEY) || "null");
+            if (!cached || !cached.data) return;
+            applyOilData(cached.data, true);
+        } catch (error) {
+            console.warn("讀取滑油報告快取失敗", error);
+        }
     }
 
     async function fetchData() {
         try {
             const res = await fetch(API_URL + "?mode=oil");
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
-            
-            if(json.dgLimits && json.egLimits) {
-                rawData = json;
-            } else {
-                rawData.headers = json.headers || [];
-                rawData.cnHeaders = json.cnHeaders || [];
-                rawData.units = json.units || [];
-                rawData.data = json.data || [];
-                rawData.dgLimits = { upper: json.upperLimits || [], lower: json.lowerLimits || [] };
-                rawData.egLimits = { upper: json.upperLimits || [], lower: json.lowerLimits || [] };
-            }
+            const normalized = normalizeOilResponse(json);
+            applyOilData(normalized, false);
 
-            updateFreshnessNotice();
-            document.getElementById('loading').style.display = 'none';
-            initControls();      
-            renderOverviewTables(); 
+            try {
+                localStorage.setItem(OIL_CACHE_KEY, JSON.stringify({
+                    savedAt: Date.now(),
+                    data: normalized
+                }));
+            } catch (cacheError) {
+                console.warn("儲存滑油報告快取失敗", cacheError);
+            }
         } catch (e) {
             console.error("Error:", e);
-            document.getElementById('loading').innerText = "載入失敗";
+            if (rawData.data.length > 0) {
+                const notice = document.getElementById('dataFreshness');
+                if (notice) notice.textContent += '｜即時更新失敗，顯示上次快取資料';
+                document.getElementById('loading').style.display = 'none';
+            } else {
+                document.getElementById('loading').innerText = "載入失敗";
+            }
         }
     }
 
@@ -149,7 +195,7 @@
         ].join('-');
     }
 
-    function updateFreshnessNotice() {
+    function updateFreshnessNotice(fromCache = false) {
         const notice = document.getElementById('dataFreshness');
         if (!notice) return;
         const latest = { dg: null, eg: null };
@@ -172,7 +218,8 @@
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        notice.textContent = '最新檢驗日：柴油機 ' + label(latest.dg) + '；緊急發電機 ' + label(latest.eg) + '。';
+        notice.textContent = '最新檢驗日：柴油機 ' + label(latest.dg) + '；緊急發電機 ' + label(latest.eg) + '。' +
+            (fromCache ? '｜快取資料，正在背景更新' : '');
         const staleGroups = [
             { name: '柴油機', date: latest.dg },
             { name: '緊急發電機', date: latest.eg }

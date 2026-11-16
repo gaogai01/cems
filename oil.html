@@ -302,11 +302,11 @@
         });
         
         const pSelect = document.getElementById('chartParam');
+        pSelect.innerHTML = '';
         for(let i=2; i<rawData.headers.length - 1; i++) { 
             const name = rawData.cnHeaders[i] || rawData.headers[i];
             pSelect.innerHTML += `<option value="${rawData.headers[i]}">${name}</option>`;
         }
-        updateChart();
     }
 
     // 渲染總覽表格 (已移除「判定」欄位)
@@ -316,13 +316,18 @@
         const selectedYear = document.getElementById('tableYear').value;
         const selectedMonth = document.getElementById('tableMonth').value;
 
-        const machineGroups = {}; 
-        rawData.data.forEach(row => {
-            const mId = row[1]; 
-            if (!machineGroups[mId]) machineGroups[mId] = [];
-            machineGroups[mId].push(row);
-        });
-
+        if (!machineGroupsCache) {
+            machineGroupsCache = {};
+            rawData.data.forEach(row => {
+                const mId = row[1];
+                if (!machineGroupsCache[mId]) machineGroupsCache[mId] = [];
+                machineGroupsCache[mId].push(row);
+            });
+            Object.values(machineGroupsCache).forEach(history =>
+                history.sort((a, b) => parseReportDate(b[0]) - parseReportDate(a[0]))
+            );
+        }
+        const machineGroups = machineGroupsCache;
         const allKeys = Object.keys(machineGroups);
         const dgKeys = allKeys.filter(k => !k.toUpperCase().includes('EG')).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
         const egKeys = allKeys.filter(k => k.toUpperCase().includes('EG')).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
@@ -353,7 +358,7 @@
 
         let tbody = document.createElement('tbody');
         keys.forEach(key => {
-            const history = machineGroups[key].sort((a, b) => new Date(b[0]) - new Date(a[0]));
+            const history = machineGroups[key];
             let targetRow = null;
             if (selectedYear === 'latest') {
                 targetRow = history[0];
@@ -482,106 +487,114 @@
     function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
     window.onclick = function(event) { if (event.target == document.getElementById('detailModal')) closeModal(); }
 
+    // 圖表移到接近畫面時才繪製，讓報告表格先出現
+    function initializeChartOnDemand() {
+        const section = document.querySelector('.chart-section');
+        if (!section) return;
+        if ('IntersectionObserver' in window) {
+            chartObserver = new IntersectionObserver(entries => {
+                if (entries.some(entry => entry.isIntersecting)) {
+                    chartObserver.disconnect();
+                    chartObserver = null;
+                    updateChart();
+                }
+            }, { rootMargin: '200px 0px' });
+            chartObserver.observe(section);
+        } else {
+            setTimeout(updateChart, 0);
+        }
+    }
+
     // --- 圖表更新 ---
     function updateChart() {
         const checkboxes = document.querySelectorAll('#machineCheckboxes input:checked');
         const selectedMachines = Array.from(checkboxes).map(cb => cb.value);
         const year = document.getElementById('chartYear').value;
         const pKey = document.getElementById('chartParam').value;
+        const pIdx = rawData.headers.indexOf(pKey);
 
-        if (selectedMachines.length === 0) {
+        if (selectedMachines.length === 0 || pIdx < 0) {
             if (chartInstance) {
                 chartInstance.data.datasets = [];
-                chartInstance.update();
+                chartInstance.update('none');
             }
             return;
         }
 
-        let datasets = [];
-        let allLabels = new Set();
-        const pIdx = rawData.headers.indexOf(pKey);
+        const selectedSet = new Set(selectedMachines);
+        const valuesByMachine = new Map(selectedMachines.map(machine => [machine, new Map()]));
+        const allLabels = new Set();
 
+        // 一次掃描資料，避免每個機組重新 filter/sort；同日資料保留第一筆
+        rawData.data.forEach(row => {
+            const machine = row[1];
+            if (!selectedSet.has(machine) || !row[0] || (year !== 'all' && !String(row[0]).startsWith(year))) return;
+            const dateKey = normalizeDateKey(row[0]);
+            if (!dateKey) return;
+            const series = valuesByMachine.get(machine);
+            if (!series.has(dateKey)) {
+                const rawValue = row[pIdx];
+                const value = rawValue === '' || rawValue === null || rawValue === undefined ? NaN : parseFloat(rawValue);
+                series.set(dateKey, Number.isFinite(value) ? value : null);
+            }
+            allLabels.add(dateKey);
+        });
+
+        const sortedLabels = Array.from(allLabels).sort();
         const hasDG = selectedMachines.some(m => !String(m).toUpperCase().includes('EG'));
         const hasEG = selectedMachines.some(m => String(m).toUpperCase().includes('EG'));
         const limitGroups = [];
         if (hasDG) limitGroups.push({ limits: rawData.dgLimits, prefix: hasEG ? '柴油機' : '', color: '#dc3545' });
         if (hasEG) limitGroups.push({ limits: rawData.egLimits, prefix: hasDG ? '緊急發電機' : '', color: '#fd7e14' });
 
-        selectedMachines.forEach((mId, index) => {
-            const filteredData = rawData.data.filter(r => {
-                const isMachineMatch = (r[1] === mId);
-                const isYearMatch = (year === 'all') || (r[0].startsWith(year));
-                return isMachineMatch && isYearMatch;
-            }).sort((a, b) => new Date(a[0]) - new Date(b[0]));
-
-            filteredData.forEach(r => {
-                const dateKey = normalizeDateKey(r[0]);
-                if (dateKey) allLabels.add(dateKey);
-            });
-
-            const dataPoints = filteredData.map(r => {
-                const dateKey = normalizeDateKey(r[0]);
-                const rawValue = r[pIdx];
-                const value = rawValue === '' || rawValue === null || rawValue === undefined
-                    ? NaN
-                    : parseFloat(rawValue);
-                return { x: dateKey, y: Number.isFinite(value) ? value : null };
-            }).filter(point => point.x);
-
-            datasets.push({
-                label: mId,
-                data: dataPoints,
-                borderColor: LINE_COLORS[index % LINE_COLORS.length],
-                backgroundColor: LINE_COLORS[index % LINE_COLORS.length],
-                borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.1, spanGaps: false
-            });
-        });
-
-        const sortedLabels = Array.from(allLabels).sort();
-        
-        datasets.forEach(ds => {
-             const newData = sortedLabels.map(lbl => {
-                 const pt = ds.data.find(p => p.x === lbl);
-                 return pt ? pt.y : null;
-             });
-             ds.data = newData;
-        });
+        let datasets = selectedMachines.map((machine, index) => ({
+            label: machine,
+            data: sortedLabels.map(label => valuesByMachine.get(machine).has(label) ? valuesByMachine.get(machine).get(label) : null),
+            borderColor: LINE_COLORS[index % LINE_COLORS.length],
+            backgroundColor: LINE_COLORS[index % LINE_COLORS.length],
+            borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.1, spanGaps: false
+        }));
 
         limitGroups.forEach(group => {
             const lower = group.limits && group.limits.lower ? parseFloat(group.limits.lower[pIdx]) : NaN;
             const upper = group.limits && group.limits.upper ? parseFloat(group.limits.upper[pIdx]) : NaN;
             const prefix = group.prefix ? group.prefix + ' ' : '';
             if (!isNaN(upper)) datasets.push({
-                label: prefix + '上限',
-                data: new Array(sortedLabels.length).fill(upper),
+                label: prefix + '上限', data: new Array(sortedLabels.length).fill(upper),
                 borderColor: group.color, borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false
             });
             if (!isNaN(lower)) datasets.push({
-                label: prefix + '下限',
-                data: new Array(sortedLabels.length).fill(lower),
+                label: prefix + '下限', data: new Array(sortedLabels.length).fill(lower),
                 borderColor: group.color, borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false
             });
         });
 
         const ctx = document.getElementById('historyChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
         const isDark = document.body.getAttribute('data-theme') === 'dark';
         const gridColor = isDark ? '#444' : '#ddd';
         const textColor = isDark ? '#eee' : '#666';
-
-        chartInstance = new Chart(ctx, {
+        const config = {
             type: 'line',
-            data: { labels: sortedLabels, datasets: datasets },
+            data: { labels: sortedLabels, datasets },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
-                scales: { 
+                animation: false,
+                parsing: false,
+                scales: {
                     y: { beginAtZero: false, grid: {color: gridColor}, ticks: {color: textColor} },
-                    x: { grid: {color: gridColor}, ticks: { color: textColor, maxTicksLimit: 12, maxRotation: 0 } }
+                    x: { grid: {color: gridColor}, ticks: {color: textColor, maxTicksLimit: 12, maxRotation: 0} }
                 },
                 plugins: { legend: { labels: { color: textColor } } }
             }
-        });
+        };
+        if (chartInstance) {
+            chartInstance.data = config.data;
+            chartInstance.options = config.options;
+            chartInstance.update('none');
+        } else {
+            chartInstance = new Chart(ctx, config);
+        }
     }
 </script>
 

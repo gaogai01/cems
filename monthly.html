@@ -267,7 +267,6 @@
             const machine1 = sumField(rows, "1號機造水量");
             const machine2 = sumField(rows, "2號機造水量");
             const waterUse = sumField(rows, "用水量");
-            const recoveredWater = sumField(rows, "回收水量");
             const ureaUse = sumField(rows, "尿素用量");
             const tankLevelIndex = headerIndex["15000公秉儲水位"];
 
@@ -278,7 +277,6 @@
             if (machine1 && machine2 && waterUse) {
                 values["增減量"] = machine1.value + machine2.value - waterUse.value;
             }
-            if (recoveredWater) values["回收水流量"] = recoveredWater.value;
             if (ureaUse) values["尿素用量"] = ureaUse.value;
 
             if (tankLevelIndex !== undefined) {

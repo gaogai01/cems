@@ -301,6 +301,7 @@
             const expectedDays = new Date(year, month, 0).getDate();
             aggregates.set(key, {
                 values,
+                year,
                 recordCount: rows.length,
                 expectedDays,
                 latestDay: Math.max.apply(null, Array.from(rowsByDate.keys()))
@@ -369,7 +370,7 @@
             if (stats) {
                 const incomplete = stats.recordCount < stats.expectedDays;
                 aggregateNote.textContent = "月累計自每日紀錄自動彙整：" + stats.recordCount + "/" + stats.expectedDays +
-                    " 天（統計至 " + (targetYear + 1911) + "/" + targetMonth + "/" + stats.latestDay + "）" +
+                    " 天（統計至 " + stats.year + "/" + targetMonth + "/" + stats.latestDay + "）" +
                     (incomplete ? "；每日資料尚未完整，合計僅包含已登錄紀錄。" : "。");
                 aggregateNote.style.background = incomplete ? "#fff3cd" : "#e8f5e9";
                 aggregateNote.style.color = incomplete ? "#805b00" : "#256029";

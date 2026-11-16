@@ -194,6 +194,47 @@ button.btn-ctrl:hover { opacity: 0.9; }
     position: relative; 
     transition: background-color 0.3s; 
 }
+.card-configurable { cursor: pointer; }
+.card-configurable:hover { filter: brightness(0.985); }
+.card-configurable:focus-visible { outline: 3px solid #3f51b5; outline-offset: 2px; }
+
+.card-settings-content { max-width: 560px; }
+.card-settings-content .modal-header h3 { margin: 0; }
+.card-settings-unit { color: var(--text-sub); font-size: 0.9rem; }
+.card-settings-message { color: var(--text-sub); font-size: 0.85rem; margin: 10px 0; }
+.alarm-setting-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.alarm-setting-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.alarm-setting-grid input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font: inherit;
+}
+.card-settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+}
+@media (max-width: 520px) {
+    .alarm-setting-grid { grid-template-columns: 1fr; }
+}
+
 
 /* 卡片頂部線條顏色跟隨群組 */
 .group-d01 .card { border-top-color: #007bff; } 

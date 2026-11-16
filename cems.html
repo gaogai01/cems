@@ -73,7 +73,7 @@
         <table id="dataTable" style="display:none;">
             <thead>
                 <tr>
-                    <th>機組 / 狀態</th><th>SO2<br>(ppm)</th><th>NOx<br>(ppm)</th><th>OPAC<br>(%)</th><th>TEMP<br>(°C)</th><th>O2<br>(%)</th><th>Vel<br>(m/s)</th><th>Flow<br>(nm3/hr)</th><th>Load<br>(kw)</th><th>Urea<br>(L/hr)</th>
+                    <th>機組</th><th>SO2<br>(ppm)</th><th>NOx<br>(ppm)</th><th>OPAC<br>(%)</th><th>TEMP<br>(°C)</th><th>O2<br>(%)</th><th>Vel<br>(m/s)</th><th>Flow<br>(nm3/hr)</th><th>Load<br>(kw)</th><th>Urea<br>(L/hr)</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -289,7 +289,7 @@
                 let statusCode = dataArray[baseIndex + 2];
                 const isRunning = statusCode === 'N';
                 let rowClass = isRunning ? 'status-run' : 'status-stop';
-                const statusLabel = isRunning ? '運轉' : `非運轉（狀態碼：${statusCode || '未知'}）`;
+                const statusLabel = isRunning ? '運轉' : '非運轉';
 
                 // 數值
                 let so2 = dataArray[baseIndex + 1];
@@ -340,7 +340,7 @@
                 else cell_urea = `<span>${Math.round(urea)}</span>`;
 
                 tbody.innerHTML += `<tr class="${rowClass}">
-                    <td>#${machineId}<br><small>${statusLabel}</small></td>
+                    <td class="machine-cell"><span class="machine-number">#${machineId}</span><small class="machine-status ${isRunning ? 'machine-running' : 'machine-stopped'}">${statusLabel}</small></td>
                     <td>${cell_so2}</td>
                     <td>${cell_nox}</td>
                     <td>${cell_opac}</td>

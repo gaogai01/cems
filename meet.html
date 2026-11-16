@@ -28,8 +28,12 @@
             #dateSelector { display: none !important; }
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 p-6">
+    <div id="navbar-placeholder" class="no-print"></div>
 
     <div id="loading" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded-lg shadow-xl text-center">
@@ -669,5 +673,6 @@
         window.addEventListener('DOMContentLoaded', initDashboard);
 
     </script>
+    <script src="common.js"></script>
 </body>
 </html>

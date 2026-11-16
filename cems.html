@@ -17,6 +17,17 @@
 <body>
 
 <div id="navbar-placeholder"></div>
+
+<div id="quickChartModal" class="quick-chart-modal" role="dialog" aria-modal="true" aria-labelledby="quickChartTitle" onclick="if(event.target === this) closeQuickChart()">
+    <div class="quick-chart-dialog">
+        <div class="quick-chart-header">
+            <h2 id="quickChartTitle">監測數據｜近24小時</h2>
+            <button type="button" class="quick-chart-close" aria-label="關閉曲線圖" onclick="closeQuickChart()">&times;</button>
+        </div>
+        <div id="quickChartStatus" class="quick-chart-status" role="status"></div>
+        <div class="quick-chart-canvas"><canvas id="quickHistoryChart"></canvas></div>
+    </div>
+</div>
     
 <div class="cems-container">
     <header>
@@ -341,15 +352,15 @@
 
                 tbody.innerHTML += `<tr class="${rowClass}">
                     <td class="machine-cell"><span class="machine-number">#${machineId}</span><small class="machine-status ${isRunning ? 'machine-running' : 'machine-stopped'}">${statusLabel}</small></td>
-                    <td>${cell_so2}</td>
-                    <td>${cell_nox}</td>
-                    <td>${cell_opac}</td>
-                    <td>${cell_temp}</td>
-                    <td>${cell_o2}</td>
-                    <td>${cell_vel}</td>
-                    <td>${Math.round(flow)}</td>
-                    <td>${cell_load}</td>
-                    <td>${cell_urea}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'so2')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'so2')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'nox')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'nox')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'opac')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'opac')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'temp')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'temp')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'o2')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'o2')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'vel')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'vel')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'flow')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'flow')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'load')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'load')">${content}</td>
+                    <td class="metric-cell" title="點選查看近24小時曲線" onclick="openQuickChart(${machineId}, 'urea')" role="button" tabindex="0" onkeydown="handleQuickChartKeydown(event, ${machineId}, 'urea')">${content}</td>
                 </tr>`;
             }
 

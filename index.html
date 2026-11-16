@@ -34,6 +34,38 @@
             <div class="loading">正在驗證權限並載入數據...</div>
         </div>
     </div>
+    <div id="cardSettingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="cardSettingsTitle" onclick="if(event.target === this) closeCardSettings()">
+        <div class="modal-content card-settings-content">
+            <div class="modal-header">
+                <h3 id="cardSettingsTitle">監測卡片設定</h3>
+                <button type="button" class="close-btn" aria-label="關閉" onclick="closeCardSettings()">&times;</button>
+            </div>
+            <div id="cardSettingsUnit" class="card-settings-unit"></div>
+            <p id="cardSettingsMessage" class="card-settings-message"></p>
+            <form onsubmit="saveCardSettings(event)">
+                <input type="hidden" id="cardSettingsCol">
+                <div class="alarm-setting-grid">
+                    <label>最小值
+                        <input type="number" step="any" id="alarmMin" required>
+                    </label>
+                    <label>黃色警報值
+                        <input type="number" step="any" id="alarmWarn">
+                    </label>
+                    <label>紅色超限值
+                        <input type="number" step="any" id="alarmCrit">
+                    </label>
+                    <label>最大值
+                        <input type="number" step="any" id="alarmMax" required>
+                    </label>
+                </div>
+                <div class="card-settings-actions">
+                    <button type="button" class="btn-ctrl" onclick="closeCardSettings()">取消</button>
+                    <button type="submit" class="btn-ctrl btn-report">儲存設定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <div id="waterReportModal" class="modal">
         <div class="modal-content" style="max-width: 1200px;">

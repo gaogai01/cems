@@ -411,9 +411,133 @@
             nox:  { offset: 6,  label: 'NOx (ppm)',  color: '#ffea00', unit: 'ppm' },
             opac: { offset: 10, label: 'OPAC (%)',   color: '#bdbdbd', unit: '%' },
             temp: { offset: 14, label: 'Temp (°C)',  color: '#ff9800', unit: '°C' },
-            load: { offset: 25, label: 'Load (KW)',  color: '#00e676', yAxisID: 'y1', unit: 'kW' },
+            o2:   { offset: 18, label: 'O2 (%)',     color: '#ab47bc', unit: '%' },
+            vel:  { offset: 21, label: 'Vel (m/s)',  color: '#26a69a', unit: 'm/s' },
+            flow: { offset: 22, label: 'Flow (Nm3/hr)', color: '#42a5f5', unit: 'Nm3/hr' },
+            load: { offset: 25, label: 'Load (KW)',  color: '#00e676', unit: 'kW' },
             urea: { offset: 26, label: 'Urea (L/hr)',color: '#ff1744', unit: 'L/hr' }
         };
+
+        let quickChartInstance = null;
+
+        window.openQuickChart = async function(machineId, metricKey) {
+            const config = POLLUTANT_CONFIG[metricKey];
+            const modal = document.getElementById('quickChartModal');
+            const title = document.getElementById('quickChartTitle');
+            const status = document.getElementById('quickChartStatus');
+            const canvas = document.getElementById('quickHistoryChart');
+            if (!config || !modal || !canvas) return;
+
+            modal.style.display = 'flex';
+            title.textContent = `#${machineId}｜${config.label}｜近24小時`;
+            status.textContent = '正在載入歷史資料…';
+            if (quickChartInstance) {
+                quickChartInstance.destroy();
+                quickChartInstance = null;
+            }
+
+            if (globalHistoryData.length === 0) await fetchHistoryData();
+            if (globalHistoryData.length === 0) {
+                status.textContent = '歷史資料暫時無法取得，請稍後再試。';
+                return;
+            }
+
+            const endTime = new Date();
+            const startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000);
+            const baseIndex = (Number(machineId) - 1) * 27;
+            const points = [];
+
+            globalHistoryData.forEach(row => {
+                if (!row || !row.t || typeof row.d !== 'string') return;
+                const time = new Date(row.t);
+                if (Number.isNaN(time.getTime()) || time < startTime || time > endTime) return;
+                const parts = row.d.split(',');
+                const rawValue = parts[baseIndex + config.offset];
+                const value = Number(rawValue);
+                points.push({
+                    x: time,
+                    y: rawValue !== undefined && String(rawValue).trim() !== '' && Number.isFinite(value) && value >= 0
+                        ? value
+                        : null
+                });
+            });
+            points.sort((a, b) => a.x - b.x);
+
+            if (points.length === 0) {
+                status.textContent = '近24小時沒有可顯示的歷史資料。';
+                return;
+            }
+
+            status.textContent = `近24小時共 ${points.length} 筆資料`;
+            const isLight = document.body.classList.contains('light-mode');
+            const gridColor = isLight ? '#dddddd' : 'rgba(255,255,255,0.12)';
+            const textColor = isLight ? '#555555' : '#cbd5e1';
+            quickChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: config.label,
+                        data: points,
+                        borderColor: config.color,
+                        backgroundColor: config.color,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        tension: 0.25,
+                        spanGaps: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            min: startTime,
+                            max: endTime,
+                            time: { unit: 'hour', tooltipFormat: 'yyyy-MM-dd HH:mm' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, maxTicksLimit: 12 }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: config.unit, color: textColor }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isLight ? '#fff' : '#333',
+                            titleColor: isLight ? '#000' : '#fff',
+                            bodyColor: isLight ? '#000' : '#fff'
+                        }
+                    }
+                }
+            });
+        };
+
+        window.closeQuickChart = function() {
+            const modal = document.getElementById('quickChartModal');
+            if (modal) modal.style.display = 'none';
+            if (quickChartInstance) {
+                quickChartInstance.destroy();
+                quickChartInstance = null;
+            }
+        };
+
+        window.handleQuickChartKeydown = function(event, machineId, metricKey) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                window.openQuickChart(machineId, metricKey);
+            }
+        };
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') window.closeQuickChart();
+        });
 
         const chartMetricHint = document.getElementById('chartMetricHint');
         document.querySelectorAll('.pollutant-check').forEach(checkbox => {

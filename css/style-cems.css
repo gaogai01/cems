@@ -166,7 +166,7 @@
 .machine-status {
     display: inline-block;
     margin-left: 6px;
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-weight: 600;
     vertical-align: middle;
     text-shadow: none;
@@ -178,16 +178,16 @@
     .cems-container { padding: 4px 14px; }
     header { margin-bottom: 7px; }
     .dashboard { gap: 8px; margin-bottom: 8px; }
-    .card { padding: 6px 8px; }
-    .card h3 { margin-bottom: 3px; font-size: 0.7rem; }
-    .card .value { font-size: 1.3rem; }
-    .card .sub-val { margin-top: 2px; min-height: 1.05em; font-size: 0.68rem; }
+    .card { padding: 8px 9px; }
+    .card h3 { margin-bottom: 3px; font-size: 0.74rem; }
+    .card .value { font-size: 1.45rem; }
+    .card .sub-val { margin-top: 3px; min-height: 1.05em; font-size: 0.72rem; }
     .gauge-container { height: 5px; margin-top: 4px; }
     .table-container { margin-bottom: 10px; }
-    table { font-size: 0.95rem; }
-    th, td { padding: 4px 5px; line-height: 1.05; }
-    th { font-size: 0.76rem; }
-    td:first-child, th:first-child { font-size: 0.9rem; }
-    .status-stop td { font-size: 0.92rem; }
+    table { font-size: 1.05rem; }
+    th, td { padding: 6px 5px; line-height: 1.1; }
+    th { font-size: 0.8rem; }
+    td:first-child, th:first-child { font-size: 1rem; }
+    .status-stop td { font-size: 1rem; }
     #loading { margin: 2px 0; font-size: 0.9rem; }
 }

@@ -261,6 +261,64 @@
         return true;
     }
 
+    // 緊急發電機資料欄位與柴油機不同：第 17 欄為閃火點，第 18 欄未使用。
+    function getOilColumnMeta(index, isEG) {
+        if (isEG && index === 17) return { name: '閃火點', unit: '℃' };
+        if (isEG && index === 18) return null;
+        return {
+            name: rawData.cnHeaders[index] || rawData.headers[index] || '',
+            unit: rawData.units[index] || ''
+        };
+    }
+
+    function getOilColumnIndices(isEG) {
+        const columns = [];
+        for (let index = 2; index < rawData.headers.length - 1; index++) {
+            if (getOilColumnMeta(index, isEG)) columns.push(index);
+        }
+        return columns;
+    }
+
+    function getSelectedMachineTypes() {
+        const selected = Array.from(document.querySelectorAll('#machineCheckboxes input:checked')).map(input => input.value);
+        return {
+            selected,
+            hasDG: selected.some(machine => !String(machine).toUpperCase().includes('EG')),
+            hasEG: selected.some(machine => String(machine).toUpperCase().includes('EG'))
+        };
+    }
+
+    function refreshChartParams() {
+        const select = document.getElementById('chartParam');
+        if (!select) return;
+        const { hasDG, hasEG } = getSelectedMachineTypes();
+        const isMixed = hasDG && hasEG;
+        const isEGOnly = hasEG && !hasDG;
+        const keepIndex = Number.parseInt(select.value, 10);
+        select.innerHTML = '';
+
+        for (let index = 2; index < rawData.headers.length - 1; index++) {
+            // 混選柴油機與緊急機時，排除同一欄位代表不同測項的氧化讀數／閃火點與空白欄。
+            if (isMixed && (index === 17 || index === 18)) continue;
+            const meta = getOilColumnMeta(index, isEGOnly);
+            if (!meta || !meta.name) continue;
+            const suffix = isMixed ? '（柴油機／緊急發電機共通）' : '';
+            const option = document.createElement('option');
+            option.value = String(index);
+            option.textContent = meta.name + suffix;
+            select.appendChild(option);
+        }
+
+        if (Array.from(select.options).some(option => option.value === String(keepIndex))) {
+            select.value = String(keepIndex);
+        }
+    }
+
+    function handleChartMachineChange() {
+        refreshChartParams();
+        updateChart();
+    }
+
     function getLimitText(colIdx, isEG) {
         const limits = isEG ? rawData.egLimits : rawData.dgLimits;
         if (!limits || !limits.lower || !limits.upper) return "-";
@@ -298,15 +356,9 @@
         mBox.innerHTML = "";
         machines.forEach((m, idx) => {
             const checked = (idx === 0) ? 'checked' : '';
-            mBox.innerHTML += `<label class="checkbox-item"><input type="checkbox" value="${m}" ${checked} onchange="updateChart()"> ${m}</label>`;
+            mBox.innerHTML += '<label class="checkbox-item"><input type="checkbox" value="' + m + '" ' + checked + ' onchange="handleChartMachineChange()"> ' + m + '</label>';
         });
-        
-        const pSelect = document.getElementById('chartParam');
-        pSelect.innerHTML = '';
-        for(let i=2; i<rawData.headers.length - 1; i++) { 
-            const name = rawData.cnHeaders[i] || rawData.headers[i];
-            pSelect.innerHTML += `<option value="${rawData.headers[i]}">${name}</option>`;
-        }
+        refreshChartParams();
     }
 
     // 渲染總覽表格 (已移除「判定」欄位)

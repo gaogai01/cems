@@ -143,6 +143,23 @@ button.btn-ctrl:hover { opacity: 0.9; }
     border: 1px solid var(--border-color); 
 }
 
+/* 外部 CWMS 資料來源狀態 */
+.cwms-status {
+    margin: -2px 0 9px;
+    padding: 7px 10px;
+    border-left: 4px solid #d39e00;
+    border-radius: 4px;
+    background: #fff3cd;
+    color: #664d03;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+[data-theme="dark"] .cwms-status {
+    background: #423605;
+    color: #ffda6a;
+    border-left-color: #ffc107;
+}
+
 /* 系統群組標題 (藥丸狀漸層背景) */
 .system-title { 
     font-size: 1rem; 

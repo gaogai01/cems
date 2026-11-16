@@ -46,8 +46,12 @@
             opacity: 1;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+    <div id="navbar-placeholder" class="no-print"></div>
     <!-- React 應用程式掛載點 -->
     <div id="root" class="loading-cloak"></div>
 
@@ -752,5 +756,6 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<DetailedProcurementGantt />);
     </script>
+    <script src="common.js"></script>
 </body>
 </html>

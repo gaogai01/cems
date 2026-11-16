@@ -118,6 +118,7 @@
         </div>
     </div>
 
+    <div id="autoAggregateNote" role="status" style="margin: -6px 0 14px; padding: 9px 12px; border-radius: 8px; background: #e8f5e9; color: #256029; font-size: 0.92rem;"></div>
     <div id="groupContainer" class="group-container"></div>
 
     <div class="chart-section">
@@ -168,26 +169,153 @@
     }
 
     async function fetchData() {
+        const DAILY_API_URL = "https://script.google.com/macros/s/AKfycbzJzoU4IyAc6CeKydjbM8iYVyPMsFvMfoR_I50OT7vyNPpH7BZBjlWGEt_DdnUtlUw/exec";
         try {
-            const res = await fetch(API_URL);
-            const json = await res.json();
-            
-            if (json.error) { alert(json.error); return; }
-            
-            apiData = json;
+            const results = await Promise.allSettled([
+                fetch(API_URL),
+                fetch(DAILY_API_URL + "?mode=daily")
+            ]);
+            if (results[0].status !== 'fulfilled' || !results[0].value.ok) {
+                throw new Error("月報資料讀取失敗");
+            }
+
+            const monthlyJson = await results[0].value.json();
+            if (monthlyJson.error) throw new Error(monthlyJson.error);
+            apiData = monthlyJson;
+
+            if (results[1].status === 'fulfilled' && results[1].value.ok) {
+                try {
+                    const dailyJson = await results[1].value.json();
+                    applyDailyAggregates(dailyJson);
+                } catch (dailyError) {
+                    console.warn("每日紀錄彙整失敗，保留月表原值", dailyError);
+                    window.dailyAggregationUnavailable = true;
+                }
+            } else {
+                console.warn("每日紀錄暫時無法讀取，保留月表原值");
+                window.dailyAggregationUnavailable = true;
+            }
+
             document.getElementById('loading').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
-            
+
             initDateControls();
             selectLatestCompleteMonth();
             renderGroupedCards();
             initDropdown();
             updateChart();
-            
+
         } catch (e) {
             console.error(e);
             document.getElementById('loading').innerText = "載入失敗 (請檢查網址或試算表權限)";
         }
+    }
+
+    function applyDailyAggregates(dailyJson) {
+        if (!dailyJson || !Array.isArray(dailyJson.headers) || !Array.isArray(dailyJson.data)) {
+            throw new Error("每日紀錄資料格式錯誤");
+        }
+
+        const headerIndex = {};
+        dailyJson.headers.forEach((header, index) => {
+            if (header) headerIndex[String(header).trim()] = index;
+        });
+        const dateIndex = headerIndex["日期"];
+        if (dateIndex === undefined) throw new Error("每日紀錄缺少日期欄");
+
+        function parseDailyDate(value) {
+            const match = String(value || "").match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+            if (!match) return null;
+            return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+        }
+
+        function sumField(rows, field) {
+            const index = headerIndex[field];
+            if (index === undefined) return null;
+            let sum = 0;
+            let count = 0;
+            rows.forEach(row => {
+                const raw = row[index];
+                if (raw === "" || raw === null || raw === undefined) return;
+                const value = Number(String(raw).replace(/,/g, ""));
+                if (!Number.isFinite(value)) return;
+                sum += value;
+                count++;
+            });
+            return count ? { value: sum, count } : null;
+        }
+
+        const aggregates = new Map();
+        apiData.data.forEach(monthRow => {
+            let year = Number.parseInt(monthRow["年度"], 10);
+            const month = Number.parseInt(monthRow["月份"], 10);
+            if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return;
+            if (year < 1911) year += 1911;
+
+            const key = year + "-" + month;
+            const rowsByDate = new Map();
+            dailyJson.data.forEach(row => {
+                const date = parseDailyDate(row[dateIndex]);
+                if (date && date.year === year && date.month === month) {
+                    rowsByDate.set(date.day, row);
+                }
+            });
+            const rows = Array.from(rowsByDate.entries()).sort((a, b) => a[0] - b[0]).map(entry => entry[1]);
+            if (!rows.length) return;
+
+            const values = {};
+            const machine1 = sumField(rows, "1號機造水量");
+            const machine2 = sumField(rows, "2號機造水量");
+            const waterUse = sumField(rows, "用水量");
+            const recoveredWater = sumField(rows, "回收水量");
+            const ureaUse = sumField(rows, "尿素用量");
+            const tankLevelIndex = headerIndex["15000公秉儲水位"];
+
+            if (machine1) values["#1機造水量"] = machine1.value;
+            if (machine2) values["#2機造水量"] = machine2.value;
+            if (machine1 && machine2) values["總造水量"] = machine1.value + machine2.value;
+            if (waterUse) values["用水量"] = waterUse.value;
+            if (machine1 && machine2 && waterUse) {
+                values["增減量"] = machine1.value + machine2.value - waterUse.value;
+            }
+            if (recoveredWater) values["回收水流量"] = recoveredWater.value;
+            if (ureaUse) values["尿素用量"] = ureaUse.value;
+
+            if (tankLevelIndex !== undefined) {
+                for (let index = rows.length - 1; index >= 0; index--) {
+                    const raw = rows[index][tankLevelIndex];
+                    if (raw === "" || raw === null || raw === undefined) continue;
+                    const level = Number(String(raw).replace(/,/g, ""));
+                    if (Number.isFinite(level)) {
+                        values["15000噸液位"] = level;
+                        break;
+                    }
+                }
+            }
+
+            const generation = Number(String(monthRow["發電量"] || "").replace(/,/g, ""));
+            if (ureaUse && Number.isFinite(generation) && generation > 0) {
+                values["尿素強度"] = ureaUse.value * 1000000 / generation;
+            }
+
+            const expectedDays = new Date(year, month, 0).getDate();
+            aggregates.set(key, {
+                values,
+                recordCount: rows.length,
+                expectedDays,
+                latestDay: Math.max.apply(null, Array.from(rowsByDate.keys()))
+            });
+        });
+
+        apiData.data = apiData.data.map(row => {
+            let year = Number.parseInt(row["年度"], 10);
+            const month = Number.parseInt(row["月份"], 10);
+            if (year < 1911) year += 1911;
+            const aggregate = aggregates.get(year + "-" + month);
+            if (!aggregate) return row;
+            return Object.assign({}, row, aggregate.values, { __dailyAggregate: aggregate });
+        });
+        window.dailyAggregationUnavailable = false;
     }
 
     function initDateControls() {
@@ -235,6 +363,27 @@
         // 更新標題藥丸
         document.getElementById('lastDatePill').innerText = `${targetYear}年 ${targetMonth}月`;
         
+        const aggregateNote = document.getElementById('autoAggregateNote');
+        if (aggregateNote) {
+            const stats = targetRecord && targetRecord.__dailyAggregate;
+            if (stats) {
+                const incomplete = stats.recordCount < stats.expectedDays;
+                aggregateNote.textContent = "月累計自每日紀錄自動彙整：" + stats.recordCount + "/" + stats.expectedDays +
+                    " 天（統計至 " + (targetYear + 1911) + "/" + targetMonth + "/" + stats.latestDay + "）" +
+                    (incomplete ? "；每日資料尚未完整，合計僅包含已登錄紀錄。" : "。");
+                aggregateNote.style.background = incomplete ? "#fff3cd" : "#e8f5e9";
+                aggregateNote.style.color = incomplete ? "#805b00" : "#256029";
+            } else if (window.dailyAggregationUnavailable) {
+                aggregateNote.textContent = "每日紀錄暫時無法讀取，目前顯示月表原有資料。";
+                aggregateNote.style.background = "#fff3cd";
+                aggregateNote.style.color = "#805b00";
+            } else {
+                aggregateNote.textContent = "此月份沒有每日紀錄，月報顯示月表原有資料。";
+                aggregateNote.style.background = "#f1f3f5";
+                aggregateNote.style.color = "#555";
+            }
+        }
+
         const groups = {};
         headers.forEach((headerName, index) => {
             if (headerName === "年度" || headerName === "月份") return;

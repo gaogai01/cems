@@ -31,6 +31,9 @@ function initDashboard() {
     if (!window.dashboardRefreshTimer) {
         window.dashboardRefreshTimer = setInterval(fetchData, 10000);
     }
+
+    // 首次進入廢水處理頁面時，載入今日 T05-01 液位曲線。
+    if (typeof initializeChart === 'function') initializeChart();
 }
 
 function startApp() {

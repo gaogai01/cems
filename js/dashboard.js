@@ -3,6 +3,111 @@
 
 let lastSuccessfulUpdateText = null;
 
+const ALARM_SETTINGS_STORAGE_KEY = "wastewaterAlarmSettingsV1";
+
+function readAlarmSettings() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(ALARM_SETTINGS_STORAGE_KEY) || "{}");
+        return saved && typeof saved === "object" ? saved : {};
+    } catch (error) {
+        console.warn("讀取卡片警報設定失敗", error);
+        return {};
+    }
+}
+
+function getAlarmRule(colName) {
+    const saved = readAlarmSettings();
+    if (saved[colName]) return { ...(ALARMS[colName] || {}), ...saved[colName] };
+    return ALARMS[colName] || null;
+}
+
+function hasCustomAlarmRule(colName) {
+    return Object.prototype.hasOwnProperty.call(readAlarmSettings(), colName);
+}
+
+function getNumberOrNull(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+}
+
+function openCardSettings(card) {
+    const colName = card.dataset.settingsCol;
+    if (!colName) return;
+
+    const saved = readAlarmSettings();
+    const rule = getAlarmRule(colName) || {};
+    const rawValue = window.currentDashboardData && window.currentDashboardData[colName];
+    const value = getNumberOrNull(rawValue);
+    const fallbackMax = value !== null && value > 0
+        ? Math.max(100, Math.ceil(value * 1.25 / 10) * 10)
+        : 100;
+    const isPh = colName.indexOf("PHI") !== -1 && !hasCustomAlarmRule(colName);
+
+    document.getElementById("cardSettingsCol").value = colName;
+    document.getElementById("cardSettingsTitle").textContent =
+        (card.dataset.settingsName || "監測卡片") + " 設定";
+    document.getElementById("cardSettingsUnit").textContent =
+        card.dataset.settingsUnit ? "單位：" + card.dataset.settingsUnit : "此項目無單位";
+    document.getElementById("alarmMin").value = rule.min ?? 0;
+    document.getElementById("alarmWarn").value = rule.warn ?? (isPh ? 6.5 : "");
+    document.getElementById("alarmCrit").value = rule.crit ?? (isPh ? 9 : "");
+    document.getElementById("alarmMax").value = rule.max ?? (isPh ? 14 : fallbackMax);
+    document.getElementById("cardSettingsMessage").textContent =
+        isPh
+            ? "目前 pH 卡片另有既定的雙向警報判斷；儲存自訂設定後，將改依黃色與紅色門檻判斷。"
+            : "黃色與紅色門檻需同時設定，留白可停用警報；系統會依門檻大小自動判斷高警報或低警報。設定保存在目前瀏覽器。";
+
+    document.getElementById("cardSettingsModal").style.display = "block";
+}
+
+function closeCardSettings() {
+    const modal = document.getElementById("cardSettingsModal");
+    if (modal) modal.style.display = "none";
+}
+
+function handleCardSettingsKeydown(event, card) {
+    if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openCardSettings(card);
+    }
+}
+
+function saveCardSettings(event) {
+    event.preventDefault();
+    const colName = document.getElementById("cardSettingsCol").value;
+    const min = getNumberOrNull(document.getElementById("alarmMin").value);
+    const warn = getNumberOrNull(document.getElementById("alarmWarn").value);
+    const crit = getNumberOrNull(document.getElementById("alarmCrit").value);
+    const max = getNumberOrNull(document.getElementById("alarmMax").value);
+
+    if (!colName || min === null || max === null || max <= min) {
+        alert("請輸入有效的最小值與最大值，且最大值須大於最小值。");
+        return;
+    }
+    if ((warn === null) !== (crit === null)) {
+        alert("黃色警報值與紅色超限值請同時設定，或同時留白停用警報。");
+        return;
+    }
+    if (warn !== null && (warn < min || warn > max || crit < min || crit > max || warn === crit)) {
+        alert("警報門檻須落在最小值與最大值之間，且黃色與紅色門檻不可相同。");
+        return;
+    }
+
+    const settings = readAlarmSettings();
+    settings[colName] = { min, warn, crit, max };
+    try {
+        localStorage.setItem(ALARM_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    } catch (error) {
+        alert("設定無法儲存，請檢查瀏覽器儲存空間。");
+        return;
+    }
+
+    closeCardSettings();
+    if (window.currentDashboardData) renderDashboard(window.currentDashboardData, true);
+}
+
+
 /**
  * 初始化儀表板
  * 1. 設定主題
@@ -102,6 +207,7 @@ async function fetchData() {
 }
 
 function renderDashboard(data, fromCache) {
+    window.currentDashboardData = data;
     if (data.timestamp) {
         const timestampText = String(data.timestamp).trim();
         const timeMatch = timestampText.match(/(?:T|\s)(\d{2}:\d{2}(?::\d{2})?)/);
@@ -137,7 +243,7 @@ function renderDashboard(data, fromCache) {
                 const displayVal = `${today} / <span style="font-size:0.8em; color:var(--text-sub);">${yesterday}</span>`;
                 const statusClass = checkAlarm(item.col + "_DAILY", today);
                 const gaugeHTML = getGaugeHTML(item.col + "_DAILY", today);
-                htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML);
+                htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML, item.col + "_DAILY");
             } else {
                 const rawVal = data[item.col] !== undefined && data[item.col] !== null ? data[item.col] : '--';
                 let displayVal = rawVal;
@@ -148,7 +254,7 @@ function renderDashboard(data, fromCache) {
                 }
                 const statusClass = checkAlarm(item.col, rawVal);
                 const gaugeHTML = getGaugeHTML(item.col, rawVal);
-                htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML);
+                htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML, item.col);
             }
         });
         htmlContent += `</div></div>`;
@@ -160,9 +266,9 @@ function renderDashboard(data, fromCache) {
 /**
  * 產生單張卡片的 HTML 結構
  */
-function generateCardHTML(statusClass, name, tag, valueDisplay, unit, gaugeHTML) {
+function generateCardHTML(statusClass, name, tag, valueDisplay, unit, gaugeHTML, colName) {
     return `
-    <div class="card ${statusClass}">
+    <div class="card ${statusClass} card-configurable" data-settings-col="${escapeHtml(colName)}" data-settings-name="${escapeHtml(name)}" data-settings-unit="${escapeHtml(unit)}" role="button" tabindex="0" title="點擊修改監測設定" onclick="openCardSettings(this)" onkeydown="handleCardSettingsKeydown(event, this)">
         <div class="card-header">
             <span class="tag-name">${name}</span>
             <span class="tag-id">${tag}</span>
@@ -183,24 +289,29 @@ function checkAlarm(colName, value) {
     let val = parseFloat(value);
     if (isNaN(val)) return "";
 
-    // pH值 特殊判斷 (雙向警報: <6 或 >9)
-    if (colName.indexOf("PHI") !== -1) {
+    // pH 值沿用既有雙向警報；有自訂設定時改走一般門檻判斷。
+    if (colName.indexOf("PHI") !== -1 && !hasCustomAlarmRule(colName)) {
         if (val < 6 || val > 9) return "status-critical";
         if (val < 6.5 || val > 8.5) return "status-warning";
         return "";
     }
 
-    // 一般數值判斷 (ALARMS 來自 config.js)
-    const rule = ALARMS[colName];
-    if (rule) {
-        let isLowAlarm = rule.warn > rule.crit; // 判斷是低液位警報還是高液位警報
-        
-        if (isLowAlarm) { // 低液位警報 (越低越危險)
-            if (val <= rule.crit) return "status-critical";
-            if (val <= rule.warn) return "status-warning";
-        } else { // 高液位/數值警報 (越高越危險)
-            if (val >= rule.crit) return "status-critical";
-            if (val >= rule.warn) return "status-warning";
+    // 一般數值判斷：優先使用使用者自訂門檻，否則沿用預設值。
+    const rule = getAlarmRule(colName);
+    const hasThresholds = rule &&
+        getNumberOrNull(rule.warn) !== null &&
+        getNumberOrNull(rule.crit) !== null;
+    if (hasThresholds) {
+        const warn = Number(rule.warn);
+        const crit = Number(rule.crit);
+        const isLowAlarm = warn > crit;
+
+        if (isLowAlarm) {
+            if (val <= crit) return "status-critical";
+            if (val <= warn) return "status-warning";
+        } else {
+            if (val >= crit) return "status-critical";
+            if (val >= warn) return "status-warning";
         }
     }
 
@@ -224,50 +335,58 @@ function getGaugeHTML(colName, value) {
     let val = parseFloat(value);
     if (isNaN(val)) return "";
 
-    let rule = ALARMS[colName];
-
-    // pH值 儀表條
-    if (colName.indexOf("PHI") !== -1) {
-        let pct = (val / 14) * 100; // pH 0-14
+    // pH 未自訂時保留原本 0–14 與雙向警戒顏色。
+    if (colName.indexOf("PHI") !== -1 && !hasCustomAlarmRule(colName)) {
+        let pct = Math.max(0, Math.min((val / 14) * 100, 100));
         let colorVar = "var(--gauge-good)";
         if (val < 6 || val > 9) colorVar = "var(--gauge-bad)";
         else if (val < 6.5 || val > 8.5) colorVar = "var(--gauge-warn)";
-        
+
         return `<div class="gauge-container">
                     <div style="width: ${pct}%; background-color: ${colorVar}; height:100%; border-radius:3px;"></div>
                     <div class="gauge-marker" style="left: ${pct}%"></div>
                 </div>`;
     }
 
-    // 一般數值 儀表條
-    if (rule && rule.max) {
-        let max = rule.max;
-        let valPct = Math.min((val / max) * 100, 100); // 限制最大 100%
-        let isLowAlarm = rule.warn > rule.crit;
-        
-        // 計算各區段比例
-        let critPct = (rule.crit / max) * 100;
-        let warnPct = (rule.warn / max) * 100;
+    const rule = getAlarmRule(colName);
+    if (!rule || getNumberOrNull(rule.max) === null) return "";
 
-        if (isLowAlarm) {
-             // 低液位警報條 (左邊紅 -> 黃 -> 綠)
-             return `<div class="gauge-container">
-                <div class="gauge-seg seg-rev-poor" style="width: ${critPct}%"></div>
-                <div class="gauge-seg seg-rev-warn" style="width: ${warnPct - critPct}%"></div>
-                <div class="gauge-seg seg-rev-good" style="width: ${100 - warnPct}%"></div>
-                <div class="gauge-marker" style="left: ${valPct}%"></div>
-             </div>`;
-        } else {
-             // 高數值警報條 (左邊綠 -> 黃 -> 紅)
-             return `<div class="gauge-container">
-                <div class="gauge-seg seg-good" style="width: ${warnPct}%"></div>
-                <div class="gauge-seg seg-warn" style="width: ${critPct - warnPct}%"></div>
-                <div class="gauge-seg seg-poor" style="width: ${100 - critPct}%"></div>
-                <div class="gauge-marker" style="left: ${valPct}%"></div>
-             </div>`;
-        }
+    const min = getNumberOrNull(rule.min) ?? 0;
+    const max = Number(rule.max);
+    const range = max - min;
+    if (range <= 0) return "";
+
+    const toPct = number => Math.max(0, Math.min(((number - min) / range) * 100, 100));
+    const valPct = toPct(val);
+    const warn = getNumberOrNull(rule.warn);
+    const crit = getNumberOrNull(rule.crit);
+
+    if (warn === null || crit === null || warn === crit) {
+        return `<div class="gauge-container">
+                    <div class="gauge-seg seg-good" style="width:100%"></div>
+                    <div class="gauge-marker" style="left: ${valPct}%"></div>
+                </div>`;
     }
-    return "";
+
+    const isLowAlarm = warn > crit;
+    const critPct = toPct(crit);
+    const warnPct = toPct(warn);
+
+    if (isLowAlarm) {
+        return `<div class="gauge-container">
+            <div class="gauge-seg seg-rev-poor" style="width: ${critPct}%"></div>
+            <div class="gauge-seg seg-rev-warn" style="width: ${Math.max(0, warnPct - critPct)}%"></div>
+            <div class="gauge-seg seg-rev-good" style="width: ${Math.max(0, 100 - warnPct)}%"></div>
+            <div class="gauge-marker" style="left: ${valPct}%"></div>
+        </div>`;
+    }
+
+    return `<div class="gauge-container">
+        <div class="gauge-seg seg-good" style="width: ${warnPct}%"></div>
+        <div class="gauge-seg seg-warn" style="width: ${Math.max(0, critPct - warnPct)}%"></div>
+        <div class="gauge-seg seg-poor" style="width: ${Math.max(0, 100 - critPct)}%"></div>
+        <div class="gauge-marker" style="left: ${valPct}%"></div>
+    </div>`;
 }
 
 /**

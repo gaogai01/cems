@@ -228,9 +228,16 @@ function renderDashboard(data, fromCache) {
     
     // 遍歷設定檔中的每個群組 (DASHBOARD_CONFIG 來自 config.js)
     DASHBOARD_CONFIG.forEach(group => {
+        const d02Status = group.id === "d02" ? String(data.D02_CWMS_STATUS || "").toLowerCase() : "";
+        const d02StatusMessage = d02Status && d02Status !== "ok"
+            ? (d02Status === "quota_exceeded"
+                ? "環境部 CWMS 今日 API 呼叫額度已用盡，資料暫停更新，稍後自動重試。"
+                : "環境部 CWMS 資料暫時無法取得，系統稍後自動重試。")
+            : "";
         htmlContent += `
         <div class="system-group ${group.className}">
             <div class="system-title">${group.title} <span>${group.items.length}</span></div>
+            ${d02StatusMessage ? `<div class="cwms-status" role="status">${d02StatusMessage}</div>` : ""}
             <div class="inner-grid">`;
 
         // 遍歷群組內的每個卡片

@@ -18,10 +18,10 @@ const db = firebase.firestore();
 // 2. 定義權限與選單
 // ============================================================
 const ROLE_ACCESS = {
-    'admin': ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html','admin.html','try.html'], //管理者
-    'env':   ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html','monthly.html'], //環化課
-    'mech':  ['oil.html'], //機械組
-    'ops':   ['cems.html', 'oil.html'], //運轉組
+    'admin': ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html', 'monthly.html', 'try.html', 'admin.html', 'meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'],
+    'env':   ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html', 'monthly.html', 'meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'],
+    'mech':  ['oil.html', 'meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'],
+    'ops':   ['cems.html', 'oil.html', 'meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'],
     'guest': []
 };
 
@@ -33,8 +33,14 @@ const ALL_PAGES = {
     'daily.html': '每日紀錄',
     'monthly.html': '每月紀錄',
     'try.html': '測試',
-    'admin.html': '後台管理' 
+    'admin.html': '後台管理',
+    'meet.html': '廠務會議報告',
+    'plan.html': '採購發包進度',
+    'bigtime.html': '機組運轉時數',
+    'newyear.html': '公益活動節目表',
+    'mv.html': '影片拍攝企劃'
 };
+const OTHER_PAGES = ['meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'];
 
 // ============================================================
 // 3. 權限檢查 & 心跳機制
@@ -102,48 +108,70 @@ function renderNavbar(userName, role, allowedPages) {
     const navPlaceholder = document.getElementById("navbar-placeholder");
     if (!navPlaceholder) return;
 
+    const currentPage = window.location.pathname.split('/').pop() || "index.html";
     let menuHtml = "";
+    const otherLinks = [];
+
     allowedPages.forEach(page => {
-        if (page === 'admin.html') return; // 後台按鈕另外處理
+        if (page === 'admin.html') return;
         const name = ALL_PAGES[page];
-        const isActive = window.location.pathname.includes(page) ? "active" : "";
-        menuHtml += `<a href="${page}" class="nav-link ${isActive}">${name}</a>`;
+        if (!name) return;
+
+        const isActive = currentPage === page ? "active" : "";
+        const linkHtml = `<a href="${page}" class="nav-link ${isActive}" ${isActive ? 'aria-current="page"' : ''}>${name}</a>`;
+        if (OTHER_PAGES.includes(page)) otherLinks.push(linkHtml);
+        else menuHtml += linkHtml;
     });
 
-    // 如果是管理員，額外加入後台按鈕
+    const otherIsActive = OTHER_PAGES.includes(currentPage);
+    const otherMenuHtml = otherLinks.length
+        ? `<details class="nav-dropdown" ${otherIsActive ? 'open' : ''}>
+                <summary class="nav-link ${otherIsActive ? 'active' : ''}">其他 <span aria-hidden="true">▾</span></summary>
+                <div class="nav-dropdown-menu">${otherLinks.join("")}</div>
+           </details>`
+        : "";
+
     let adminBtnHtml = "";
     if (role === 'admin') {
-        const isActive = window.location.pathname.includes('admin.html') ? "active" : "";
-        // 使用紅色按鈕區隔
-        adminBtnHtml = `<a href="admin.html" class="nav-link ${isActive}" style="background:#dc3545;color:white;">⚙️ 後台管理</a>`;
+        const isActive = currentPage === 'admin.html' ? "active" : "";
+        adminBtnHtml = `<a href="admin.html" class="nav-link admin-nav-link ${isActive}" ${isActive ? 'aria-current="page"' : ''}>⚙️ 後台管理</a>`;
     }
 
     navPlaceholder.innerHTML = `
         <style>
-            .navbar { background: #333; padding: 10px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-            .nav-link { color: #ccc; text-decoration: none; font-size: 0.95rem; padding: 6px 12px; border-radius: 5px; transition: 0.2s; white-space: nowrap; font-family: "Microsoft JhengHei", sans-serif; }
-            .nav-link:hover { background: #555; color: white; }
-            .nav-link.active { background: #007bff; color: white; font-weight: bold; }
+            .navbar { background: #333; padding: 10px 15px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2); position: relative; z-index: 1001; }
+            .navbar .nav-link { color: #ccc; text-decoration: none; font-size: 0.95rem; padding: 6px 12px; border: 0; border-radius: 5px; transition: 0.2s; white-space: nowrap; font-family: "Microsoft JhengHei", sans-serif; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+            .navbar .nav-link:hover, .nav-dropdown[open] > summary { background: #555; color: white; }
+            .navbar .nav-link.active { background: #007bff; color: white; font-weight: bold; }
+            .nav-dropdown { position: relative; }
+            .nav-dropdown > summary { list-style: none; }
+            .nav-dropdown > summary::-webkit-details-marker { display: none; }
+            .nav-dropdown-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; padding: 6px; background: #333; border: 1px solid #555; border-radius: 6px; box-shadow: 0 8px 18px rgba(0,0,0,.25); flex-direction: column; gap: 2px; z-index: 1002; }
+            .nav-dropdown[open] .nav-dropdown-menu { display: flex; }
+            .nav-dropdown-menu .nav-link { width: 100%; box-sizing: border-box; }
             .user-info { margin-left: auto; color: white; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; font-family: "Microsoft JhengHei", sans-serif; }
             .btn-logout { background: transparent; border: 1px solid #666; color: #aaa; cursor: pointer; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; transition:0.3s; }
             .btn-logout:hover { border-color: #f8d7da; color: #f8d7da; }
             @media (max-width: 768px) {
                 .navbar { padding: 8px; gap: 5px; }
-                .nav-link { font-size: 0.85rem; padding: 5px 8px; flex: 1; text-align: center; }
+                .navbar > .nav-link, .nav-dropdown > summary { font-size: 0.85rem; padding: 5px 8px; flex: 1; justify-content: center; text-align: center; }
+                .nav-dropdown { flex: 1; }
+                .nav-dropdown-menu { min-width: min(240px, 90vw); }
                 .user-info { width: 100%; justify-content: flex-end; margin-top: 5px; border-top: 1px solid #444; padding-top: 5px; }
             }
+            @media print { #navbar-placeholder { display: none !important; } }
         </style>
         <div class="navbar">
             ${menuHtml}
+            ${otherMenuHtml}
             ${adminBtnHtml}
             <div class="user-info">
-                <span>👤 ${userName}</span>
+                <span>👤 ${typeof escapeHtml === "function" ? escapeHtml(userName) : String(userName || "")}</span>
                 <button class="btn-logout" onclick="logout()">登出</button>
             </div>
         </div>
     `;
 }
-
 function logout() {
     auth.signOut().then(() => location.href = 'login.html');
 }

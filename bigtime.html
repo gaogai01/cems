@@ -77,8 +77,12 @@
             transform: scale(0.98);
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="p-2 md:p-4 min-h-screen">
+    <div id="navbar-placeholder" class="no-print"></div>
     <div class="max-w-7xl mx-auto">
         <!-- Header Section -->
         <header class="mb-4">
@@ -456,5 +460,6 @@
 
         window.onload = fetchData;
     </script>
+    <script src="common.js"></script>
 </body>
 </html>

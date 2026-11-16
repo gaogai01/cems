@@ -395,13 +395,14 @@
         let thead = document.createElement('thead');
         let trHead = document.createElement('tr');
         trHead.innerHTML = `<th>機組</th><th>檢驗日期</th>`;
-        for (let i = 2; i < rawData.headers.length - 1; i++) { 
-            const cnName = rawData.cnHeaders[i] || rawData.headers[i];
-            const unit = rawData.units[i] ? `<span class="unit-small">(${rawData.units[i]})</span>` : '';
+        const visibleColumns = getOilColumnIndices(isEG);
+        visibleColumns.forEach(i => {
+            const meta = getOilColumnMeta(i, isEG);
+            const unit = meta.unit ? '<span class="unit-small">(' + meta.unit + ')</span>' : '';
             const th = document.createElement('th');
-            th.innerHTML = `${cnName} ${unit}`;
+            th.innerHTML = meta.name + ' ' + unit;
             trHead.appendChild(th);
-        }
+        });
         // ▼ 移除判定欄位表頭
         // const thDiag = document.createElement('th'); thDiag.innerText = "判定"; trHead.appendChild(thDiag);
         
@@ -427,7 +428,7 @@
             if (!targetRow) {
                 let tr = document.createElement('tr');
                 tr.innerHTML = `<td>${key}</td><td style="color:#ccc">無數據</td>`;
-                for(let k=2; k<rawData.headers.length - 1; k++) tr.innerHTML += `<td>-</td>`;
+                visibleColumns.forEach(() => { tr.innerHTML += '<td>-</td>'; });
                 tbody.appendChild(tr);
                 return;
             }
@@ -459,16 +460,16 @@
             tdDate.innerText = dateStr;
             tr.appendChild(tdDate);
 
-            for (let i = 2; i < rawData.headers.length - 1; i++) {
+            visibleColumns.forEach(i => {
                 let td = document.createElement('td');
                 let val = targetRow[i];
                 if (!checkStatus(val, i, isEG)) {
                     td.className = "val-limit";
-                    td.title = `標準: ${getLimitText(i, isEG)}`;
+                    td.title = '標準: ' + getLimitText(i, isEG);
                 }
                 td.innerText = val;
                 tr.appendChild(td);
-            }
+            });
             // ▼ 移除判定結果的 td
             // let tdDiag = document.createElement('td'); ... tr.appendChild(tdDiag);
 
@@ -513,23 +514,24 @@
         for(let i=historyRows.length; i<3; i++) tableHtml += `<th style="background:var(--table-head-bg);">-</th>`;
         tableHtml += `</tr></thead><tbody>`;
 
-        for(let i=2; i<rawData.headers.length - 1; i++) {
-            const cnName = rawData.cnHeaders[i] || rawData.headers[i];
-            const unit = rawData.units[i] || "";
-            let limitText = getLimitText(i, isEG);
-            
-            tableHtml += `<tr><td style="text-align:left; font-weight:bold;">${cnName} <span style="color:#888;font-size:0.8em">(${unit})</span></td><td style="color:#666;font-size:0.85em">${limitText}</td>`;
+        getOilColumnIndices(isEG).forEach(i => {
+            const meta = getOilColumnMeta(i, isEG);
+            const unitHtml = meta.unit ? ' <span style="color:#888;font-size:0.8em">(' + meta.unit + ')</span>' : '';
+            const limitText = getLimitText(i, isEG);
+
+            tableHtml += '<tr><td style="text-align:left; font-weight:bold;">' + meta.name + unitHtml + '</td><td style="color:#666;font-size:0.85em">' + limitText + '</td>';
             for(let j=0; j<3; j++) {
                 const isLatest = (j === 0) ? 'col-latest' : '';
                 if (j < historyRows.length) {
                     const val = historyRows[j][i];
                     const valClass = checkStatus(val, i, isEG) ? "" : "val-limit";
-                    // 詳細表格加上底線樣式
-                    tableHtml += `<td class="${isLatest} ${valClass}" style="border-bottom:1px solid var(--border-color); padding:8px;">${val}</td>`;
-                } else { tableHtml += `<td class="${isLatest}" style="border-bottom:1px solid var(--border-color);"> - </td>`; }
+                    tableHtml += '<td class="' + isLatest + ' ' + valClass + '" style="border-bottom:1px solid var(--border-color); padding:8px;">' + val + '</td>';
+                } else {
+                    tableHtml += '<td class="' + isLatest + '" style="border-bottom:1px solid var(--border-color);"> - </td>';
+                }
             }
-            tableHtml += `</tr>`;
-        }
+            tableHtml += '</tr>';
+        });
         tableHtml += `</tbody></table>`;
 
         // 組合內容
@@ -562,8 +564,7 @@
         const checkboxes = document.querySelectorAll('#machineCheckboxes input:checked');
         const selectedMachines = Array.from(checkboxes).map(cb => cb.value);
         const year = document.getElementById('chartYear').value;
-        const pKey = document.getElementById('chartParam').value;
-        const pIdx = rawData.headers.indexOf(pKey);
+        const pIdx = Number.parseInt(document.getElementById('chartParam').value, 10);
 
         if (selectedMachines.length === 0 || pIdx < 0) {
             if (chartInstance) {

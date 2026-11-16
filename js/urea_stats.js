@@ -45,12 +45,16 @@ function initUreaChart() {
         }
         if(statusDiv) statusDiv.innerHTML = '';
         
-        allUreaData = data; 
-        
+        const sortedData = Array.isArray(data)
+            ? data.filter(item => item && item.date).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)))
+            : [];
+        allUreaData = sortedData.slice(-7);
+
         if (allUreaData.length > 0) {
             currentDataIndex = allUreaData.length - 1;
-            renderStackedChart(data);
-            updateDetailView(); 
+            if (statusDiv) statusDiv.innerText = `顯示最近 ${allUreaData.length} 日`;
+            renderStackedChart(allUreaData);
+            updateDetailView();
         } else {
             if(statusDiv) statusDiv.innerHTML = '無數據';
         }

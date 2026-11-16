@@ -52,6 +52,39 @@ function changeDate(offset) {
     updateChart();
 }
 
+/**
+ * 頁面登入並完成儀表板初始化後，自動載入今日液位曲線。
+ * 只初始化一次；保留使用者已設定的日期與分類。
+ */
+function initializeChart() {
+    if (window.chartInitialized) return;
+
+    const dateInput = document.getElementById('chartEndDate');
+    const categorySelect = document.getElementById('categorySelect');
+    const checkboxContainer = document.getElementById('tagCheckboxes');
+    if (!dateInput || !categorySelect || !checkboxContainer) return;
+
+    window.chartInitialized = true;
+
+    if (!dateInput.value) {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
+    }
+
+    if (!categorySelect.value) categorySelect.value = 'level';
+    renderCheckboxes();
+
+    if (getHistoryData()) {
+        autoSelectDefault();
+        updateChart();
+    } else {
+        fetchHistory();
+    }
+}
+
 // ============================================================
 // 3. 視窗控制
 // ============================================================

@@ -104,7 +104,7 @@ function saveCardSettings(event) {
     }
 
     closeCardSettings();
-    if (window.currentDashboardData) renderDashboard(window.currentDashboardData, true);
+    if (window.currentDashboardData) renderDashboard(window.currentDashboardData, false);
 }
 
 
@@ -321,7 +321,7 @@ function checkAlarm(colName, value) {
     if (isFlow) {
         if (val > 0) {
             // 如果沒有設警報，或者數值未達警告值，則顯示運轉中
-            if (!rule || (val < rule.warn)) return "status-running";
+            if (!rule || getNumberOrNull(rule.warn) === null || val < Number(rule.warn)) return "status-running";
         }
     }
 

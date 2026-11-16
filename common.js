@@ -42,6 +42,18 @@ const ALL_PAGES = {
 };
 const OTHER_PAGES = ['meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'];
 
+const PAGE_SHEETS = {
+    'index.html':   { title: '廢水處理室資料庫', url: 'https://docs.google.com/spreadsheets/d/1Zbpcze9d3FD1fhIFXSAx44Qc9wQXLzpJxRiBwO5vVz0/edit?usp=sharing' },
+    'cems.html':    { title: 'CEMS數據', url: 'https://docs.google.com/spreadsheets/d/1TX_B1yOiqN-f2ofCAiOHp2uc1sqXhZU50j_LtHprGzM/edit?usp=sharing' },
+    'urea.html':    { title: '每日巡查紀錄表', url: 'https://docs.google.com/spreadsheets/d/1AKWbhgRP7UxDJ2a3ynEqTefjuT1ARd-VDmKSr5gsevk/edit?usp=sharing' },
+    'oil.html':     { title: '綜研所滑油化驗報告', url: 'https://docs.google.com/spreadsheets/d/13FMsoQ8zwlC8IYOXxK9uGMSFuLmh0pL7ERHEUgvLz5s/edit?usp=sharing' },
+    'daily.html':   { title: '每日巡查紀錄表', url: 'https://docs.google.com/spreadsheets/d/1AKWbhgRP7UxDJ2a3ynEqTefjuT1ARd-VDmKSr5gsevk/edit?usp=sharing' },
+    'monthly.html': { title: '每月環化紀錄表', url: 'https://docs.google.com/spreadsheets/d/1rTTUmA6R1ZVH7tjNFZM-L6Cykiv8L2kVRPhDLXktv1o/edit?usp=sharing' },
+    'meet.html':    { title: '每月環化紀錄表', url: 'https://docs.google.com/spreadsheets/d/1rTTUmA6R1ZVH7tjNFZM-L6Cykiv8L2kVRPhDLXktv1o/edit?usp=sharing' },
+    'plan.html':    { title: '115年尖山發電廠發包進度表', url: 'https://docs.google.com/spreadsheets/d/1M7A5w3DkfD2SOji5slo0iN2ChQFcgprQiInhjSIzf0Q/edit?usp=sharing' },
+    'bigtime.html': { title: '尖山發電廠機組運轉時數', url: 'https://docs.google.com/spreadsheets/d/1-6NiRVNfLzVaqr6775STcrjdy9gyKiHHU1jNewiyUiY/edit?usp=sharing' }
+};
+
 // ============================================================
 // 3. 權限檢查 & 心跳機制
 // ============================================================
@@ -149,6 +161,8 @@ function renderNavbar(userName, role, allowedPages) {
             .nav-dropdown-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; padding: 6px; background: #333; border: 1px solid #555; border-radius: 6px; box-shadow: 0 8px 18px rgba(0,0,0,.25); flex-direction: column; gap: 2px; z-index: 1002; }
             .nav-dropdown[open] .nav-dropdown-menu { display: flex; }
             .nav-dropdown-menu .nav-link { width: 100%; box-sizing: border-box; }
+            .sheet-edit-link { background: #198754 !important; color: #fff !important; font-weight: 600; }
+            .sheet-edit-link:hover { background: #157347 !important; }
             .user-info { margin-left: auto; color: white; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; font-family: "Microsoft JhengHei", sans-serif; }
             .btn-logout { background: transparent; border: 1px solid #666; color: #aaa; cursor: pointer; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; transition:0.3s; }
             .btn-logout:hover { border-color: #f8d7da; color: #f8d7da; }
@@ -165,6 +179,7 @@ function renderNavbar(userName, role, allowedPages) {
             ${menuHtml}
             ${otherMenuHtml}
             ${adminBtnHtml}
+            ${PAGE_SHEETS[currentPage] ? `<a class="nav-link sheet-edit-link" href="${PAGE_SHEETS[currentPage].url}" target="_blank" rel="noopener noreferrer" title="開啟來源試算表：${PAGE_SHEETS[currentPage].title}">📊 編輯來源試算表</a>` : ""}
             <div class="user-info">
                 <span>👤 ${typeof escapeHtml === "function" ? escapeHtml(userName) : String(userName || "")}</span>
                 <button class="btn-logout" onclick="logout()">登出</button>

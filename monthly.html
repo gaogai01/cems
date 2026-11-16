@@ -376,7 +376,8 @@
                 const incomplete = stats.recordCount < stats.expectedDays;
                 aggregateNote.textContent = "月累計自每日紀錄自動彙整：" + stats.recordCount + "/" + stats.expectedDays +
                     " 天（統計至 " + stats.year + "/" + targetMonth + "/" + stats.latestDay + "）" +
-                    (incomplete ? "；每日資料尚未完整，合計僅包含已登錄紀錄。" : "。");
+                    (incomplete ? "；每日資料尚未完整，合計僅包含已登錄紀錄。" : "。") +
+                    "回收水流量及月檢數據沿用月表資料。";
                 aggregateNote.style.background = incomplete ? "#fff3cd" : "#e8f5e9";
                 aggregateNote.style.color = incomplete ? "#805b00" : "#256029";
             } else if (window.dailyAggregationUnavailable) {

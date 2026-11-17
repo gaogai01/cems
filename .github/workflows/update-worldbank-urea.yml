@@ -2,7 +2,7 @@ name: Update urea price and USD exchange rate
 
 on:
   schedule:
-    - cron: "17 10 * * *"
+    - cron: "17 14 * * *"
   workflow_dispatch:
   push:
     paths:

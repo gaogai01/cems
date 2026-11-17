@@ -112,15 +112,15 @@
                 <td class="label">1. 國際報價</td>
                 <td class="value">
                     <input type="number" id="usdPrice" value="" placeholder="載入中" class="input-usd" oninput="markPriceManual(); updatePrice()"> 
-                    <span style="font-size:0.8rem;">USD/頓</span>
+                    <span style="font-size:0.8rem;">USD/公噸</span>
                 </td>
             </tr>
             <tr><td class="label">2. 匯率</td><td class="value"><span id="exchangeRate">32.890</span><br><small id="exchangeRateMeta" style="font-weight:normal;color:#666;">臺銀即期賣出參考（2026-11-13）</small></td></tr>
-            <tr style="background-color: #f1f3f5;"><td class="label" style="font-weight:bold;">➡ 原料成本</td><td class="value"><span id="rawCost">10.6</span> <small>元/kg</small></td></tr>
+            <tr style="background-color: #f1f3f5;"><td class="label" style="font-weight:bold;">➡ 原料成本</td><td class="value"><span id="rawCost">—</span> <small>元/kg</small></td></tr>
             <tr><td class="label">+ 海運 (東南亞-台灣)</td><td class="value">+ <span id="seaFreight">1.5</span></td></tr>
             <tr><td class="label">+ 轉運 (台灣-澎湖)</td><td class="value">+ <span id="localFreight">2.5</span></td></tr>
-            <tr><td class="label">+ 關稅/保險/雜支</td><td class="value">+ <span id="taxMisc">1.6</span></td></tr>
-            <tr class="total-row"><td class="label">預估到廠價</td><td class="value"><span id="finalPrice">16.1</span> <small>元/kg</small></td></tr>
+            <tr><td class="label">+ 關稅/保險/雜支</td><td class="value">+ <span id="taxMisc">—</span></td></tr>
+            <tr class="total-row"><td class="label">預估到廠價</td><td class="value"><span id="finalPrice">—</span> <small>元/kg</small></td></tr>
         </table>
         <p id="ureaPriceMeta" style="font-size:0.78rem; color:#666; line-height:1.5; margin:10px 0 0;">正在載入 Trading Economics 日報價…</p>
         <p style="font-size:0.75rem; color:#777; margin:4px 0 0;">報價來源：<a href="https://tradingeconomics.com/commodity/urea" target="_blank" rel="noopener noreferrer">Trading Economics 尿素日報價（USD/公噸）</a>。成本計算使用日報價；<a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener noreferrer">World Bank 月均價</a>僅供比較。</p>
@@ -264,7 +264,8 @@
     }
 
     function updatePrice() {
-        const ureaUsd = parseFloat(document.getElementById('usdPrice').value) || 0;
+        const ureaUsd = parseFloat(document.getElementById('usdPrice').value);
+        if (!Number.isFinite(ureaUsd) || ureaUsd <= 0) return;
         const rawCost = (ureaUsd * exchangeRate) / 1000; 
         const totalCost = rawCost + 1.5 + 2.5 + (rawCost * 0.15);
         document.getElementById('rawCost').innerText = rawCost.toFixed(1);

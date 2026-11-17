@@ -67,6 +67,18 @@ const ALL_PAGES = {
 };
 const OTHER_PAGES = ['meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'];
 
+const PAGE_SHEETS = {
+    'index.html':   { title: '廢水處理室資料庫', url: 'https://docs.google.com/spreadsheets/d/1Zbpcze9d3FD1fhIFXSAx44Qc9wQXLzpJxRiBwO5vVz0/edit?usp=sharing' },
+    'cems.html':    { title: 'CEMS數據', url: 'https://docs.google.com/spreadsheets/d/1TX_B1yOiqN-f2ofCAiOHp2uc1sqXhZU50j_LtHprGzM/edit?usp=sharing' },
+    'urea.html':    { title: '每日巡查紀錄表', url: 'https://docs.google.com/spreadsheets/d/1AKWbhgRP7UxDJ2a3ynEqTefjuT1ARd-VDmKSr5gsevk/edit?usp=sharing' },
+    'oil.html':     { title: '綜研所滑油化驗報告', url: 'https://docs.google.com/spreadsheets/d/13FMsoQ8zwlC8IYOXxK9uGMSFuLmh0pL7ERHEUgvLz5s/edit?usp=sharing' },
+    'daily.html':   { title: '每日巡查紀錄表', url: 'https://docs.google.com/spreadsheets/d/1AKWbhgRP7UxDJ2a3ynEqTefjuT1ARd-VDmKSr5gsevk/edit?usp=sharing' },
+    'monthly.html': { title: '每月環化紀錄表', url: 'https://docs.google.com/spreadsheets/d/1rTTUmA6R1ZVH7tjNFZM-L6Cykiv8L2kVRPhDLXktv1o/edit?usp=sharing' },
+    'meet.html':    { title: '每月環化紀錄表', url: 'https://docs.google.com/spreadsheets/d/1rTTUmA6R1ZVH7tjNFZM-L6Cykiv8L2kVRPhDLXktv1o/edit?usp=sharing' },
+    'plan.html':    { title: '115年尖山發電廠發包進度表', url: 'https://docs.google.com/spreadsheets/d/1M7A5w3DkfD2SOji5slo0iN2ChQFcgprQiInhjSIzf0Q/edit?usp=sharing' },
+    'bigtime.html': { title: '尖山發電廠機組運轉時數', url: 'https://docs.google.com/spreadsheets/d/1-6NiRVNfLzVaqr6775STcrjdy9gyKiHHU1jNewiyUiY/edit?usp=sharing' }
+};
+
 // ============================================================
 // 3. 權限檢查 & 心跳機制
 // ============================================================

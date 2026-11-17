@@ -2,9 +2,9 @@
   "source": "Trading Economics",
   "sourceUrl": "https://tradingeconomics.com/commodity/urea",
   "latest": {
-    "value": 420,
+    "value": 420.0,
     "date": "2026-11-16",
     "unit": "USD/T"
   },
-  "fetchedAt": "2026-11-17T14:20:16+00:00"
-}
+  "fetchedAt": "2026-11-17T22:39:12+00:00"
+}\n

@@ -22,7 +22,7 @@ def main():
     with urlopen(request, timeout=30) as response:
         page = response.read().decode("utf-8", "replace")
 
-    chart_match = re.search(r"TEChartsMeta\\s*=\\s*(\\[.*?\\]);", page, re.DOTALL)
+    chart_match = re.search(r"TEChartsMeta\s*=\s*(\[.*?\]);", page, re.DOTALL)
     if not chart_match:
         raise RuntimeError("Trading Economics chart data was not found")
 
@@ -36,13 +36,13 @@ def main():
 
     # The page's dataset range identifies the date of the latest published daily observation.
     date_match = re.search(
-        r"Urea - Historical Dataset \\(\\d{4}-\\d{2}-\\d{2}/(\\d{4}-\\d{2}-\\d{2})\\)",
+        r"Urea - Historical Dataset \(\d{4}-\d{2}-\d{2}/(\d{4}-\d{2}-\d{2})\)",
         page,
     )
     if not date_match:
         # Fallback to the page's summary, e.g. "on November 16, 2026".
         summary_match = re.search(
-            r"Urea fell to [\\d,.]+ USD/T on ([A-Za-z]+ \\d{1,2}, \\d{4})",
+            r"Urea fell to [\d,.]+ USD/T on ([A-Za-z]+ \d{1,2}, \d{4})",
             page,
         )
         if not summary_match:
@@ -63,7 +63,7 @@ def main():
     }
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Updated Trading Economics urea: {price:g} USD/T ({observed_date})")
 
 

@@ -1,42 +1,49 @@
 #!/usr/bin/env python3
 """Fetch the latest Bank of Taiwan USD spot-selling reference rate."""
 
-from html.parser import HTMLParser
+import csv
+from datetime import date
+import io
 import json
 from pathlib import Path
 import re
 from urllib.request import Request, urlopen
 
-SOURCE_URL = "https://rate.bot.com.tw/xrt/quote/ltm/USD/spot"
+# 臺銀官方匯率 CSV，欄位順序：日期、幣別、現金買入/賣出、即期買入/賣出。
+SOURCE_URL = "https://rate.bot.com.tw/xrt/flcsv/0/L3M/USD"
 OUTPUT_PATH = Path("data/bot_usd_twd.json")
 
 
-class TableParser(HTMLParser):
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.rows = []
-        self.row = None
-        self.cell = None
+def parse_rate(page: str):
+    for row in csv.reader(io.StringIO(page)):
+        if len(row) < 6:
+            continue
 
-    def handle_starttag(self, tag, attrs):
-        tag = tag.lower()
-        if tag == "tr":
-            self.row = []
-        elif tag in ("td", "th") and self.row is not None:
-            self.cell = []
+        date_text = row[0].strip().lstrip("\ufeff")
+        currency = row[1].strip()
+        date_match = re.fullmatch(r"(\d{4})/(\d{1,2})/(\d{1,2})", date_text)
+        if not date_match:
+            continue
+        if "USD" not in currency.upper() and not any(word in currency for word in ("美金", "美元")):
+            continue
 
-    def handle_data(self, data):
-        if self.cell is not None:
-            self.cell.append(data)
+        try:
+            spot_sell = float(row[5].replace(",", "").strip())
+        except (ValueError, IndexError):
+            continue
+        if spot_sell <= 0:
+            continue
 
-    def handle_endtag(self, tag):
-        tag = tag.lower()
-        if tag in ("td", "th") and self.cell is not None:
-            self.row.append(" ".join("".join(self.cell).split()))
-            self.cell = None
-        elif tag == "tr" and self.row is not None:
-            self.rows.append(self.row)
-            self.row = None
+        year, month, day = map(int, date_match.groups())
+        return {
+            "source": "臺灣銀行營業時間牌告匯率",
+            "sourceUrl": SOURCE_URL,
+            "currency": "USD/TWD",
+            "rateType": "即期賣出",
+            "rateDate": date(year, month, day).isoformat(),
+            "rate": spot_sell,
+        }
+    return None
 
 
 def main():
@@ -45,40 +52,15 @@ def main():
         headers={"User-Agent": "CEMS-USD-TWD-Reference-Rate/1.0"},
     )
     with urlopen(request, timeout=45) as response:
-        page = response.read().decode("utf-8", errors="replace")
+        page = response.read().decode("utf-8-sig", errors="replace")
 
-    parser = TableParser()
-    parser.feed(page)
+    result = parse_rate(page)
+    if result is None:
+        raise RuntimeError("Could not locate the latest USD spot-selling rate in Bank of Taiwan CSV.")
 
-    for row in parser.rows:
-        if len(row) < 6:
-            continue
-        date_match = re.fullmatch(r"(\d{4})/(\d{2})/(\d{2})", row[0].strip())
-        currency = row[1].strip()
-        if not date_match or ("USD" not in currency.upper() and "美金" not in currency):
-            continue
-        try:
-            spot_sell = float(row[5].replace(",", "").strip())
-        except ValueError:
-            continue
-        if spot_sell <= 0:
-            continue
-
-        year, month, day = date_match.groups()
-        result = {
-            "source": "臺灣銀行營業時間牌告匯率",
-            "sourceUrl": SOURCE_URL,
-            "currency": "USD/TWD",
-            "rateType": "即期賣出",
-            "rateDate": f"{year}-{month}-{day}",
-            "rate": spot_sell,
-        }
-        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        OUTPUT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"Updated BOT USD/TWD spot sell: {result['rateDate']} = {result['rate']}")
-        return
-
-    raise RuntimeError("Could not locate the latest USD spot-selling rate on the Bank of Taiwan page.")
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"Updated BOT USD/TWD spot sell: {result['rateDate']} = {result['rate']}")
 
 
 if __name__ == "__main__":

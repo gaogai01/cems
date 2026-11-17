@@ -1,3 +1,16 @@
+// Apply the shared CEMS favicon across the dashboard pages.
+(function setCemsFavicon() {
+    const href = new URL('favicon.svg?v=20261117', document.baseURI).href;
+    let icon = document.querySelector('link[rel~="icon"]');
+    if (!icon) {
+        icon = document.createElement('link');
+        icon.rel = 'icon';
+        icon.type = 'image/svg+xml';
+        document.head.appendChild(icon);
+    }
+    icon.href = href;
+})();
+
 // ============================================================
 // 1. Firebase 設定 (請填入您的設定)
 // ============================================================

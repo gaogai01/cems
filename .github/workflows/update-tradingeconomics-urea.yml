@@ -1,9 +1,6 @@
 name: Update Trading Economics urea price
 
 on:
-  schedule:
-    # 22:45 Taiwan time, Monday to Friday
-    - cron: '45 14 * * 1-5'
   workflow_dispatch:
 
 permissions:

@@ -1,0 +1,10 @@
+{
+  "source": "Trading Economics",
+  "sourceUrl": "https://tradingeconomics.com/commodity/urea",
+  "latest": {
+    "value": 420,
+    "date": "2026-11-16",
+    "unit": "USD/T"
+  },
+  "fetchedAt": "2026-11-17T22:00:00+08:00"
+}

@@ -192,7 +192,6 @@
 
     function startApp() {
         updatePrice();
-        loadTradingEconomicsUreaPrice();
         loadBotUsdTwdRate();
         initConcChart();
         predictStock();
@@ -236,31 +235,8 @@
     async function loadTradingEconomicsUreaPrice(force = false) {
         if (force) isManualPrice = false;
         const meta = document.getElementById('ureaPriceMeta');
-        if (meta) meta.textContent = '正在更新 Trading Economics 日報價…';
-        try {
-            const response = await fetch('data/tradingeconomics_urea.json?ts=' + Date.now(), { cache: 'no-store' });
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-            const payload = await response.json();
-            const latest = payload && payload.latest;
-            if (!latest || !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(latest.date || '')) ||
-                !Number.isFinite(Number(latest.value)) || Number(latest.value) <= 0 ||
-                String(latest.unit || '').toUpperCase() !== 'USD/T') {
-                throw new Error('資料格式錯誤');
-            }
-            if (!isManualPrice) {
-                document.getElementById('usdPrice').value = Number(latest.value).toFixed(2);
-                updatePrice();
-            }
-            if (meta) {
-                const value = Number(latest.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const manualNote = isManualPrice ? '（目前使用手動輸入值）' : '';
-                const fetched = payload.fetchedAt ? '；同步時間 ' + payload.fetchedAt : '';
-                meta.textContent = 'Trading Economics 日報價：USD ' + value + '/公噸；報價日期 ' + latest.date + fetched + manualNote;
-            }
-        } catch (error) {
-            if (meta) meta.textContent = '無法取得 Trading Economics 日報價，請稍後按「重新載入資料」重試；成本不會自動改用其他基準價。';
-            console.error('Trading Economics urea price load failed:', error);
-        }
+        if (meta) meta.textContent = '正在從每日巡查紀錄表讀取 Trading Economics 日報價…';
+        await fetchUreaInventoryData(force);
     }
 
     function updatePrice() {
@@ -399,7 +375,7 @@
         table.innerHTML = `<tr>${rowDates.join('')}</tr><tr>${rowWeeks.join('')}</tr><tr>${rowStocks.join('')}</tr><tr>${rowStatus.join('')}</tr>`;
     }
 
-    async function fetchUreaInventoryData() {
+    async function fetchUreaInventoryData(force = false) {
         const meta = document.getElementById('ureaInventoryMeta');
         try {
             const user = auth.currentUser;
@@ -421,6 +397,23 @@
             }
             document.getElementById('currentStock').value = stock;
             document.getElementById('dailyUsage').value = average.toFixed(2);
+            const latest = payload.latestUreaPrice;
+            const priceMeta = document.getElementById('ureaPriceMeta');
+            if (latest && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(latest.date || '')) &&
+                Number.isFinite(Number(latest.value)) && Number(latest.value) > 0 &&
+                String(latest.unit || '').toUpperCase() === 'USD/T') {
+                if (force) isManualPrice = false;
+                if (!isManualPrice) {
+                    document.getElementById('usdPrice').value = Number(latest.value).toFixed(2);
+                    updatePrice();
+                }
+                const value = Number(latest.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const manualNote = isManualPrice ? '（目前使用手動輸入值）' : '';
+                const fetched = latest.fetchedAt ? '；同步時間 ' + latest.fetchedAt : '';
+                if (priceMeta) priceMeta.textContent = '資料來源：每日巡查紀錄表／Trading Economics；日報價 USD ' + value + '/公噸；報價基準日 ' + latest.date + fetched + manualNote;
+            } else if (priceMeta) {
+                priceMeta.textContent = '試算表尚無有效尿素報價；請稍後重新載入資料。';
+            }
             predictStock();
             if (meta) {
                 meta.textContent = '資料來源：每日巡查紀錄表；庫存基準日 ' +
@@ -430,6 +423,8 @@
             renderUreaUsageChart(payload.usage || []);
         } catch (error) {
             if (meta) meta.textContent = '無法讀取試算表資料，請確認登入權限或稍後重試；目前保留手動輸入值。';
+            const priceMeta = document.getElementById('ureaPriceMeta');
+            if (priceMeta) priceMeta.textContent = '無法從每日巡查紀錄表讀取國際尿素報價；請稍後重新載入。';
             console.error('Urea inventory sheet load failed:', error);
         }
     }

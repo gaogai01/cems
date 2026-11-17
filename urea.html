@@ -105,13 +105,13 @@
 <div class="container">
 
     <div class="card">
-        <h2>國際尿素成本 <button onclick="loadWorldBankUreaPrice(true); loadBotUsdTwdRate()" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">重新載入資料</button></h2>
-        <p style="font-size:0.8rem; color:#666; margin-bottom:8px;">* 世界銀行尿素月均價（USD/公噸，可手動調整）：</p>
+        <h2>國際尿素成本 <button onclick="loadTradingEconomicsUreaPrice(true); loadBotUsdTwdRate()" style="font-size:0.8rem; cursor:pointer; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff;">重新載入資料</button></h2>
+        <p style="font-size:0.8rem; color:#666; margin-bottom:8px;">* Trading Economics 尿素日報價（USD/公噸，可手動調整）：</p>
         <table class="cost-table">
             <tr>
                 <td class="label">1. 國際報價</td>
                 <td class="value">
-                    <input type="number" id="usdPrice" value="325" class="input-usd" oninput="markPriceManual(); updatePrice()"> 
+                    <input type="number" id="usdPrice" value="" placeholder="載入中" class="input-usd" oninput="markPriceManual(); updatePrice()"> 
                     <span style="font-size:0.8rem;">USD/頓</span>
                 </td>
             </tr>
@@ -122,8 +122,8 @@
             <tr><td class="label">+ 關稅/保險/雜支</td><td class="value">+ <span id="taxMisc">1.6</span></td></tr>
             <tr class="total-row"><td class="label">預估到廠價</td><td class="value"><span id="finalPrice">16.1</span> <small>元/kg</small></td></tr>
         </table>
-        <p id="ureaPriceMeta" style="font-size:0.78rem; color:#666; line-height:1.5; margin:10px 0 0;">正在載入世界銀行月均價…</p>
-        <p style="font-size:0.75rem; color:#777; margin:4px 0 0;">資料來源：<a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener noreferrer">World Bank 月均價（Pink Sheet）</a>；CC BY 4.0。<br><a href="https://tradingeconomics.com/commodity/urea" target="_blank" rel="noopener noreferrer">查看 Trading Economics 國際尿素日報價（USD/公噸） ↗</a></p>
+        <p id="ureaPriceMeta" style="font-size:0.78rem; color:#666; line-height:1.5; margin:10px 0 0;">正在載入 Trading Economics 日報價…</p>
+        <p style="font-size:0.75rem; color:#777; margin:4px 0 0;">報價來源：<a href="https://tradingeconomics.com/commodity/urea" target="_blank" rel="noopener noreferrer">Trading Economics 尿素日報價（USD/公噸）</a>。成本計算使用日報價；<a href="https://www.worldbank.org/en/research/commodity-markets" target="_blank" rel="noopener noreferrer">World Bank 月均價</a>僅供比較。</p>
     </div>
 
     <div class="card">
@@ -192,7 +192,7 @@
 
     function startApp() {
         updatePrice();
-        loadWorldBankUreaPrice();
+        loadTradingEconomicsUreaPrice();
         loadBotUsdTwdRate();
         initConcChart();
         predictStock();
@@ -230,41 +230,36 @@
     function markPriceManual() {
         isManualPrice = true;
         const meta = document.getElementById('ureaPriceMeta');
-        if (meta) meta.textContent = '已切換為手動報價；按「重新載入資料」可重新讀取最新同步資料。';
+        if (meta) meta.textContent = '已切換為手動報價；按「重新載入資料」可重新讀取 Trading Economics 日報價。';
     }
 
-    async function loadWorldBankUreaPrice(force = false) {
+    async function loadTradingEconomicsUreaPrice(force = false) {
         if (force) isManualPrice = false;
         const meta = document.getElementById('ureaPriceMeta');
-        if (meta) meta.textContent = '正在更新世界銀行月均價…';
+        if (meta) meta.textContent = '正在更新 Trading Economics 日報價…';
         try {
-            const response = await fetch('data/worldbank_urea.json?ts=' + Date.now(), { cache: 'no-store' });
+            const response = await fetch('data/tradingeconomics_urea.json?ts=' + Date.now(), { cache: 'no-store' });
             if (!response.ok) throw new Error('HTTP ' + response.status);
             const payload = await response.json();
             const latest = payload && payload.latest;
-            if (!latest || !/^\d{4}-\d{2}$/.test(latest.month) || !Number.isFinite(Number(latest.value)) || Number(latest.value) <= 0) {
+            if (!latest || !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(latest.date || '')) ||
+                !Number.isFinite(Number(latest.value)) || Number(latest.value) <= 0 ||
+                String(latest.unit || '').toUpperCase() !== 'USD/T') {
                 throw new Error('資料格式錯誤');
             }
             if (!isManualPrice) {
-                document.getElementById('usdPrice').value = Number(latest.value).toFixed(1);
+                document.getElementById('usdPrice').value = Number(latest.value).toFixed(2);
                 updatePrice();
             }
             if (meta) {
-                const [year, month] = latest.month.split('-');
-                const value = Number(latest.value).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                const value = Number(latest.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const manualNote = isManualPrice ? '（目前使用手動輸入值）' : '';
-                let changeNote = '';
-                if (payload.previous && Number.isFinite(Number(payload.previous.value)) && Number(payload.previous.value) > 0) {
-                    const change = Number(latest.value) - Number(payload.previous.value);
-                    const rate = change / Number(payload.previous.value) * 100;
-                    const sign = change > 0 ? '+' : '';
-                    changeNote = '；較上月 ' + sign + change.toFixed(1) + ' USD (' + sign + rate.toFixed(1) + '%)';
-                }
-                meta.textContent = '資料基準月份：' + year + '年' + Number(month) + '月；月均價 USD ' + value + '/公噸' + changeNote + manualNote;
+                const fetched = payload.fetchedAt ? '；同步時間 ' + payload.fetchedAt : '';
+                meta.textContent = 'Trading Economics 日報價：USD ' + value + '/公噸；報價日期 ' + latest.date + fetched + manualNote;
             }
         } catch (error) {
-            if (meta) meta.textContent = '無法取得最新月均價，沿用目前輸入值；可稍後按「重新載入資料」重試。';
-            console.error('World Bank urea price load failed:', error);
+            if (meta) meta.textContent = '無法取得 Trading Economics 日報價，請稍後按「重新載入資料」重試；成本不會自動改用其他基準價。';
+            console.error('Trading Economics urea price load failed:', error);
         }
     }
 

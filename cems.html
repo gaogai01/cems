@@ -188,7 +188,7 @@
         const LAT = 23.575; const LON = 119.665;
         let lastSuccessfulCemsUpdateText = null;
         const THRESHOLDS = {
-            so2: { warn: 120, limit: 133, max: 200 }, nox: { warn: 327, limit: 363, max: 400 }, opac: { warn: 8, limit: 40, max: 50 }, load: { warn: 8000, limit: 9000, max: 11000 }, urea: { warn: 200, limit: 360, max: 400 },
+            so2: { good: 50, warn: 120, limit: 133, max: 200 }, nox: { good: 247, warn: 327, limit: 363, max: 400 }, opac: { good: 4, warn: 8, limit: 40, max: 50 }, load: { warn: 8000, limit: 9000, max: 11000 }, urea: { warn: 200, limit: 360, max: 400 },
             powerCard: { max: 120000 }, unitsCard: { max: 12 }, ureaCard: { max: 50 }, aqiCard: { max: 150 }, tempCard: { max: 40 }, windCard: { max: 25 }
         };
         const GAUGE_VALUES = { aqi: [0, 0, 50, 100, 150], units: [0, 3, 9, 11, 12], urea: [0, 10, 30, 45, 50], power: [0, 30000, 70000, 110000, 120000], temp: [7, 16, 23, 28, 37], wind: [0, 3, 4, 8, 25] };
@@ -227,7 +227,7 @@
             val = parseFloat(val); if (isNaN(val)) return ""; if (!THRESHOLDS[type]) return "";
             if (val > THRESHOLDS[type].limit) return "col-limit";
             if (val > THRESHOLDS[type].warn) return "col-warn";
-            if (type === 'so2' && val < 50) return "col-good"; if (type === 'nox' && val < 247) return "col-good"; if (type === 'opac' && val < 4) return "col-good";
+            if (THRESHOLDS[type].good !== undefined && val < THRESHOLDS[type].good) return "col-good";
             return "";
         }
 
@@ -579,6 +579,36 @@
             });
         });
 
+        function appendChartThresholdLines(datasets, metricKey, startTime, endTime) {
+            const thresholds = THRESHOLDS[metricKey];
+            const config = POLLUTANT_CONFIG[metricKey];
+            if (!thresholds || !config) return;
+
+            const lineStyles = {
+                good: { label: '良好界線', color: '#29b6f6', dash: [4, 5] },
+                warn: { label: '警報值', color: '#ffea00', dash: [8, 5] },
+                limit: { label: '超標值', color: '#ff1744', dash: [2, 4] }
+            };
+            Object.keys(lineStyles).forEach(function(level) {
+                const value = thresholds[level];
+                if (!Number.isFinite(value)) return;
+                const style = lineStyles[level];
+                datasets.push({
+                    label: config.label + ' ' + style.label + ' ' + value,
+                    data: [{ x: startTime, y: value }, { x: endTime, y: value }],
+                    borderColor: style.color,
+                    backgroundColor: style.color,
+                    borderDash: style.dash,
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 0,
+                    tension: 0,
+                    fill: false
+                });
+            });
+        }
+
         // === 2. 更新圖表數據 (多選邏輯) ===
         window.updateChartFromHistory = function() {
             if (globalHistoryData.length === 0) return;
@@ -648,6 +678,7 @@
                         yAxisID: config.yAxisID || 'y' // 預設用左軸 'y'，Load 用右軸 'y1'
                     });
                     if (config.yAxisID === 'y1') useRightAxis = true;
+                    appendChartThresholdLines(datasets, key, startTime, endTime);
                 }
             });
 

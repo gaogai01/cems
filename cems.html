@@ -591,7 +591,7 @@
             });
         });
 
-        function appendChartThresholdLines(datasets, metricKey, startTime, endTime) {
+        function appendChartThresholdLines(datasets, metricKey, startTime, endTime, yAxisID = 'y') {
             const thresholds = THRESHOLDS[metricKey];
             const config = POLLUTANT_CONFIG[metricKey];
             if (!thresholds || !config) return;
@@ -616,7 +616,7 @@
                     pointHoverRadius: 0,
                     pointHitRadius: 0,
                     tension: 0,
-                    yAxisID: metricKey === 'load' || metricKey === 'urea' ? 'y1' : 'y',
+                    yAxisID: yAxisID,
                     fill: false
                 });
             });
@@ -694,7 +694,7 @@
                         tension: 0.3,
                         yAxisID: dualAxis && (key === 'urea' || key === 'load') ? 'y1' : 'y'
                     });
-                    appendChartThresholdLines(datasets, key, startTime, endTime);
+                    appendChartThresholdLines(datasets, key, startTime, endTime, dualAxis && (key === 'urea' || key === 'load') ? 'y1' : 'y');
                 }
             });
 

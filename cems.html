@@ -193,7 +193,7 @@
         };
         const GAUGE_VALUES = { aqi: [0, 0, 50, 100, 150], units: [0, 3, 9, 11, 12], urea: [0, 10, 30, 45, 50], power: [0, 30000, 70000, 110000, 120000], temp: [7, 16, 23, 28, 37], wind: [0, 3, 4, 8, 25] };
         const COLORS_4 = ['#29b6f6', '#00e676', '#ffea00', '#ff1744'];
-        let chartInstance = null; let globalHistoryData = []; let currentTotalLoadVal = 0; const BOILER_UNITS = [1, 2, 3, 4, 5, 7, 9, 11];
+        let chartInstance = null; let globalHistoryData = []; let currentTotalLoadVal = 0; let currentHighestNoxMachineId = null; let initialChartMachineSelected = false; const BOILER_UNITS = [1, 2, 3, 4, 5, 7, 9, 11];
 
         function generateGradientByValue(values, colors, max) {
             let gradientStr = 'linear-gradient(90deg, ';
@@ -286,6 +286,15 @@
             }
         }
 
+        function selectInitialChartMachineByHighestNox() {
+            if (initialChartMachineSelected || currentHighestNoxMachineId === null) return false;
+            const machineSelect = document.getElementById('chartMachine');
+            if (!machineSelect) return false;
+            machineSelect.value = String(currentHighestNoxMachineId);
+            initialChartMachineSelected = true;
+            return true;
+        }
+
         function renderTable(timestamp, rawString) {
             document.getElementById('loading').style.display = 'none'; document.getElementById('dataTable').style.display = 'table';
             lastSuccessfulCemsUpdateText = new Date(timestamp).toLocaleTimeString();
@@ -293,6 +302,8 @@
             const dataArray = rawString.split(','); const tbody = document.getElementById('tableBody'); tbody.innerHTML = "";
             const ITEMS_PER_MACHINE = 27; let runCount = 0; let boilerRunCount = 0; let totalGenLoad = 0; let totalUreaKLD = 0;
             let totals = { so2: 0, nox: 0, opac: 0, temp: 0, o2: 0, vel: 0, flow: 0, load: 0, urea: 0 };
+            let highestRunningNox = -Infinity;
+            let highestRunningNoxMachineId = null;
             
             for (let i = 0; i < 12; i++) {
                 let machineId = i + 1; let baseIndex = i * ITEMS_PER_MACHINE; if (baseIndex + 26 >= dataArray.length) break;
@@ -328,6 +339,11 @@
                 let opac_over = dataArray[baseIndex + 13];
 
                 if (statusCode === 'N') {
+                    const currentNox = Number(nox);
+                    if (nox_code !== '20' && Number.isFinite(currentNox) && currentNox >= 0 && currentNox > highestRunningNox) {
+                        highestRunningNox = currentNox;
+                        highestRunningNoxMachineId = machineId;
+                    }
                     runCount++; if (BOILER_UNITS.includes(machineId)) boilerRunCount++;
                     totals.so2 += parseFloat(so2)||0; totals.nox += parseFloat(nox)||0; totals.opac += parseFloat(opac)||0; totals.temp += parseFloat(temp)||0; totals.o2 += parseFloat(o2)||0; totals.vel += parseFloat(vel)||0; totals.flow += parseFloat(flow)||0; totals.load += parseFloat(load)||0; totals.urea += parseFloat(urea)||0;
                     totalGenLoad += parseFloat(load)||0; totalUreaKLD += (parseFloat(urea)||0) * 24 / 1000;
@@ -366,6 +382,10 @@
             }
 
             currentTotalLoadVal = totalGenLoad;
+            if (highestRunningNoxMachineId !== null) {
+                currentHighestNoxMachineId = highestRunningNoxMachineId;
+                if (selectInitialChartMachineByHighestNox() && globalHistoryData.length > 0) updateChartFromHistory();
+            }
             document.getElementById('totalLoad').innerText = totalGenLoad.toLocaleString(); updateGauge('marker-power', totalGenLoad, THRESHOLDS.powerCard.max);
             document.getElementById('runningCountVal').innerText = runCount; document.getElementById('boilerCountVal').innerText = `含鍋爐: ${boilerRunCount}`; updateGauge('marker-units', runCount, THRESHOLDS.unitsCard.max);
             document.getElementById('totalUreaVal').innerText = totalUreaKLD.toFixed(1); updateGauge('marker-urea', totalUreaKLD, THRESHOLDS.ureaCard.max);
@@ -385,6 +405,7 @@
                 if (!Array.isArray(json)) throw new Error("歷史資料格式異常");
                 globalHistoryData = json;
                 if (status) status.innerText = `歷史資料已載入 ${json.length} 筆`;
+                selectInitialChartMachineByHighestNox();
                 updateChartFromHistory();
                 calculateLoadComparison();
             } catch (error) {

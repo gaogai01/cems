@@ -104,7 +104,7 @@
     </div>
 
     <div class="control-group">
-        <label class="fw-bold">監測項目（同單位可多選）：</label>
+        <label class="fw-bold">監測項目：</label>
         <div class="checkbox-group">
             <label><input type="checkbox" class="pollutant-check" value="so2"> SO2</label>
             <label><input type="checkbox" class="pollutant-check" value="nox" checked> NOx</label>
@@ -113,7 +113,7 @@
             <label><input type="checkbox" class="pollutant-check" value="urea"> Urea</label>
             <label><input type="checkbox" class="pollutant-check" value="load"> Load</label>
         </div>
-        <small id="chartMetricHint" role="status" style="font-size:0.8rem; color:var(--text-sub);">可多選相同單位的項目</small>
+        <small id="chartMetricHint" role="status" style="font-size:0.8rem; color:var(--text-sub);">可多選相同單位；也可同時選 NOx 與尿素噴藥量或負載（雙 Y 軸）</small>
     </div>
 
     <div class="control-group">
@@ -562,20 +562,32 @@
         });
 
         const chartMetricHint = document.getElementById('chartMetricHint');
+        function isSupportedMetricSelection(keys) {
+            const units = new Set(keys.map(key => POLLUTANT_CONFIG[key].unit));
+            if (units.size <= 1) return true;
+            return keys.length === 2 && keys.includes('nox') && (keys.includes('urea') || keys.includes('load'));
+        }
+        function updateMetricHint(keys) {
+            if (!chartMetricHint) return;
+            if (keys.length === 2 && keys.includes('nox') && (keys.includes('urea') || keys.includes('load'))) {
+                const secondLabel = keys.includes('urea') ? '尿素噴藥量 (L/hr)' : '發電負載 (kW)';
+                chartMetricHint.innerText = `雙 Y 軸：NOx (ppm) ＋ ${secondLabel}`;
+            } else {
+                chartMetricHint.innerText = keys.length
+                    ? `目前圖表單位：${POLLUTANT_CONFIG[keys[0]].unit}`
+                    : '可多選相同單位；也可同時選 NOx 與尿素噴藥量或負載（雙 Y 軸）';
+            }
+        }
         document.querySelectorAll('.pollutant-check').forEach(checkbox => {
             checkbox.addEventListener('change', () => {
-                const selected = Array.from(document.querySelectorAll('.pollutant-check:checked'));
-                const units = new Set(selected.map(item => POLLUTANT_CONFIG[item.value].unit));
-                if (units.size > 1) {
+                const selectedKeys = Array.from(document.querySelectorAll('.pollutant-check:checked')).map(item => item.value);
+                if (!isSupportedMetricSelection(selectedKeys)) {
                     checkbox.checked = false;
-                    if (chartMetricHint) chartMetricHint.innerText = '不同單位不能混畫；請先取消目前選取項目。';
+                    updateMetricHint(Array.from(document.querySelectorAll('.pollutant-check:checked')).map(item => item.value));
+                    if (chartMetricHint) chartMetricHint.innerText = '跨單位雙軸目前支援 NOx＋尿素噴藥量或 NOx＋發電負載。';
                     return;
                 }
-                if (chartMetricHint) {
-                    chartMetricHint.innerText = selected.length
-                        ? `目前圖表單位：${POLLUTANT_CONFIG[selected[0].value].unit}`
-                        : '可多選相同單位的項目';
-                }
+                updateMetricHint(selectedKeys);
             });
         });
 
@@ -604,6 +616,7 @@
                     pointHoverRadius: 0,
                     pointHitRadius: 0,
                     tension: 0,
+                    yAxisID: metricKey === 'load' || metricKey === 'urea' ? 'y1' : 'y',
                     fill: false
                 });
             });
@@ -623,12 +636,16 @@
                 alert("請至少選擇一個監測項目");
                 return;
             }
-            const selectedUnits = new Set(Array.from(checkedBoxes).map(box => POLLUTANT_CONFIG[box.value].unit));
-            if (selectedUnits.size > 1) {
-                if (chartMetricHint) chartMetricHint.innerText = '不同單位不能混畫；請重新選擇。';
+            const selectedKeys = Array.from(checkedBoxes).map(box => box.value);
+            if (!isSupportedMetricSelection(selectedKeys)) {
+                if (chartMetricHint) chartMetricHint.innerText = '跨單位雙軸目前支援 NOx＋尿素噴藥量或 NOx＋發電負載。';
                 return;
             }
-            const chartUnit = POLLUTANT_CONFIG[checkedBoxes[0].value].unit;
+            const dualAxis = selectedKeys.length === 2 && selectedKeys.includes('nox') && (selectedKeys.includes('urea') || selectedKeys.includes('load'));
+            const rightMetricKey = dualAxis ? selectedKeys.find(key => key === 'urea' || key === 'load') : null;
+            const leftMetricKey = dualAxis ? 'nox' : selectedKeys[0];
+            const leftAxisLabel = POLLUTANT_CONFIG[leftMetricKey].label;
+            const rightAxisLabel = rightMetricKey ? POLLUTANT_CONFIG[rightMetricKey].label : '';
 
             // 2. 設定時間範圍
             let endTime = dateInput ? new Date(dateInput) : new Date();
@@ -643,7 +660,7 @@
             
             // 3. 準備多個 Datasets
             const datasets = [];
-            let useRightAxis = false; // 標記是否需要啟用右軸
+            const useRightAxis = dualAxis;
 
             checkedBoxes.forEach(checkbox => {
                 const key = checkbox.value;
@@ -675,18 +692,18 @@
                         pointRadius: 0,
                         pointHoverRadius: 4,
                         tension: 0.3,
-                        yAxisID: config.yAxisID || 'y' // 預設用左軸 'y'，Load 用右軸 'y1'
+                        yAxisID: dualAxis && (key === 'urea' || key === 'load') ? 'y1' : 'y'
                     });
-                    if (config.yAxisID === 'y1') useRightAxis = true;
                     appendChartThresholdLines(datasets, key, startTime, endTime);
                 }
             });
 
-            drawChart(datasets, useRightAxis, chartUnit);
+            updateMetricHint(selectedKeys);
+            drawChart(datasets, useRightAxis, leftAxisLabel, rightAxisLabel);
         };
 
-        // === 3. 繪製圖表 (支援負載右 Y 軸) ===
-        function drawChart(datasets, useRightAxis, chartUnit) {
+        // === 3. 繪製圖表 (NOx 與尿素噴藥量/負載支援雙 Y 軸) ===
+        function drawChart(datasets, useRightAxis, leftAxisLabel, rightAxisLabel) {
             const ctx = document.getElementById('historyChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
 
@@ -718,7 +735,7 @@
                             beginAtZero: true,
                             grid: { color: gridColor },
                             ticks: { color: textColor },
-                            title: { display: true, text: `數值（${chartUnit}）`, color: textColor }
+                            title: { display: true, text: leftAxisLabel, color: textColor }
                         },
                         y1: {
                             type: 'linear',
@@ -726,8 +743,8 @@
                             position: 'right',
                             beginAtZero: true,
                             grid: { drawOnChartArea: false }, // 右軸不畫網格線，避免混亂
-                            ticks: { color: '#00e676' }, // 綠色字體對應 Load
-                            title: { display: useRightAxis, text: '負載 (KW)', color: '#00e676' }
+                            ticks: { color: rightAxisLabel.includes('Urea') ? '#ff1744' : '#00e676' },
+                            title: { display: useRightAxis, text: rightAxisLabel, color: rightAxisLabel.includes('Urea') ? '#ff1744' : '#00e676' }
                         }
                     },
                     plugins: {

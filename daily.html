@@ -130,6 +130,7 @@
             const cached = JSON.parse(localStorage.getItem(DAILY_CACHE_KEY) || "null");
             if (cached && cached.payload && Array.isArray(cached.payload.data) && cached.payload.data.length) {
                 renderDailyData(cached.payload);
+                lastDataFingerprint = getDataFingerprint(cached.payload);
                 const cacheTime = cached.savedAt ? new Date(cached.savedAt) : null;
                 setDataStatus(cacheTime ? `先顯示快取資料（${cacheTime.toLocaleTimeString()}），正在更新…` : "先顯示快取資料，正在更新…");
             }
@@ -139,6 +140,10 @@
 
         fetchData();
         setInterval(() => fetchData(), 5 * 60 * 1000);
+    }
+
+    function getDataFingerprint(json) {
+        return JSON.stringify([json.headers, json.units, json.limits, json.data]);
     }
 
     function setDataStatus(message) {
@@ -173,7 +178,7 @@
             if (json.error) throw new Error(json.error);
             if (!Array.isArray(json.data) || !json.data.length) throw new Error("資料來源沒有可顯示的紀錄");
 
-            const fingerprint = JSON.stringify([json.headers, json.units, json.limits, json.data]);
+            const fingerprint = getDataFingerprint(json);
             if (fingerprint !== lastDataFingerprint) {
                 renderDailyData(json);
                 lastDataFingerprint = fingerprint;

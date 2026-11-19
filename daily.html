@@ -26,6 +26,7 @@
         <div class="header-left">
             <h2>最新數據總覽</h2>
             <span class="date-pill" id="lastDatePill">...</span>
+            <span id="dataStatus" role="status" aria-live="polite" style="font-size:0.8rem;color:#667085;"></span>
         </div>
         <div class="btn-group">
             <button class="btn-report" onclick="openReportModal()">📊 產生月報表</button>
@@ -59,9 +60,10 @@
             <select id="chartParam" onchange="updateLineChart()"></select>
             <label style="color:var(--text-main)">範圍：</label>
             <select id="timeRange" onchange="updateLineChart()">
-                <option value="720">近 30 天 (每月)</option>
-                <option value="168">近 7 天</option>
-                <option value="24">近 24 小時</option>
+                <option value="720">近 1 個月</option>
+                <option value="2160" selected>近 1 季</option>
+                <option value="4320">近半年</option>
+                <option value="8760">近 1 年</option>
             </select>
         </div>
         <div class="chart-box">
@@ -115,29 +117,85 @@
     
     let rawData = null;
     let lineChart = null;
+    let lastDataFingerprint = "";
+    let fetchInProgress = false;
+    const DAILY_CACHE_KEY = "cems_daily_records_cache_v1";
 
     function startApp() {
-        fetchData();
-        setInterval(fetchData, 60000);
         document.getElementById('logDate').valueAsDate = new Date();
-        document.getElementById('reportMonth').value = new Date().toISOString().slice(0, 7); 
+        document.getElementById('reportMonth').value = new Date().toISOString().slice(0, 7);
+
+        // 先顯示上次成功載入的資料，背景再抓最新內容，減少每次開頁的等待。
+        try {
+            const cached = JSON.parse(localStorage.getItem(DAILY_CACHE_KEY) || "null");
+            if (cached && cached.payload && Array.isArray(cached.payload.data) && cached.payload.data.length) {
+                renderDailyData(cached.payload);
+                const cacheTime = cached.savedAt ? new Date(cached.savedAt) : null;
+                setDataStatus(cacheTime ? `先顯示快取資料（${cacheTime.toLocaleTimeString()}），正在更新…` : "先顯示快取資料，正在更新…");
+            }
+        } catch (e) {
+            console.warn("讀取每日紀錄快取失敗：", e);
+        }
+
+        fetchData();
+        setInterval(() => fetchData(), 5 * 60 * 1000);
+    }
+
+    function setDataStatus(message) {
+        const status = document.getElementById('dataStatus');
+        if (status) status.textContent = message;
+    }
+
+    function renderDailyData(json) {
+        rawData = json;
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        renderAllGroups();
+        initDropdown();
+        updateLineChart();
     }
 
     async function fetchData() {
-        try {
-            const res = await fetch(API_URL + "?mode=daily");
-            const json = await res.json();
-            if (json.error) { console.error(json.error); return; }
+        if (fetchInProgress) return;
+        fetchInProgress = true;
+        const loading = document.getElementById('loading');
+        if (!rawData && loading) loading.textContent = "資料載入中…";
 
-            if (json.data && json.data.length > 0) {
-                rawData = json;
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                renderAllGroups();
-                initDropdown();
-                updateLineChart();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        try {
+            const res = await fetch(API_URL + "?mode=daily&_=" + Date.now(), {
+                cache: "no-store",
+                signal: controller.signal
+            });
+            if (!res.ok) throw new Error(`資料服務回應 ${res.status}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (!Array.isArray(json.data) || !json.data.length) throw new Error("資料來源沒有可顯示的紀錄");
+
+            const fingerprint = JSON.stringify([json.headers, json.units, json.limits, json.data]);
+            if (fingerprint !== lastDataFingerprint) {
+                renderDailyData(json);
+                lastDataFingerprint = fingerprint;
+                try {
+                    localStorage.setItem(DAILY_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), payload: json }));
+                } catch (e) {
+                    console.warn("儲存每日紀錄快取失敗：", e);
+                }
             }
-        } catch (e) { console.error("Error:", e); }
+            setDataStatus(`資料已更新 ${new Date().toLocaleTimeString()}`);
+        } catch (e) {
+            console.error("每日紀錄載入失敗：", e);
+            const message = e.name === "AbortError" ? "資料來源逾時" : (e.message || "網路連線失敗");
+            if (rawData) {
+                setDataStatus(`仍顯示上次資料；更新失敗：${message}`);
+            } else if (loading) {
+                loading.innerHTML = `資料載入失敗：${escapeHtml(message)}。<button type="button" onclick="fetchData()">重新載入</button>`;
+            }
+        } finally {
+            clearTimeout(timeoutId);
+            fetchInProgress = false;
+        }
     }
 
     function renderAllGroups() {
@@ -477,6 +535,9 @@
             let header = rawData.headers[i].trim();
             if (targetFields.includes(header)) select.innerHTML += `<option value="${i}">${header}</option>`;
         }
+        const defaultLevel = Array.from(select.options).find(option => option.textContent.trim() === "15000公秉儲水位");
+        if (defaultLevel) select.value = defaultLevel.value;
+        document.getElementById('timeRange').value = "2160";
     }
 
     function updateLineChart() {
@@ -484,7 +545,7 @@
         const labelName = rawData.headers[colIdx];
         const unit = rawData.units[colIdx] || "";
         const limit = parseFloat(rawData.limits[colIdx]);
-        const rangeHours = parseInt(document.getElementById('timeRange').value);
+        const rangeHours = parseInt(document.getElementById('timeRange').value, 10);
         const now = new Date(); const startTime = new Date(now.getTime() - rangeHours * 60 * 60 * 1000);
         const labels = []; const values = [];
         const today = new Date(); today.setHours(23, 59, 59, 999);
@@ -499,12 +560,12 @@
 
         const ctx = document.getElementById('lineChart').getContext('2d');
         if (lineChart) lineChart.destroy();
-        const datasets = [{ label: labelName, data: values, borderColor: '#007bff', backgroundColor: 'rgba(0, 123, 255, 0.1)', borderWidth: 2, pointRadius: 2, fill: true, tension: 0.1 }];
+        const datasets = [{ label: labelName, data: values, borderColor: '#007bff', backgroundColor: 'rgba(0, 123, 255, 0.1)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, fill: true, tension: 0.1 }];
         if (!isNaN(limit)) datasets.push({ label: '上限', data: new Array(labels.length).fill(limit), borderColor: '#dc3545', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false });
 
         lineChart = new Chart(ctx, {
             type: 'line', data: { labels: labels, datasets: datasets },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: {display: true, text: unit} } } }
+            options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { beginAtZero: true, title: {display: true, text: unit} } } }
         });
     }
 </script>

@@ -11,9 +11,13 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
     <link rel="stylesheet" href="css/style-cems.css">
+<style>
+.report-open-btn{padding:8px 14px;border:0;border-radius:8px;background:#1769d2;color:#fff;font-weight:700;cursor:pointer}.cems-report-modal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.68);padding:18px;overflow:auto}.cems-report-modal.is-open{display:flex;align-items:flex-start;justify-content:center}.cems-report-dialog{background:#fff;color:#25364a;border-radius:14px;width:min(1200px,100%);margin:auto;padding:20px;box-shadow:0 20px 60px #0005}.cems-report-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #d8dee8;padding-bottom:12px}.cems-report-head h2{margin:0;font-size:1.35rem}.cems-report-close{font-size:2rem;line-height:1;border:0;background:transparent;cursor:pointer;color:inherit}.cems-report-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 0}.cems-report-toolbar select,.cems-report-toolbar button{min-height:40px;padding:8px 12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#25364a}.cems-report-toolbar button{cursor:pointer;font-weight:700}.cems-report-toolbar button:disabled{opacity:.5;cursor:not-allowed}.cems-report-toolbar .cems-report-primary{background:#177245;color:#fff;border-color:#177245}.cems-report-status{padding:9px 12px;margin-bottom:10px;background:#f1f5f9;border-radius:7px;color:#334155}.cems-report-status.error{background:#fff1f2;color:#b42318}.cems-report-status.success{background:#ecfdf3;color:#067647}.cems-report-preview{overflow:auto;max-height:70vh}.cems-report-preview h3{margin:18px 0 8px}.cems-report-table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap;margin-bottom:22px}.cems-report-table th,.cems-report-table td{border:1px solid #7c8797;padding:6px 8px;text-align:center}.cems-report-table th{background:#d9eef2;font-weight:700}.cems-report-table tbody tr:nth-child(even){background:#f5f7fa}.cems-report-note{font-size:.9rem;color:#475569;margin:8px 0}@media(max-width:700px){.cems-report-modal{padding:7px}.cems-report-dialog{padding:14px}.cems-report-head h2{font-size:1.1rem}.cems-report-toolbar{display:grid;grid-template-columns:auto 1fr 1fr}.cems-report-toolbar select{min-width:0}.cems-report-toolbar button{padding:7px;font-size:.88rem}.cems-report-preview{max-height:65vh}}@media print{body.printing-cems-report *{visibility:hidden!important}body.printing-cems-report #cemsReportModal,body.printing-cems-report #cemsReportModal *{visibility:visible!important}body.printing-cems-report #cemsReportModal{display:block!important;position:absolute;inset:0;background:#fff;padding:0;overflow:visible}body.printing-cems-report .cems-report-dialog{width:100%;max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0}body.printing-cems-report .cems-report-toolbar,body.printing-cems-report .cems-report-close,body.printing-cems-report .cems-report-status{display:none!important}body.printing-cems-report .cems-report-preview{max-height:none;overflow:visible}body.printing-cems-report .cems-report-table{font-size:8pt;page-break-inside:auto}body.printing-cems-report .cems-report-table tr{page-break-inside:avoid;page-break-after:auto}@page{size:A4 landscape;margin:10mm}}
+</style>
 </head>
 <body>
 
@@ -30,12 +34,19 @@
     </div>
 </div>
     
+<div id="cemsReportModal" class="cems-report-modal" role="dialog" aria-modal="true" aria-labelledby="cemsReportTitle" aria-hidden="true">
+<section class="cems-report-dialog">
+<header class="cems-report-head"><h2 id="cemsReportTitle">CEMS 各月份平均測值一覽表</h2><button type="button" id="closeCemsReport" class="cems-report-close" aria-label="關閉">×</button></header>
+<div class="cems-report-toolbar"><label for="cemsReportYear">年度</label><select id="cemsReportYear"></select><button type="button" id="loadCemsReport" class="cems-report-primary">載入預覽</button><button type="button" id="exportCemsReportPdf" disabled>產出 PDF</button><button type="button" id="exportCemsReportExcel" disabled>產出 Excel</button></div>
+<div id="cemsReportStatus" class="cems-report-status" role="status">選擇年度後載入報表。</div><div id="cemsReportPreview" class="cems-report-preview"></div>
+</section></div>
 <div class="cems-container">
     <header>
         <div class="header-spacer"></div>
         <div class="header-title"><h1>CEMS</h1></div>
         <div class="header-controls">
             <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">☀️ 亮色</span></button>
+            <button type="button" id="openCemsReport" class="report-open-btn">📄 CEMS 月報</button>
             <div id="updateTime" class="update-pill">連線中...</div>
         </div>
     </header>
@@ -818,6 +829,125 @@
                 document.getElementById('windDir').innerText = "環境資料連線異常";
             }
         }
+
+
+        // CEMS 年度月報：完整原始資料由 Apps Script 彙整，前端負責預覽與匯出。
+        const cemsReportDialog = document.getElementById('cemsReportModal');
+        const cemsReportStatus = document.getElementById('cemsReportStatus');
+        const cemsReportPreview = document.getElementById('cemsReportPreview');
+        let cemsReportData = null;
+        const reportYearSelect = document.getElementById('cemsReportYear');
+        const reportCurrentYear = new Date().getFullYear();
+        for (let y = reportCurrentYear; y >= reportCurrentYear - 15; y--) {
+            const option = document.createElement('option');
+            option.value = y;
+            option.textContent = (y - 1911) + ' 年';
+            reportYearSelect.appendChild(option);
+        }
+        function setCemsReportStatus(message, type) {
+            cemsReportStatus.textContent = message;
+            cemsReportStatus.className = 'cems-report-status' + (type ? ' ' + type : '');
+        }
+        function openCemsReport() {
+            cemsReportDialog.classList.add('is-open');
+            cemsReportDialog.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeCemsReport() {
+            cemsReportDialog.classList.remove('is-open');
+            cemsReportDialog.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+        document.getElementById('openCemsReport').addEventListener('click', openCemsReport);
+        document.getElementById('closeCemsReport').addEventListener('click', closeCemsReport);
+        cemsReportDialog.addEventListener('click', event => { if (event.target === cemsReportDialog) closeCemsReport(); });
+        document.addEventListener('keydown', event => { if (event.key === 'Escape' && cemsReportDialog.classList.contains('is-open')) closeCemsReport(); });
+
+        function reportCell(value, digits) {
+            if (value === null || value === undefined || value === '') return '—';
+            const num = Number(value);
+            return Number.isFinite(num) ? num.toFixed(digits) : String(value);
+        }
+        function renderCemsReport(payload) {
+            const months = Array.isArray(payload) ? payload : payload && payload.months;
+            if (!Array.isArray(months) || !months.length) throw new Error('月報 API 未回傳 months 資料。');
+            const year = Number(payload.year || reportYearSelect.value);
+            const machines = Array.from({length:12}, (_,i) => 'P' + String(i+1).padStart(3,'0'));
+            const definitions = [{key:'nox',title:'NOx (ppm)',digits:2},{key:'so2',title:'SO₂ (ppm)',digits:2},{key:'opac',title:'OPAC (%)',digits:2},{key:'hours',title:'運轉時數 (hr)',digits:1}];
+            const tables = definitions.map(def => {
+                let rows = '';
+                for (let m=1; m<=12; m++) {
+                    const item = months.find(row => Number(row.month) === m);
+                    const unitValues = machines.map((machine,index) => {
+                        const unitMap = item && (item.units || item.machines);
+                        const unit = unitMap && (unitMap[machine] || unitMap[index]);
+                        return '<td>' + reportCell(unit && (unit[def.key] !== undefined ? unit[def.key] : unit[def.key.toUpperCase()]), def.digits) + '</td>';
+                    }).join('');
+                    const average = item && (item.average || item.avg || {});
+                    const avgValue = average[def.key] !== undefined ? average[def.key] : average[def.key.toUpperCase()];
+                    rows += '<tr><th>' + m + ' 月</th>' + unitValues + '<td><b>' + reportCell(avgValue, def.digits) + '</b></td></tr>';
+                }
+                return '<h3>' + def.title + '</h3><table class="cems-report-table"><thead><tr><th>月份</th>' + machines.map(m=>'<th>'+m+'</th>').join('') + '<th>全廠平均</th></tr></thead><tbody>' + rows + '</tbody></table>';
+            }).join('');
+            cemsReportPreview.innerHTML = '<h3>台灣電力公司尖山發電廠 ' + (year-1911) + ' 年度 CEMS 各月份平均測值一覽表</h3><p class="cems-report-note">月平均依有效運轉監測資料計算；全廠平均依各機組月平均及運轉時數加權。正式使用前請核對資料完整性。</p>' + tables;
+            cemsReportData = {year, months};
+            document.getElementById('exportCemsReportPdf').disabled = false;
+            document.getElementById('exportCemsReportExcel').disabled = false;
+            setCemsReportStatus('預覽已載入。請核對月份資料與加權平均值。', 'success');
+        }
+        document.getElementById('loadCemsReport').addEventListener('click', async () => {
+            const year = reportYearSelect.value;
+            const button = document.getElementById('loadCemsReport');
+            button.disabled = true;
+            document.getElementById('exportCemsReportPdf').disabled = true;
+            document.getElementById('exportCemsReportExcel').disabled = true;
+            cemsReportPreview.innerHTML = '';
+            setCemsReportStatus(year + ' 年資料載入中…');
+            try {
+                const response = await fetch(GAS_URL + '?type=monthlyReport&year=' + encodeURIComponent(year), {cache:'no-store'});
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const result = await response.json();
+                if (result && result.error) throw new Error(result.message || result.error);
+                renderCemsReport(result);
+            } catch (error) {
+                console.error('CEMS 月報讀取失敗', error);
+                setCemsReportStatus('月報資料尚未連線：Apps Script 尚未提供 type=monthlyReport 年度彙整 API，或回傳格式不符。請先完成後端彙整路由；不會以曲線圖最近 2,000 筆資料代替整年度報表。', 'error');
+            } finally { button.disabled = false; }
+        });
+        document.getElementById('exportCemsReportPdf').addEventListener('click', () => {
+            if (!cemsReportData) return;
+            document.body.classList.add('printing-cems-report');
+            window.print();
+            setTimeout(() => document.body.classList.remove('printing-cems-report'), 800);
+        });
+        document.getElementById('exportCemsReportExcel').addEventListener('click', () => {
+            if (!cemsReportData || !window.XLSX) {
+                setCemsReportStatus('Excel 元件尚未載入，請重新整理網頁後再試。', 'error');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+            const machines = Array.from({length:12}, (_,i) => 'P' + String(i+1).padStart(3,'0'));
+            const definitions = [{key:'nox',title:'NOx (ppm)'},{key:'so2',title:'SO2 (ppm)'},{key:'opac',title:'OPAC (%)'},{key:'hours',title:'運轉時數 (hr)'}];
+            definitions.forEach(def => {
+                const rows = [['月份', ...machines, '全廠平均']];
+                for (let m=1; m<=12; m++) {
+                    const item = cemsReportData.months.find(row => Number(row.month) === m);
+                    const unitMap = item && (item.units || item.machines);
+                    const vals = machines.map((machine,index) => {
+                        const unit = unitMap && (unitMap[machine] || unitMap[index]);
+                        const v = unit && (unit[def.key] !== undefined ? unit[def.key] : unit[def.key.toUpperCase()]);
+                        return v === undefined || v === null ? '' : Number(v);
+                    });
+                    const avg = item && (item.average || item.avg || {});
+                    const avgValue = avg[def.key] !== undefined ? avg[def.key] : avg[def.key.toUpperCase()];
+                    rows.push([m, ...vals, avgValue === undefined || avgValue === null ? '' : Number(avgValue)]);
+                }
+                const ws = XLSX.utils.aoa_to_sheet(rows);
+                ws['!cols'] = [{wch:10}, ...machines.map(()=>({wch:12})), {wch:14}];
+                XLSX.utils.book_append_sheet(wb, ws, def.title.slice(0,31));
+            });
+            XLSX.writeFile(wb, '尖山發電廠CEMS月報_' + (cemsReportData.year-1911) + '年.xlsx');
+        });
 
         const chartDateInput = document.getElementById('chartDate');
         const chartPrevDayButton = document.getElementById('chartPrevDay');

@@ -838,7 +838,7 @@
         let cemsReportData = null;
         const reportYearSelect = document.getElementById('cemsReportYear');
         const reportCurrentYear = new Date().getFullYear();
-        for (let y = reportCurrentYear; y >= reportCurrentYear - 15; y--) {
+        for (let y = reportCurrentYear; y >= 2006; y--) {
             const option = document.createElement('option');
             option.value = y;
             option.textContent = (y - 1911) + ' 年';

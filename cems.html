@@ -889,7 +889,7 @@
                 }
                 return '<h3>' + def.title + '</h3><table class="cems-report-table"><thead><tr><th>月份</th>' + machines.map(m=>'<th>'+m+'</th>').join('') + '<th>全廠平均</th></tr></thead><tbody>' + rows + '</tbody></table>';
             }).join('');
-            cemsReportPreview.innerHTML = '<h3>台灣電力公司尖山發電廠 ' + (year-1911) + ' 年度 CEMS 各月份平均測值一覽表</h3><p class="cems-report-note">月平均依有效運轉監測資料計算；全廠平均依各機組月平均及運轉時數加權。正式使用前請核對資料完整性。</p>' + tables;
+            cemsReportPreview.innerHTML = '<h3>台灣電力公司尖山發電廠 ' + (year-1911) + ' 年度 CEMS 各月份平均測值一覽表</h3><p class="cems-report-note">有環保局表列全廠平均者直接採用；早期未提供全廠平均或運轉時數的月份，以有數值的機組簡單平均，未提供的欄位顯示「—」。正式使用前請核對資料完整性。</p>' + tables;
             cemsReportData = {year, months};
             document.getElementById('exportCemsReportPdf').disabled = false;
             document.getElementById('exportCemsReportExcel').disabled = false;

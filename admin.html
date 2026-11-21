@@ -21,7 +21,7 @@
     .hero-actions{display:flex;gap:10px;flex-wrap:wrap}
     .btn{border:0;border-radius:10px;padding:10px 15px;font:inherit;font-weight:700;cursor:pointer;transition:transform .15s,filter .15s}
     .btn:hover{filter:brightness(1.04);transform:translateY(-1px)}
-    .btn-light{background:#fff;color:#17477d}.btn-primary{background:var(--blue);color:#fff}.btn-green{background:var(--green);color:#fff}.btn-outline{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+    .btn-light{background:#fff;color:#17477d} .btn-primary{background:var(--blue);color:#fff}.btn-green{background:var(--green);color:#fff}.btn-danger{background:#b42335;color:#fff}.btn-outline{background:var(--card);color:var(--ink);border:1px solid var(--line)}
     .statusline{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.9rem;margin:14px 2px 18px}
     .dot{width:9px;height:9px;background:#19a873;border-radius:50%;display:inline-block}
     .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
@@ -101,7 +101,7 @@
 </main>
 <script src="common.js"></script>
 <script>
-  const ROLE_LABELS={guest:'停用',env:'全部分頁',mech:'滑油報告',ops:'CEMS＋滑油',admin:'全部分頁＋後台'};
+  const ROLE_LABELS={guest:'其他獨立頁面',env:'一般全頁',mech:'滑油報告',ops:'CEMS＋滑油',admin:'全部分頁＋後台'};
   let usersCache=[];
   let activeFilter='all';
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -172,22 +172,35 @@
       const duplicateBadge=dupCount>1?'<span class="badge b-red" title="相同 Email 共 '+dupCount+' 筆文件">重複 '+dupCount+' 筆</span>':'';
       const uidDisplay=escapeHtml(u.uid||'—');
       const roleId='role-'+u.uid;
-      const approveBtn=!u.isApproved?'<button class="btn btn-green small-btn" data-action="approve" data-uid="'+escapeHtml(u.uid)+'">核准</button>':'';
-      return '<tr><td><div class="person">'+escapeHtml(u.name||'未填姓名')+'</div><div class="sub">'+escapeHtml(u.title||'')+'</div></td><td><div class="email">'+escapeHtml(u.email||'未提供 Email')+' '+duplicateBadge+'</div><div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div></td><td>'+escapeHtml(u.dept||'未填部門')+'</td><td>'+statusBadge(u)+'</td><td><select id="'+escapeHtml(roleId)+'" data-role-id="'+escapeHtml(u.uid)+'">'+roleOptions(u.role||'guest')+'</select><div class="sub">'+escapeHtml(ROLE_LABELS[u.role]||'未設定')+'</div></td><td>'+fmtDate(u.createdAt)+'</td><td>'+fmtDate(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存</button></td></tr>'
+      const approveBtn=!u.isApproved?'<button class="btn btn-green small-btn" data-action="approve" data-uid="'+escapeHtml(u.uid)+'">核准／啟用</button>':'';
+      const statusBtn=u.isApproved?'<button class="btn btn-danger small-btn" data-action="disable" data-uid="'+escapeHtml(u.uid)+'">停用</button>':(u.accountStatus==='disabled'?'<button class="btn btn-green small-btn" data-action="enable" data-uid="'+escapeHtml(u.uid)+'">重新啟用</button>':'');
+      return '<tr><td><div class="person">'+escapeHtml(u.name||'未填姓名')+'</div><div class="sub">'+escapeHtml(u.title||'')+'</div></td><td><div class="email">'+escapeHtml(u.email||'未提供 Email')+' '+duplicateBadge+'</div><div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div></td><td>'+escapeHtml(u.dept||'未填部門')+'</td><td>'+statusBadge(u)+'</td><td><select id="'+escapeHtml(roleId)+'" data-role-id="'+escapeHtml(u.uid)+'">'+roleOptions(u.role||'guest')+'</select><div class="sub">'+escapeHtml(ROLE_LABELS[u.role]||'未設定')+'</div></td><td>'+fmtDate(u.createdAt)+'</td><td>'+fmtDate(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存</button></td></tr>'
     }).join('');
   }
   async function approveUser(uid){
     const select=document.getElementById('role-'+uid);if(!select)return;
-    const role=select.value;if(role==='guest'&&!confirm('此權限會停用帳號，仍要核准為停用嗎？'))return;
-    await saveUser(uid,role,true);
+    await saveUser(uid,select.value,'approved');
   }
   async function updateUser(uid){
     const select=document.getElementById('role-'+uid);if(!select)return;
-    const role=select.value;await saveUser(uid,role,role!=='guest');
+    await saveUser(uid,select.value,'keep');
   }
-  async function saveUser(uid,role,isApproved){
+  async function disableUser(uid){
+    if(!confirm('確定停用這個帳號？使用者將無法進入網站。'))return;
+    const select=document.getElementById('role-'+uid);if(!select)return;
+    await saveUser(uid,select.value,'disabled');
+  }
+  async function enableUser(uid){
+    if(!confirm('確定重新啟用這個帳號？'))return;
+    const select=document.getElementById('role-'+uid);if(!select)return;
+    await saveUser(uid,select.value,'approved');
+  }
+  async function saveUser(uid,role,mode){
     try{
-      await db.collection('users').doc(uid).update({isApproved:isApproved,accountStatus:isApproved?'approved':'disabled',role:role,isAdmin:role==='admin'});
+      const updates={role:role,isAdmin:role==='admin'};
+      if(mode==='approved'){updates.isApproved=true;updates.accountStatus='approved'}
+      if(mode==='disabled'){updates.isApproved=false;updates.accountStatus='disabled'}
+      await db.collection('users').doc(uid).update(updates);
       await loadUsers();
     }catch(error){alert('更新失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }

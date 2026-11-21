@@ -60,19 +60,8 @@
 
     <div id="admin-view" class="hidden">
         <h3>管理員後台</h3>
-        <p>您已登入為超級管理員。</p>
-        
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
-            <button class="btn-submit" onclick="location.href='index.html'">廢油水</button>
-            <button class="btn-submit" style="background:#28a745" onclick="location.href='cems.html'">CEMS</button>
-            <button class="btn-submit" style="background:#6f42c1" onclick="location.href='oil.html'">滑油報告</button>
-            <button class="btn-submit" style="background:#fd7e14" onclick="location.href='urea.html'">尿素分析</button>
-        </div>
-        
-        <div id="admin-panel">
-            <h4 style="margin-top:0;">人員權限管理</h4>
-            <div id="user-list">載入中...</div>
-        </div>
+        <p>您已登入管理員帳號。</p>
+        <button class="btn-submit" onclick="location.href='admin.html'">開啟人員與分頁權限管理</button>
         <button class="btn-logout" onclick="logout()">登出</button>
     </div>
 </div>
@@ -110,14 +99,16 @@
                 // 超級管理員 (直接在資料庫把 isAdmin 設為 true 的人)
                 if (data.isAdmin) {
                     document.getElementById('admin-view').classList.remove('hidden');
-                    loadUserList();
                 } 
                 // 一般已核准用戶
                 else if (data.isApproved) {
-                    // 根據權限自動跳轉到適合的首頁
-                    if(data.role === 'mech') location.href = 'oil.html'; // 機械組 -> 滑油
-                    else if(data.role === 'ops') location.href = 'cems.html'; // 運轉組 -> CEMS
-                    else location.href = 'index.html'; // 環化或其他 -> 廢水
+                    // 新帳號依勾選權限導向；舊帳號維持原角色預設。
+                    if (Array.isArray(data.permissions)) {
+                        const preferredPages = ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html', 'monthly.html'];
+                        location.href = preferredPages.find(page => data.permissions.includes(page)) || 'meet.html';
+                    } else if(data.role === 'mech') location.href = 'oil.html';
+                    else if(data.role === 'ops') location.href = 'cems.html';
+                    else location.href = 'index.html';
                 } 
                 // 未核准
                 else {
@@ -153,6 +144,7 @@
             name, dept, title, email: user.email, 
             isApproved: false, 
             accountStatus: 'pending',
+            permissions: [],
             isAdmin: false, 
             role: 'guest', // 預設權限
             createdAt: new Date()
@@ -161,63 +153,6 @@
 
     function logout() { auth.signOut(); }
 
-    // ============================================================
-    // 3. 管理員後台邏輯
-    // ============================================================
-    async function loadUserList() {
-        const listDiv = document.getElementById('user-list');
-        const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
-        let html = '';
-        
-        snap.forEach(doc => {
-            const u = doc.data();
-            // 如果是自己 (管理員)，就不顯示操作按鈕，避免誤刪自己
-            const isSelf = (auth.currentUser.uid === doc.id);
-            
-            const roleOptions = `
-                <option value="guest" ${u.role==='guest'?'selected':''}>訪客 (無權限)</option>
-                <option value="env" ${u.role==='env'?'selected':''}>環化課 (全開)</option>
-                <option value="mech" ${u.role==='mech'?'selected':''}>機械組 (僅滑油)</option>
-                <option value="ops" ${u.role==='ops'?'selected':''}>運轉組 (CEMS+滑油)</option>
-                <option value="admin" ${u.role==='admin'?'selected':''}>管理員 (全開+後台)</option>
-            `;
-
-            html += `
-            <div class="user-item">
-                <div class="user-info-row">
-                    <div>
-                        <strong>${escapeHtml(u.name)}</strong> <span class="tag">${escapeHtml(u.dept)} ${escapeHtml(u.title)}</span>
-                        ${u.isAdmin ? '<span class="tag tag-admin">Admin</span>' : ''}
-                    </div>
-                    <div style="font-size:0.8rem; color:#888;">${escapeHtml(u.email)}</div>
-                </div>
-                <div class="user-role-row">
-                    ${isSelf ? '<span>超級管理員</span>' : `
-                        <select class="role-select" id="role-${doc.id}">
-                            ${roleOptions}
-                        </select>
-                        <button class="approve-btn" onclick="updateUser('${doc.id}')">更新</button>
-                        `}
-                </div>
-            </div>`;
-        });
-        listDiv.innerHTML = html || '暫無人員';
-    }
-
-    function updateUser(uid) {
-        const newRole = document.getElementById(`role-${uid}`).value;
-        const isApproved = (newRole !== 'guest'); // 只要不是 guest 就算核准
-        const isAdmin = (newRole === 'admin');    // 只有 admin 才有後台權限
-
-        db.collection('users').doc(uid).update({ 
-            role: newRole, 
-            isApproved: isApproved,
-            isAdmin: isAdmin
-        }).then(() => {
-            alert("權限已更新！");
-            loadUserList();
-        });
-    }
 </script>
 </body>
 </html>

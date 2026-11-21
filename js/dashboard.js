@@ -10,8 +10,10 @@ function updateDataUploadReminder(timestamp, fromCache) {
     if (!reminder) return;
 
     const rawTimestamp = String(timestamp || "").trim();
-    const normalizedTimestamp = rawTimestamp.replace(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+/, "$1-$2-$3T").replace(" ", "T");
-    const timestampMs = Date.parse(normalizedTimestamp);
+    const timestampParts = rawTimestamp.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    const timestampMs = timestampParts
+        ? new Date(Number(timestampParts[1]), Number(timestampParts[2]) - 1, Number(timestampParts[3]), Number(timestampParts[4]), Number(timestampParts[5]), Number(timestampParts[6] || 0)).getTime()
+        : Date.parse(rawTimestamp);
     if (!rawTimestamp || !Number.isFinite(timestampMs)) {
         reminder.style.display = "block";
         reminder.textContent = "⚠️ 目前無法確認廢水來源資料的更新時間。請環化課確認廢水主機上的 push_to_google.py 已開啟執行；停電復電後請重新啟動。";

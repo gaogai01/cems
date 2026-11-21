@@ -165,7 +165,7 @@
   function renderOnline(){
     const list=document.getElementById('online-list');const online=usersCache.filter(isOnline).sort(function(a,b){return (asDate(b.lastSeen)||0)-(asDate(a.lastSeen)||0)});
     document.getElementById('metric-online').textContent=online.length;
-    list.innerHTML=online.length?online.map(function(u){return '<article class="online-card"><div class="online-name"><span class="dot"></span> '+escapeHtml(u.name||'未填姓名')+'</div><div class="online-meta">'+escapeHtml([u.dept,u.title].filter(Boolean).join('・')||'未填部門/職稱')+'<br>最後活動 '+fmtDate(u.lastSeen)+'</div></article>'}).join(''):'<div class="empty">目前沒有 5 分鐘內活動的使用者</div>';
+    list.innerHTML=online.length?online.map(function(u){return '<article class="online-card"><div class="online-name"><span class="dot"></span> '+escapeHtml(u.name||'未填姓名')+'</div><div class="online-meta">'+escapeHtml([u.dept,u.title].filter(Boolean).join('・')||'未填部門/職稱')+'<br>最後活動 '+fmtDateTime(u.lastSeen)+'</div></article>'}).join(''):'<div class="empty">目前沒有 5 分鐘內活動的使用者</div>';
   }
   function statusBadge(u){
     if(u.isApproved)return '<span class="badge b-green">已啟用</span>';

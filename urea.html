@@ -399,7 +399,7 @@
             document.getElementById('dailyUsage').value = average.toFixed(2);
             const latestSG = payload.latestUreaSG;
             const sgMeta = document.getElementById('sgMeta');
-            if (latestSG && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(latestSG.date || '')) &&
+            if (latestSG && /^\d{4}-\d{2}-\d{2}$/.test(String(latestSG.date || '')) &&
                 Number.isFinite(Number(latestSG.value)) && Number(latestSG.value) > 1) {
                 const sg = Number(latestSG.value);
                 document.getElementById('sgInput').value = sg.toFixed(3);

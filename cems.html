@@ -51,6 +51,8 @@
         </div>
     </header>
 
+    <div id="cemsUploadReminder" role="alert" aria-live="polite" style="display:none;margin:12px 0;padding:14px 18px;border-left:6px solid #d97706;border-radius:8px;background:#fff3cd;color:#704500;font-weight:700;line-height:1.6;"></div>
+
     <div class="dashboard">
         <div class="card power">
             <h3>目前總發電量</h3>
@@ -221,6 +223,30 @@
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbwPLWcCJhnE_ZnnIbCgk9hNcjo6ikLDR_rzFGCiBFPamXapAj3e-fg1YiJo1THW08T4/exec';
         const LAT = 23.575; const LON = 119.665;
         let lastSuccessfulCemsUpdateText = null;
+        let lastSuccessfulCemsTimestampMs = null;
+        const CEMS_UPLOAD_STALE_MS = 15 * 60 * 1000;
+        function updateCemsUploadReminder(timestamp) {
+            const reminder = document.getElementById("cemsUploadReminder");
+            if (!reminder) return;
+            const timestampMs = timestamp === undefined || timestamp === null
+                ? lastSuccessfulCemsTimestampMs
+                : new Date(timestamp).getTime();
+            if (!Number.isFinite(timestampMs)) {
+                reminder.style.display = "block";
+                reminder.textContent = "⚠️ 目前無法確認 CEMS 資料更新時間，請確認 CEMS 主機的資料上傳 Python 程式已開啟；若主機曾關機或重新啟動，請重新執行上傳程式。";
+                return;
+            }
+            const ageMs = Date.now() - timestampMs;
+            if (ageMs >= -5 * 60 * 1000 && ageMs <= CEMS_UPLOAD_STALE_MS) {
+                reminder.style.display = "none";
+                reminder.textContent = "";
+                return;
+            }
+            const elapsedMinutes = Math.max(0, Math.floor(ageMs / 60000));
+            const sourceTime = new Date(timestampMs).toLocaleString("zh-TW", { hour12: false });
+            reminder.style.display = "block";
+            reminder.textContent = "⚠️ CEMS 來源資料已 " + elapsedMinutes + " 分鐘未更新（最後資料時間：" + sourceTime + "）。請確認 CEMS 主機的資料上傳 Python 程式仍在執行；若主機曾關機或重新啟動，請重新開啟上傳程式。";
+        }
         const THRESHOLDS = {
             so2: { good: 50, warn: 120, limit: 133, max: 200 }, nox: { good: 247, warn: 327, limit: 363, max: 400 }, opac: { good: 4, warn: 8, limit: 40, max: 50 }, load: { warn: 8000, limit: 9000, max: 11000 }, urea: { warn: 200, limit: 360, max: 400 },
             powerCard: { max: 120000 }, unitsCard: { max: 12 }, ureaCard: { max: 50 }, aqiCard: { max: 150 }, tempCard: { max: 40 }, windCard: { max: 25 }
@@ -312,6 +338,7 @@
                 renderTable(json.timestamp, json.dataString);
                 calculateLoadComparison();
             } catch (error) {
+                updateCemsUploadReminder();
                 console.error(error);
                 const lastUpdate = lastSuccessfulCemsUpdateText
                     ? `最後成功更新：${lastSuccessfulCemsUpdateText}；資料可能已過期`
@@ -331,7 +358,9 @@
 
         function renderTable(timestamp, rawString) {
             document.getElementById('loading').style.display = 'none'; document.getElementById('dataTable').style.display = 'table';
+            lastSuccessfulCemsTimestampMs = new Date(timestamp).getTime();
             lastSuccessfulCemsUpdateText = new Date(timestamp).toLocaleTimeString();
+            updateCemsUploadReminder(timestamp);
             document.getElementById('updateTime').innerText = "更新: " + lastSuccessfulCemsUpdateText;
             const dataArray = rawString.split(','); const tbody = document.getElementById('tableBody'); tbody.innerHTML = "";
             const ITEMS_PER_MACHINE = 27; let runCount = 0; let boilerRunCount = 0; let totalGenLoad = 0; let totalUreaKLD = 0;

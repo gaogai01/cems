@@ -16,7 +16,7 @@
     
     <link rel="stylesheet" href="css/style-cems.css">
 <style>
-.report-open-btn{padding:8px 14px;border:0;border-radius:8px;background:#1769d2;color:#fff;font-weight:700;cursor:pointer}.cems-report-modal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.68);padding:18px;overflow:auto}.cems-report-modal.is-open{display:flex;align-items:flex-start;justify-content:center}.cems-report-dialog{background:#fff;color:#25364a;border-radius:14px;width:min(1200px,100%);margin:auto;padding:20px;box-shadow:0 20px 60px #0005}.cems-report-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #d8dee8;padding-bottom:12px}.cems-report-head h2{margin:0;font-size:1.35rem}.cems-report-close{font-size:2rem;line-height:1;border:0;background:transparent;cursor:pointer;color:inherit}.cems-report-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 0}.cems-report-toolbar select,.cems-report-toolbar button{min-height:40px;padding:8px 12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#25364a}.cems-report-toolbar button{cursor:pointer;font-weight:700}.cems-report-toolbar button:disabled{opacity:.5;cursor:not-allowed}.cems-report-toolbar .cems-report-primary{background:#177245;color:#fff;border-color:#177245}.cems-report-status{padding:9px 12px;margin-bottom:10px;background:#f1f5f9;border-radius:7px;color:#334155}.cems-report-status.error{background:#fff1f2;color:#b42318}.cems-report-status.success{background:#ecfdf3;color:#067647}.cems-report-preview{overflow:auto;max-height:70vh}.cems-report-preview h3{margin:18px 0 8px}.cems-report-table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap;margin-bottom:22px}.cems-report-table th,.cems-report-table td{border:1px solid #7c8797;padding:6px 8px;text-align:center}.cems-report-table th{background:#d9eef2;font-weight:700}.cems-report-table tbody tr:nth-child(even){background:#f5f7fa}.cems-report-note{font-size:.9rem;color:#475569;margin:8px 0}@media(max-width:700px){.cems-report-modal{padding:7px}.cems-report-dialog{padding:14px}.cems-report-head h2{font-size:1.1rem}.cems-report-toolbar{display:grid;grid-template-columns:auto 1fr 1fr}.cems-report-toolbar select{min-width:0}.cems-report-toolbar button{padding:7px;font-size:.88rem}.cems-report-preview{max-height:65vh}}@media print{body.printing-cems-report *{visibility:hidden!important}body.printing-cems-report #cemsReportModal,body.printing-cems-report #cemsReportModal *{visibility:visible!important}body.printing-cems-report #cemsReportModal{display:block!important;position:absolute;inset:0;background:#fff;padding:0;overflow:visible}body.printing-cems-report .cems-report-dialog{width:100%;max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0}body.printing-cems-report .cems-report-toolbar,body.printing-cems-report .cems-report-close,body.printing-cems-report .cems-report-status{display:none!important}body.printing-cems-report .cems-report-preview{max-height:none;overflow:visible}body.printing-cems-report .cems-report-table{font-size:8pt;page-break-inside:auto}body.printing-cems-report .cems-report-table tr{page-break-inside:avoid;page-break-after:auto}@page{size:A4 landscape;margin:10mm}}
+.report-open-btn{padding:8px 14px;border:0;border-radius:8px;background:#1769d2;color:#fff;font-weight:700;cursor:pointer}.cems-report-modal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.68);padding:18px;overflow:auto}.cems-report-modal.is-open{display:flex;align-items:flex-start;justify-content:center}.cems-report-dialog{background:#fff;color:#25364a;border-radius:14px;width:min(1200px,100%);margin:auto;padding:20px;box-shadow:0 20px 60px #0005}.cems-report-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #d8dee8;padding-bottom:12px}.cems-report-head h2{margin:0;font-size:1.35rem}.cems-report-close{font-size:2rem;line-height:1;border:0;background:transparent;cursor:pointer;color:inherit}.cems-report-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 0}.cems-report-toolbar select,.cems-report-toolbar button{min-height:40px;padding:8px 12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#25364a}.cems-report-toolbar button{cursor:pointer;font-weight:700}.cems-report-toolbar button:disabled{opacity:.5;cursor:not-allowed}.cems-report-toolbar .cems-report-primary{background:#177245;color:#fff;border-color:#177245}.cems-report-status{padding:9px 12px;margin-bottom:10px;background:#f1f5f9;border-radius:7px;color:#334155}.cems-report-status.error{background:#fff1f2;color:#b42318}.cems-report-status.success{background:#ecfdf3;color:#067647}.cems-report-preview{overflow:auto;max-height:70vh}.cems-report-preview h3{margin:18px 0 8px}.cems-report-table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap;margin-bottom:22px}.cems-report-table th,.cems-report-table td{border:1px solid #7c8797;padding:6px 8px;text-align:center}.cems-report-table th{background:#c8e3ec;color:#17324d;font-weight:800}.cems-report-table td{color:#26384b;font-weight:600}.cems-report-table tbody th{color:#17324d;background:#e5f2f5}.cems-report-table tbody tr:nth-child(even){background:#f1f5f9}.cems-report-table .annual-average-row th,.cems-report-table .annual-average-row td{background:#dcefe6;color:#123b2a;font-weight:800;border-top:3px solid #24734a}.cems-report-note{font-size:.9rem;color:#475569;margin:8px 0}@media(max-width:700px){.cems-report-modal{padding:7px}.cems-report-dialog{padding:14px}.cems-report-head h2{font-size:1.1rem}.cems-report-toolbar{display:grid;grid-template-columns:auto 1fr 1fr}.cems-report-toolbar select{min-width:0}.cems-report-toolbar button{padding:7px;font-size:.88rem}.cems-report-preview{max-height:65vh}}@media print{body.printing-cems-report *{visibility:hidden!important}body.printing-cems-report #cemsReportModal,body.printing-cems-report #cemsReportModal *{visibility:visible!important}body.printing-cems-report #cemsReportModal{display:block!important;position:absolute;inset:0;background:#fff;padding:0;overflow:visible}body.printing-cems-report .cems-report-dialog{width:100%;max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0}body.printing-cems-report .cems-report-toolbar,body.printing-cems-report .cems-report-close,body.printing-cems-report .cems-report-status{display:none!important}body.printing-cems-report .cems-report-preview{max-height:none;overflow:visible}body.printing-cems-report .cems-report-table{font-size:8pt;page-break-inside:auto}body.printing-cems-report .cems-report-table tr{page-break-inside:avoid;page-break-after:auto}@page{size:A4 landscape;margin:10mm}}
 </style>
 </head>
 <body>
@@ -874,22 +874,38 @@
             const year = Number(payload.year || reportYearSelect.value);
             const machines = Array.from({length:12}, (_,i) => 'P' + String(i+1).padStart(3,'0'));
             const definitions = [{key:'nox',title:'NOx (ppm)',digits:2},{key:'so2',title:'SO₂ (ppm)',digits:2},{key:'opac',title:'OPAC (%)',digits:2},{key:'hours',title:'運轉時數 (hr)',digits:1}];
+            const readValue = (record, key) => {
+                if (!record) return null;
+                const value = record[key] !== undefined ? record[key] : record[key.toUpperCase()];
+                return value === '' || value === undefined ? null : value;
+            };
+            const annualValue = (def, machine) => {
+                const entries = months.map(item => {
+                    const unitMap = item && (item.units || item.machines);
+                    const record = machine ? (unitMap && unitMap[machine]) : (item && (item.average || item.avg || {}));
+                    const value = readValue(record, def.key);
+                    const hours = machine ? readValue(unitMap && unitMap[machine], 'hours') : readValue(item && (item.average || item.avg || {}), 'hours');
+                    return {value: value === null ? null : Number(value), weight: hours === null ? null : Number(hours)};
+                }).filter(x => x.value !== null && Number.isFinite(x.value));
+                if (!entries.length) return null;
+                if (def.key === 'hours') return entries.reduce((sum,x)=>sum+x.value,0) / entries.length;
+                const weighted = entries.filter(x => x.weight !== null && Number.isFinite(x.weight) && x.weight > 0);
+                if (weighted.length) return weighted.reduce((sum,x)=>sum+x.value*x.weight,0) / weighted.reduce((sum,x)=>sum+x.weight,0);
+                return entries.reduce((sum,x)=>sum+x.value,0) / entries.length;
+            };
             const tables = definitions.map(def => {
                 let rows = '';
                 for (let m=1; m<=12; m++) {
                     const item = months.find(row => Number(row.month) === m);
-                    const unitValues = machines.map((machine,index) => {
-                        const unitMap = item && (item.units || item.machines);
-                        const unit = unitMap && (unitMap[machine] || unitMap[index]);
-                        return '<td>' + reportCell(unit && (unit[def.key] !== undefined ? unit[def.key] : unit[def.key.toUpperCase()]), def.digits) + '</td>';
-                    }).join('');
-                    const average = item && (item.average || item.avg || {});
-                    const avgValue = average[def.key] !== undefined ? average[def.key] : average[def.key.toUpperCase()];
+                    const unitValues = machines.map(machine => '<td>' + reportCell(readValue(item && (item.units || item.machines)[machine], def.key), def.digits) + '</td>').join('');
+                    const avgValue = readValue(item && (item.average || item.avg || {}), def.key);
                     rows += '<tr><th>' + m + ' 月</th>' + unitValues + '<td><b>' + reportCell(avgValue, def.digits) + '</b></td></tr>';
                 }
+                const annualUnits = machines.map(machine => '<td>' + reportCell(annualValue(def,machine), def.digits) + '</td>').join('');
+                rows += '<tr class="annual-average-row"><th>全年平均</th>' + annualUnits + '<td><b>' + reportCell(annualValue(def,null), def.digits) + '</b></td></tr>';
                 return '<h3>' + def.title + '</h3><table class="cems-report-table"><thead><tr><th>月份</th>' + machines.map(m=>'<th>'+m+'</th>').join('') + '<th>全廠平均</th></tr></thead><tbody>' + rows + '</tbody></table>';
             }).join('');
-            cemsReportPreview.innerHTML = '<h3>台灣電力公司尖山發電廠 ' + (year-1911) + ' 年度 CEMS 各月份平均測值一覽表</h3><p class="cems-report-note">有環保局表列全廠平均者直接採用；早期未提供全廠平均或運轉時數的月份，以有數值的機組簡單平均，未提供的欄位顯示「—」。正式使用前請核對資料完整性。</p>' + tables;
+            cemsReportPreview.innerHTML = '<h3>台灣電力公司尖山發電廠 ' + (year-1911) + ' 年度 CEMS 各月份平均測值一覽表</h3><p class="cems-report-note">全廠平均優先採用來源表列值；全年平均按運轉時數加權，來源未提供時數的年度則以有數值月份平均。缺值以「—」表示。</p>' + tables;
             cemsReportData = {year, months};
             document.getElementById('exportCemsReportPdf').disabled = false;
             document.getElementById('exportCemsReportExcel').disabled = false;
@@ -942,6 +958,22 @@
                     const avgValue = avg[def.key] !== undefined ? avg[def.key] : avg[def.key.toUpperCase()];
                     rows.push([m, ...vals, avgValue === undefined || avgValue === null ? '' : Number(avgValue)]);
                 }
+                const annualVals = machines.map(machine => {
+                    const entries = cemsReportData.months.map(item => {
+                        const unit = item.units && item.units[machine];
+                        const value = unit && unit[def.key];
+                        const weight = unit && unit.hours;
+                        return {value:value===undefined||value===null?null:Number(value),weight:weight===undefined||weight===null?null:Number(weight)};
+                    }).filter(x=>x.value!==null&&Number.isFinite(x.value));
+                    if (!entries.length) return '';
+                    if (def.key==='hours') return entries.reduce((a,x)=>a+x.value,0)/entries.length;
+                    const weighted=entries.filter(x=>x.weight!==null&&Number.isFinite(x.weight)&&x.weight>0);
+                    return weighted.length?weighted.reduce((a,x)=>a+x.value*x.weight,0)/weighted.reduce((a,x)=>a+x.weight,0):entries.reduce((a,x)=>a+x.value,0)/entries.length;
+                });
+                const plantEntries=cemsReportData.months.map(item=>({value:item.average&&item.average[def.key],weight:item.average&&item.average.hours})).filter(x=>x.value!==undefined&&x.value!==null&&Number.isFinite(Number(x.value)));
+                const plantWeighted=plantEntries.filter(x=>x.weight!==undefined&&x.weight!==null&&Number(x.weight)>0);
+                const plantAnnual=def.key==='hours'?(plantEntries.length?plantEntries.reduce((a,x)=>a+Number(x.value),0)/plantEntries.length:''):(plantWeighted.length?plantWeighted.reduce((a,x)=>a+Number(x.value)*Number(x.weight),0)/plantWeighted.reduce((a,x)=>a+Number(x.weight),0):(plantEntries.length?plantEntries.reduce((a,x)=>a+Number(x.value),0)/plantEntries.length:''));
+                rows.push(['全年平均',...annualVals,plantAnnual]);
                 const ws = XLSX.utils.aoa_to_sheet(rows);
                 ws['!cols'] = [{wch:10}, ...machines.map(()=>({wch:12})), {wch:14}];
                 XLSX.utils.book_append_sheet(wb, ws, def.title.slice(0,31));

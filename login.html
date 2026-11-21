@@ -152,6 +152,7 @@
         db.collection('users').doc(user.uid).set({
             name, dept, title, email: user.email, 
             isApproved: false, 
+            accountStatus: 'pending',
             isAdmin: false, 
             role: 'guest', // 預設權限
             createdAt: new Date()

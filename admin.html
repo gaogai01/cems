@@ -83,7 +83,7 @@
     <div id="online-list" class="online-list"><div class="empty">載入中…</div></div>
   </section>
   <section class="panel">
-    <div class="panel-head"><div><h2 class="panel-title">👤 帳號與權限</h2><p class="panel-desc">核准或停用帳號，並依需要設定可使用的分頁。</p></div></div>
+    <div class="panel-head"><div><h2 class="panel-title">👤 帳號與權限</h2><p class="panel-desc">可編輯姓名、部門、職稱及資料 Email；Email 僅供網站顯示，不會變更 Google 登入帳號。UID 是登入識別碼，保持唯讀。</p></div></div>
     <div class="notice"><span>ℹ️</span><div><strong>重複 Email 如何判讀：</strong>網站以 Firebase UID 作為 Firestore 文件編號。相同 Email 出現兩列，表示 users 集合內有不同 UID 的資料文件共用這個 Email；可能是不同 Firebase 帳號，也可能是舊的個人資料文件。此頁無法查驗 Firebase Authentication 的帳號清單，請先比對 UID 與登入紀錄，勿直接刪除其中一筆。</div></div>
     <div class="toolbar">
       <input class="search" id="searchBox" type="search" placeholder="搜尋姓名、Email、部門或 UID…" aria-label="搜尋人員">
@@ -116,7 +116,8 @@
   let activeFilter='all';
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function asDate(value){if(!value)return null;if(typeof value.toDate==='function')return value.toDate();const d=new Date(value);return Number.isNaN(d.getTime())?null:d}
-  function fmtDate(value){const d=asDate(value);return d?d.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}
+  function fmtDateOnly(value){const d=asDate(value);return d?d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0'):'—'}
+  function fmtDateTime(value){const d=asDate(value);return d?fmtDateOnly(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'—'}
   function emailKey(email){return String(email||'').trim().toLowerCase()}
   function duplicateCounts(){const counts={};usersCache.forEach(function(u){const k=emailKey(u.email);if(k)counts[k]=(counts[k]||0)+1});return counts}
   function isOnline(u){const d=asDate(u.lastSeen);return d&&((Date.now()-d.getTime())<=5*60*1000)}
@@ -199,7 +200,7 @@
       const uidDisplay=escapeHtml(u.uid||'—');
       const approveBtn=!u.isApproved&&u.accountStatus!=='disabled'?'<button class="btn btn-green small-btn" data-action="approve" data-uid="'+escapeHtml(u.uid)+'">核准帳號</button>':'';
       const statusBtn=u.isApproved?'<button class="btn btn-danger small-btn" data-action="disable" data-uid="'+escapeHtml(u.uid)+'">停用</button>':(u.accountStatus==='disabled'?'<button class="btn btn-green small-btn" data-action="enable" data-uid="'+escapeHtml(u.uid)+'">重新啟用</button>':'');
-      return '<tr><td><div class="person">'+escapeHtml(u.name||'未填姓名')+'</div><div class="sub">'+escapeHtml(u.title||'')+'</div></td><td><div class="email">'+escapeHtml(u.email||'未提供 Email')+' '+duplicateBadge+'</div><div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div></td><td>'+escapeHtml(u.dept||'未填部門')+'</td><td>'+statusBadge(u)+'</td><td class="permission-cell">'+permissionEditor(u)+'</td><td>'+fmtDate(u.createdAt)+'</td><td>'+fmtDate(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存權限</button></td></tr>'
+      return '<tr><td class="person-cell"><input class="profile-input profile-name" type="text" data-profile="name" value="'+escapeHtml(u.name||'')+'" placeholder="姓名" aria-label="姓名"><input class="profile-input profile-sub" type="text" data-profile="title" value="'+escapeHtml(u.title||'')+'" placeholder="職稱" aria-label="職稱"></td><td class="email-cell"><input class="profile-input email-input" type="email" data-profile="email" value="'+escapeHtml(u.email||'')+'" placeholder="資料 Email" aria-label="資料 Email">'+duplicateBadge+'<div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div></td><td><input class="profile-input" type="text" data-profile="dept" value="'+escapeHtml(u.dept||'')+'" placeholder="部門" aria-label="部門"></td><td>'+statusBadge(u)+'</td><td class="permission-cell">'+permissionEditor(u)+'</td><td>'+fmtDateOnly(u.createdAt)+'</td><td>'+fmtDateTime(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存資料與權限</button></td></tr>'
     }).join('');
   }
   function findUser(uid){return usersCache.find(function(u){return u.uid===uid})}
@@ -227,7 +228,11 @@
     const isAdmin=adminInput?adminInput.checked:(u.isAdmin===true);
     const wasAdmin=u.isAdmin===true||(!Array.isArray(u.permissions)&&u.role==='admin');
     if(isAdmin!==wasAdmin&&!confirm(isAdmin?'確定授予此帳號後台管理員權限？管理員可管理其他帳號與分頁權限。':'確定移除此帳號的後台管理員權限？'))return;
-    const updates={permissions:permissions,isAdmin:isAdmin,role:isAdmin?'admin':(u.role==='admin'?'guest':(u.role||'guest'))};
+    const profile={};
+    row.querySelectorAll('input[data-profile]').forEach(function(input){profile[input.dataset.profile]=input.value.trim()});
+    if(!profile.name){alert('姓名不可空白。');return}
+    if(profile.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(profile.email)){alert('請輸入有效的資料 Email。');return}
+    const updates={permissions:permissions,isAdmin:isAdmin,role:isAdmin?'admin':(u.role==='admin'?'guest':(u.role||'guest')),name:profile.name,dept:profile.dept||'',title:profile.title||'',email:profile.email||''};
     try{await db.collection('users').doc(uid).update(updates);await loadUsers()}
     catch(error){alert('儲存權限失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }

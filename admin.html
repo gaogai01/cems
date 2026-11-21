@@ -58,7 +58,26 @@
     .empty,.error{padding:24px;text-align:center;color:var(--muted)}
     .error{color:var(--red)}
     .section-label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
-    .permission-grid{display:grid;grid-template-columns:repeat(2,minmax(130px,1fr));gap:5px 9px;min-width:280px}.perm-item,.admin-access,.fixed-access{display:flex;align-items:center;gap:6px;font-size:.78rem}.perm-item input,.admin-access input{accent-color:var(--blue)}.admin-access{margin-top:7px;padding-top:6px;border-top:1px solid var(--line);color:var(--amber);font-weight:800}.fixed-access{margin-top:7px;color:var(--muted);white-space:normal}.permission-cell{min-width:320px}
+    .permission-grid{display:grid;grid-template-columns:repeat(2,minmax(130px,1fr));gap:5px 9px;min-width:280px}.perm-item,.admin-access,.fixed-access{display:flex;align-items:center;gap:6px;font-size:.78rem}.perm-item input,.admin-access input{accent-color:var(--blue)}.admin-access{margin-top:7px;padding-top:6px;border-top:1px solid var(--line);color:var(--amber);font-weight:800}.fixed-access{margin-top:7px;color:var(--muted);white-space:normal}.permission-cell{min-width:0}
+    table{table-layout:fixed;min-width:1260px}
+    th:nth-child(1),td:nth-child(1){width:135px}
+    th:nth-child(2),td:nth-child(2){width:225px}
+    th:nth-child(3),td:nth-child(3){width:145px}
+    th:nth-child(4),td:nth-child(4){width:100px}
+    th:nth-child(5),td:nth-child(5){width:300px}
+    th:nth-child(6),td:nth-child(6){width:105px;white-space:nowrap}
+    th:nth-child(7),td:nth-child(7){width:145px;white-space:nowrap}
+    th:nth-child(8),td:nth-child(8){width:190px}
+    td{padding:9px 10px;font-size:.88rem}
+    .profile-input{display:block;width:100%;max-width:100%;min-width:0;margin:3px 0;padding:6px 7px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font:inherit;font-size:.84rem}
+    .person{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .email{overflow-wrap:anywhere;font-size:.84rem}
+    .uid{font: .68rem ui-monospace,SFMono-Regular,monospace;color:var(--muted);white-space:normal;overflow-wrap:anywhere;margin-top:3px}
+    .action-cell{white-space:normal}
+    .action-cell .small-btn{padding:6px 8px;font-size:.76rem;margin:2px 1px}
+    .profile-actions{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+    .profile-view .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    @media(max-width:1350px){table{min-width:1260px}}
     @media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:600px){.page{padding:14px 12px 32px}.hero{padding:20px;align-items:flex-start;flex-direction:column}.hero-actions{width:100%}.hero-actions .btn{flex:1}.metrics{gap:9px}.metric{padding:13px 12px;gap:9px}.metric-icon{width:36px;height:36px;font-size:1.1rem}.metric-value{font-size:1.3rem}.panel{padding:15px;margin:12px 0}.panel-head{flex-direction:column}.toolbar{align-items:stretch}.filters{overflow:auto;flex-wrap:nowrap;padding-bottom:4px}.filter{white-space:nowrap}.search{width:100%}}
     @media print{.hero-actions,.toolbar,.action-cell,.filters{display:none!important}.page{max-width:none;padding:0}.panel,.metric{box-shadow:none}}
@@ -113,6 +132,7 @@
   const LEGACY_ACCESS={admin:['index.html','cems.html','urea.html','oil.html','daily.html','monthly.html'],env:['index.html','cems.html','urea.html','oil.html','daily.html','monthly.html'],mech:['oil.html'],ops:['cems.html','oil.html'],guest:[]};
   const OTHER_PAGE_LABELS='廠務會議、採購發包、機組時數、公益活動、影片企劃';
   let usersCache=[];
+  let editingUsers=new Set();
   let activeFilter='all';
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function asDate(value){if(!value)return null;if(typeof value.toDate==='function')return value.toDate();const d=new Date(value);return Number.isNaN(d.getTime())?null:d}
@@ -133,6 +153,9 @@
       if(btn.dataset.action==='disable')disableUser(uid);
       if(btn.dataset.action==='enable')enableUser(uid);
       if(btn.dataset.action==='save')saveUser(uid);
+      if(btn.dataset.action==='profile-edit'){editingUsers.add(uid);renderUsers()}
+      if(btn.dataset.action==='profile-cancel'){editingUsers.delete(uid);renderUsers()}
+      if(btn.dataset.action==='profile-save')saveProfile(uid);
     });
     loadUsers();
     setInterval(renderOnline,60000);
@@ -200,7 +223,20 @@
       const uidDisplay=escapeHtml(u.uid||'—');
       const approveBtn=!u.isApproved&&u.accountStatus!=='disabled'?'<button class="btn btn-green small-btn" data-action="approve" data-uid="'+escapeHtml(u.uid)+'">核准帳號</button>':'';
       const statusBtn=u.isApproved?'<button class="btn btn-danger small-btn" data-action="disable" data-uid="'+escapeHtml(u.uid)+'">停用</button>':(u.accountStatus==='disabled'?'<button class="btn btn-green small-btn" data-action="enable" data-uid="'+escapeHtml(u.uid)+'">重新啟用</button>':'');
-      return '<tr><td class="person-cell"><input class="profile-input profile-name" type="text" data-profile="name" value="'+escapeHtml(u.name||'')+'" placeholder="姓名" aria-label="姓名"><input class="profile-input profile-sub" type="text" data-profile="title" value="'+escapeHtml(u.title||'')+'" placeholder="職稱" aria-label="職稱"></td><td class="email-cell"><input class="profile-input email-input" type="email" data-profile="email" value="'+escapeHtml(u.email||'')+'" placeholder="資料 Email" aria-label="資料 Email">'+duplicateBadge+'<div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div></td><td><input class="profile-input" type="text" data-profile="dept" value="'+escapeHtml(u.dept||'')+'" placeholder="部門" aria-label="部門"></td><td>'+statusBadge(u)+'</td><td class="permission-cell">'+permissionEditor(u)+'</td><td>'+fmtDateOnly(u.createdAt)+'</td><td>'+fmtDateTime(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存資料與權限</button></td></tr>'
+      const editing=editingUsers.has(u.uid);
+      const personCell=editing
+        ? '<input class="profile-input" type="text" data-profile="name" value="'+escapeHtml(u.name||'')+'" placeholder="姓名" aria-label="姓名">'
+        : '<div class="person">'+escapeHtml(u.name||'未填姓名')+'</div>';
+      const deptTitleCell=editing
+        ? '<input class="profile-input" type="text" data-profile="dept" value="'+escapeHtml(u.dept||'')+'" placeholder="部門" aria-label="部門"><input class="profile-input" type="text" data-profile="title" value="'+escapeHtml(u.title||'')+'" placeholder="職稱" aria-label="職稱">'
+        : '<div>'+escapeHtml(u.dept||'未填部門')+'</div><div class="sub">'+escapeHtml(u.title||'')+'</div>';
+      const emailCell=editing
+        ? '<input class="profile-input" type="email" data-profile="email" value="'+escapeHtml(u.email||'')+'" placeholder="資料 Email" aria-label="資料 Email"><div class="uid">UID '+uidDisplay+'</div>'
+        : '<div class="email">'+escapeHtml(u.email||'未提供 Email')+' '+duplicateBadge+'</div><div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div>';
+      const profileActions=editing
+        ? '<div class="profile-actions"><button class="btn btn-green small-btn" data-action="profile-save" data-uid="'+escapeHtml(u.uid)+'">儲存</button><button class="btn btn-outline small-btn" data-action="profile-cancel" data-uid="'+escapeHtml(u.uid)+'">取消</button></div>'
+        : '<button class="btn btn-outline small-btn" data-action="profile-edit" data-uid="'+escapeHtml(u.uid)+'">修改資料</button>';
+      return '<tr><td class="person-cell">'+personCell+'</td><td class="email-cell">'+emailCell+'</td><td>'+deptTitleCell+'</td><td>'+statusBadge(u)+'</td><td class="permission-cell">'+permissionEditor(u)+'</td><td>'+fmtDateOnly(u.createdAt)+'</td><td>'+fmtDateTime(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存權限</button>'+profileActions+'</td></tr>'
     }).join('');
   }
   function findUser(uid){return usersCache.find(function(u){return u.uid===uid})}
@@ -219,22 +255,32 @@
     try{await db.collection('users').doc(uid).update({isApproved:true,accountStatus:'approved'});await loadUsers()}
     catch(error){alert('啟用失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }
+  function getUserRow(uid){
+    return Array.from(document.querySelectorAll('#all-users-list tr')).find(function(tr){
+      return tr.querySelector('button[data-uid="'+CSS.escape(uid)+'"]');
+    });
+  }
   async function saveUser(uid){
-    const u=findUser(uid);if(!u)return;
-    const row=Array.from(document.querySelectorAll('#all-users-list tr')).find(function(tr){const b=tr.querySelector('button[data-uid]');return b&&b.dataset.uid===uid});
-    if(!row)return;
+    const u=findUser(uid);const row=getUserRow(uid);if(!u||!row)return;
     const permissions=Array.from(row.querySelectorAll('input[data-permission]:checked')).map(function(i){return i.dataset.permission});
     const adminInput=row.querySelector('input[data-admin]');
     const isAdmin=adminInput?adminInput.checked:(u.isAdmin===true);
     const wasAdmin=u.isAdmin===true||(!Array.isArray(u.permissions)&&u.role==='admin');
     if(isAdmin!==wasAdmin&&!confirm(isAdmin?'確定授予此帳號後台管理員權限？管理員可管理其他帳號與分頁權限。':'確定移除此帳號的後台管理員權限？'))return;
+    const updates={permissions:permissions,isAdmin:isAdmin,role:isAdmin?'admin':(u.role==='admin'?'guest':(u.role||'guest'))};
+    try{await db.collection('users').doc(uid).update(updates);await loadUsers()}
+    catch(error){alert('儲存權限失敗：'+(error.message||'請檢查權限'));console.error(error)}
+  }
+  async function saveProfile(uid){
+    const row=getUserRow(uid);if(!row)return;
     const profile={};
     row.querySelectorAll('input[data-profile]').forEach(function(input){profile[input.dataset.profile]=input.value.trim()});
     if(!profile.name){alert('姓名不可空白。');return}
     if(profile.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(profile.email)){alert('請輸入有效的資料 Email。');return}
-    const updates={permissions:permissions,isAdmin:isAdmin,role:isAdmin?'admin':(u.role==='admin'?'guest':(u.role||'guest')),name:profile.name,dept:profile.dept||'',title:profile.title||'',email:profile.email||''};
-    try{await db.collection('users').doc(uid).update(updates);await loadUsers()}
-    catch(error){alert('儲存權限失敗：'+(error.message||'請檢查權限'));console.error(error)}
+    try{
+      await db.collection('users').doc(uid).update({name:profile.name,dept:profile.dept||'',title:profile.title||'',email:profile.email||''});
+      editingUsers.delete(uid);await loadUsers();
+    }catch(error){alert('基本資料儲存失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }
 </script>
 </body>

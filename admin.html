@@ -155,7 +155,7 @@
   function renderMetrics(){
     const counts=duplicateCounts();let duplicateGroups=0,pending=0;
     Object.keys(counts).forEach(function(k){if(counts[k]>1)duplicateGroups++});
-    usersCache.forEach(function(u){if(!u.isApproved)pending++});
+    usersCache.forEach(function(u){if(!u.isApproved&&u.accountStatus!=='disabled')pending++});
     document.getElementById('metric-total').textContent=usersCache.length;
     document.getElementById('metric-online').textContent=usersCache.filter(isOnline).length;
     document.getElementById('metric-pending').textContent=pending;

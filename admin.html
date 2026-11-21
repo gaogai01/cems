@@ -74,7 +74,7 @@
   <section class="metrics" aria-label="帳號摘要">
     <div class="metric"><div class="metric-icon">👥</div><div><div class="metric-label">人員資料</div><div class="metric-value" id="metric-total">—</div></div></div>
     <div class="metric"><div class="metric-icon">🟢</div><div><div class="metric-label">目前線上</div><div class="metric-value" id="metric-online">—</div></div></div>
-    <div class="metric"><div class="metric-icon">⏳</div><div><div class="metric-label">待審核</div><div class="metric-value" id="metric-pending">—</div></div></div>
+    <div class="metric"><div class="metric-icon">⏳</div><div><div class="metric-label">尚未核准</div><div class="metric-value" id="metric-pending">—</div></div></div>
     <div class="metric"><div class="metric-icon">⚠️</div><div><div class="metric-label">重複 Email 群組</div><div class="metric-value" id="metric-duplicate">—</div></div></div>
   </section>
   <section class="panel">
@@ -87,7 +87,7 @@
     <div class="toolbar">
       <input class="search" id="searchBox" type="search" placeholder="搜尋姓名、Email、部門或 UID…" aria-label="搜尋人員">
       <div class="filters" role="group" aria-label="人員篩選">
-        <button class="filter active" data-filter="all">全部</button><button class="filter" data-filter="pending">待審核</button><button class="filter" data-filter="approved">已核准</button><button class="filter" data-filter="disabled">已停用</button><button class="filter" data-filter="duplicate">重複 Email</button>
+        <button class="filter active" data-filter="all">全部</button><button class="filter" data-filter="unapproved">尚未核准</button><button class="filter" data-filter="approved">已核准</button><button class="filter" data-filter="disabled">已停用</button><button class="filter" data-filter="duplicate">重複 Email</button>
       </div>
     </div>
     <div class="table-wrap">
@@ -162,7 +162,7 @@
       const key=emailKey(u.email),dup=key&&counts[key]>1;
       const text=[u.name,u.email,u.dept,u.title,u.uid].join(' ').toLowerCase();
       const matchesQuery=!q||text.includes(q);
-      const matchesFilter=activeFilter==='all'||(activeFilter==='pending'&&!u.isApproved&&u.role!=='guest')||(activeFilter==='approved'&&!!u.isApproved)||(activeFilter==='disabled'&&(!u.isApproved||u.role==='guest'))||(activeFilter==='duplicate'&&dup);
+      const matchesFilter=activeFilter==='all'||(activeFilter==='unapproved'&&!u.isApproved)||(activeFilter==='approved'&&!!u.isApproved)||(activeFilter==='disabled'&&u.accountStatus==='disabled')||(activeFilter==='duplicate'&&dup);
       return matchesQuery&&matchesFilter
     });
     document.getElementById('result-count').textContent='顯示 '+filtered.length+' / '+usersCache.length+' 筆人員資料';
@@ -187,7 +187,7 @@
   }
   async function saveUser(uid,role,isApproved){
     try{
-      await db.collection('users').doc(uid).update({isApproved:isApproved,role:role,isAdmin:role==='admin'});
+      await db.collection('users').doc(uid).update({isApproved:isApproved,accountStatus:isApproved?'approved':'disabled',role:role,isAdmin:role==='admin'});
       await loadUsers();
     }catch(error){alert('更新失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }

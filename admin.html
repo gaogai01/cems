@@ -58,6 +58,7 @@
     .empty,.error{padding:24px;text-align:center;color:var(--muted)}
     .error{color:var(--red)}
     .section-label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+    .permission-grid{display:grid;grid-template-columns:repeat(2,minmax(130px,1fr));gap:5px 9px;min-width:280px}.perm-item,.admin-access,.fixed-access{display:flex;align-items:center;gap:6px;font-size:.78rem}.perm-item input,.admin-access input{accent-color:var(--blue)}.admin-access{margin-top:7px;padding-top:6px;border-top:1px solid var(--line);color:var(--amber);font-weight:800}.fixed-access{margin-top:7px;color:var(--muted);white-space:normal}.permission-cell{min-width:320px}
     @media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:600px){.page{padding:14px 12px 32px}.hero{padding:20px;align-items:flex-start;flex-direction:column}.hero-actions{width:100%}.hero-actions .btn{flex:1}.metrics{gap:9px}.metric{padding:13px 12px;gap:9px}.metric-icon{width:36px;height:36px;font-size:1.1rem}.metric-value{font-size:1.3rem}.panel{padding:15px;margin:12px 0}.panel-head{flex-direction:column}.toolbar{align-items:stretch}.filters{overflow:auto;flex-wrap:nowrap;padding-bottom:4px}.filter{white-space:nowrap}.search{width:100%}}
     @media print{.hero-actions,.toolbar,.action-cell,.filters{display:none!important}.page{max-width:none;padding:0}.panel,.metric{box-shadow:none}}
@@ -101,7 +102,16 @@
 </main>
 <script src="common.js"></script>
 <script>
-  const ROLE_LABELS={guest:'其他獨立頁面',env:'一般全頁',mech:'滑油報告',ops:'CEMS＋滑油',admin:'全部分頁＋後台'};
+  const PAGE_OPTIONS=[
+    {id:'index.html',label:'廢水處理'},
+    {id:'cems.html',label:'CEMS監測'},
+    {id:'urea.html',label:'尿素分析'},
+    {id:'oil.html',label:'滑油報告'},
+    {id:'daily.html',label:'每日紀錄'},
+    {id:'monthly.html',label:'每月紀錄'}
+  ];
+  const LEGACY_ACCESS={admin:['index.html','cems.html','urea.html','oil.html','daily.html','monthly.html'],env:['index.html','cems.html','urea.html','oil.html','daily.html','monthly.html'],mech:['oil.html'],ops:['cems.html','oil.html'],guest:[]};
+  const OTHER_PAGE_LABELS='廠務會議、採購發包、機組時數、公益活動、影片企劃';
   let usersCache=[];
   let activeFilter='all';
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -115,8 +125,14 @@
     document.getElementById('refreshBtn').addEventListener('click',loadUsers);
     document.getElementById('searchBox').addEventListener('input',renderUsers);
     document.querySelectorAll('.filter').forEach(function(btn){btn.addEventListener('click',function(){activeFilter=btn.dataset.filter;document.querySelectorAll('.filter').forEach(function(b){b.classList.toggle('active',b===btn)});renderUsers()})});
-    document.getElementById('all-users-list').addEventListener('change',function(event){if(event.target.matches('select[data-role-id]'))event.target.dataset.changed='1'});
-    document.getElementById('all-users-list').addEventListener('click',function(event){const btn=event.target.closest('button[data-action]');if(!btn)return;const uid=btn.dataset.uid;if(btn.dataset.action==='approve')approveUser(uid);if(btn.dataset.action==='save')updateUser(uid)});
+    document.getElementById('all-users-list').addEventListener('click',function(event){
+      const btn=event.target.closest('button[data-action]');if(!btn)return;
+      const uid=btn.dataset.uid;
+      if(btn.dataset.action==='approve')approveUser(uid);
+      if(btn.dataset.action==='disable')disableUser(uid);
+      if(btn.dataset.action==='enable')enableUser(uid);
+      if(btn.dataset.action==='save')saveUser(uid);
+    });
     loadUsers();
     setInterval(renderOnline,60000);
   }
@@ -151,18 +167,28 @@
     list.innerHTML=online.length?online.map(function(u){return '<article class="online-card"><div class="online-name"><span class="dot"></span> '+escapeHtml(u.name||'未填姓名')+'</div><div class="online-meta">'+escapeHtml([u.dept,u.title].filter(Boolean).join('・')||'未填部門/職稱')+'<br>最後活動 '+fmtDate(u.lastSeen)+'</div></article>'}).join(''):'<div class="empty">目前沒有 5 分鐘內活動的使用者</div>';
   }
   function statusBadge(u){
-    if(u.isApproved)return '<span class="badge b-green">已核准</span>';
-    if(u.role==='guest')return '<span class="badge b-red">已停用</span>';
-    return '<span class="badge b-amber">待審核</span>';
+    if(u.isApproved)return '<span class="badge b-green">已啟用</span>';
+    if(u.accountStatus==='disabled')return '<span class="badge b-red">已停用</span>';
+    return '<span class="badge b-amber">'+(u.accountStatus==='pending'?'待審核':'未核准（舊資料）')+'</span>';
   }
-  function roleOptions(current){return Object.keys(ROLE_LABELS).map(function(role){return '<option value="'+role+'" '+(current===role?'selected':'')+'>'+ROLE_LABELS[role]+'</option>'}).join('')}
+  function savedPermissions(u){
+    const base=Array.isArray(u.permissions)?u.permissions:(LEGACY_ACCESS[u.role]||[]);
+    return PAGE_OPTIONS.map(function(p){return p.id}).filter(function(id){return base.includes(id)});
+  }
+  function permissionEditor(u){
+    const selected=savedPermissions(u);
+    const isSelf=auth.currentUser&&auth.currentUser.uid===u.uid;
+    const admin=u.isAdmin===true||(!Array.isArray(u.permissions)&&u.role==='admin');
+    const boxes=PAGE_OPTIONS.map(function(p){return '<label class="perm-item"><input type="checkbox" data-permission="'+p.id+'" '+(selected.includes(p.id)?'checked':'')+'> '+p.label+'</label>'}).join('');
+    return '<div class="permission-grid">'+boxes+'</div><label class="admin-access"><input type="checkbox" data-admin '+(admin?'checked':'')+' '+(isSelf?'disabled title="目前登入中的管理員不能在此撤銷自己的後台權限"':'')+'> 後台管理員權限</label><div class="fixed-access">核准後固定可用：'+OTHER_PAGE_LABELS+'</div>';
+  }
   function renderUsers(){
     const body=document.getElementById('all-users-list');const q=document.getElementById('searchBox').value.trim().toLowerCase();const counts=duplicateCounts();
     const filtered=usersCache.filter(function(u){
       const key=emailKey(u.email),dup=key&&counts[key]>1;
       const text=[u.name,u.email,u.dept,u.title,u.uid].join(' ').toLowerCase();
       const matchesQuery=!q||text.includes(q);
-      const matchesFilter=activeFilter==='all'||(activeFilter==='unapproved'&&!u.isApproved)||(activeFilter==='approved'&&!!u.isApproved)||(activeFilter==='disabled'&&u.accountStatus==='disabled')||(activeFilter==='duplicate'&&dup);
+      const matchesFilter=activeFilter==='all'||(activeFilter==='unapproved'&&!u.isApproved&&u.accountStatus!=='disabled')||(activeFilter==='approved'&&!!u.isApproved)||(activeFilter==='disabled'&&u.accountStatus==='disabled')||(activeFilter==='duplicate'&&dup);
       return matchesQuery&&matchesFilter
     });
     document.getElementById('result-count').textContent='顯示 '+filtered.length+' / '+usersCache.length+' 筆人員資料';
@@ -171,38 +197,39 @@
       const key=emailKey(u.email),dupCount=counts[key]||0;
       const duplicateBadge=dupCount>1?'<span class="badge b-red" title="相同 Email 共 '+dupCount+' 筆文件">重複 '+dupCount+' 筆</span>':'';
       const uidDisplay=escapeHtml(u.uid||'—');
-      const roleId='role-'+u.uid;
-      const approveBtn=!u.isApproved?'<button class="btn btn-green small-btn" data-action="approve" data-uid="'+escapeHtml(u.uid)+'">核准／啟用</button>':'';
+      const approveBtn=!u.isApproved&&u.accountStatus!=='disabled'?'<button class="btn btn-green small-btn" data-action="approve" data-uid="'+escapeHtml(u.uid)+'">核准帳號</button>':'';
       const statusBtn=u.isApproved?'<button class="btn btn-danger small-btn" data-action="disable" data-uid="'+escapeHtml(u.uid)+'">停用</button>':(u.accountStatus==='disabled'?'<button class="btn btn-green small-btn" data-action="enable" data-uid="'+escapeHtml(u.uid)+'">重新啟用</button>':'');
-      return '<tr><td><div class="person">'+escapeHtml(u.name||'未填姓名')+'</div><div class="sub">'+escapeHtml(u.title||'')+'</div></td><td><div class="email">'+escapeHtml(u.email||'未提供 Email')+' '+duplicateBadge+'</div><div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div></td><td>'+escapeHtml(u.dept||'未填部門')+'</td><td>'+statusBadge(u)+'</td><td><select id="'+escapeHtml(roleId)+'" data-role-id="'+escapeHtml(u.uid)+'">'+roleOptions(u.role||'guest')+'</select><div class="sub">'+escapeHtml(ROLE_LABELS[u.role]||'未設定')+'</div></td><td>'+fmtDate(u.createdAt)+'</td><td>'+fmtDate(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存</button></td></tr>'
+      return '<tr><td><div class="person">'+escapeHtml(u.name||'未填姓名')+'</div><div class="sub">'+escapeHtml(u.title||'')+'</div></td><td><div class="email">'+escapeHtml(u.email||'未提供 Email')+' '+duplicateBadge+'</div><div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div></td><td>'+escapeHtml(u.dept||'未填部門')+'</td><td>'+statusBadge(u)+'</td><td class="permission-cell">'+permissionEditor(u)+'</td><td>'+fmtDate(u.createdAt)+'</td><td>'+fmtDate(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存權限</button></td></tr>'
     }).join('');
   }
+  function findUser(uid){return usersCache.find(function(u){return u.uid===uid})}
   async function approveUser(uid){
-    const select=document.getElementById('role-'+uid);if(!select)return;
-    await saveUser(uid,select.value,'approved');
-  }
-  async function updateUser(uid){
-    const select=document.getElementById('role-'+uid);if(!select)return;
-    await saveUser(uid,select.value,'keep');
+    const u=findUser(uid);if(!u||!confirm('核准「'+(u.name||u.email||uid)+'」？核准後可使用已勾選的核心分頁，以及固定的其他五頁。'))return;
+    try{await db.collection('users').doc(uid).update({isApproved:true,accountStatus:'approved'});await loadUsers()}
+    catch(error){alert('核准失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }
   async function disableUser(uid){
-    if(!confirm('確定停用這個帳號？使用者將無法進入網站。'))return;
-    const select=document.getElementById('role-'+uid);if(!select)return;
-    await saveUser(uid,select.value,'disabled');
+    const u=findUser(uid);if(!u||!confirm('確定停用「'+(u.name||u.email||uid)+'」？此帳號將無法進入網站。'))return;
+    try{await db.collection('users').doc(uid).update({isApproved:false,accountStatus:'disabled'});await loadUsers()}
+    catch(error){alert('停用失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }
   async function enableUser(uid){
-    if(!confirm('確定重新啟用這個帳號？'))return;
-    const select=document.getElementById('role-'+uid);if(!select)return;
-    await saveUser(uid,select.value,'approved');
+    const u=findUser(uid);if(!u||!confirm('確定重新啟用「'+(u.name||u.email||uid)+'」？既有分頁權限將保留。'))return;
+    try{await db.collection('users').doc(uid).update({isApproved:true,accountStatus:'approved'});await loadUsers()}
+    catch(error){alert('啟用失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }
-  async function saveUser(uid,role,mode){
-    try{
-      const updates={role:role,isAdmin:role==='admin'};
-      if(mode==='approved'){updates.isApproved=true;updates.accountStatus='approved'}
-      if(mode==='disabled'){updates.isApproved=false;updates.accountStatus='disabled'}
-      await db.collection('users').doc(uid).update(updates);
-      await loadUsers();
-    }catch(error){alert('更新失敗：'+(error.message||'請檢查權限'));console.error(error)}
+  async function saveUser(uid){
+    const u=findUser(uid);if(!u)return;
+    const row=Array.from(document.querySelectorAll('#all-users-list tr')).find(function(tr){const b=tr.querySelector('button[data-uid]');return b&&b.dataset.uid===uid});
+    if(!row)return;
+    const permissions=Array.from(row.querySelectorAll('input[data-permission]:checked')).map(function(i){return i.dataset.permission});
+    const adminInput=row.querySelector('input[data-admin]');
+    const isAdmin=adminInput?adminInput.checked:(u.isAdmin===true);
+    const wasAdmin=u.isAdmin===true||(!Array.isArray(u.permissions)&&u.role==='admin');
+    if(isAdmin!==wasAdmin&&!confirm(isAdmin?'確定授予此帳號後台管理員權限？管理員可管理其他帳號與分頁權限。':'確定移除此帳號的後台管理員權限？'))return;
+    const updates={permissions:permissions,isAdmin:isAdmin,role:isAdmin?'admin':(u.role==='admin'?'guest':(u.role||'guest'))};
+    try{await db.collection('users').doc(uid).update(updates);await loadUsers()}
+    catch(error){alert('儲存權限失敗：'+(error.message||'請檢查權限'));console.error(error)}
   }
 </script>
 </body>

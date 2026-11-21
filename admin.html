@@ -276,7 +276,7 @@
     const profile={};
     row.querySelectorAll('input[data-profile]').forEach(function(input){profile[input.dataset.profile]=input.value.trim()});
     if(!profile.name){alert('姓名不可空白。');return}
-    if(profile.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(profile.email)){alert('請輸入有效的資料 Email。');return}
+    if(profile.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)){alert('請輸入有效的資料 Email。');return}
     try{
       await db.collection('users').doc(uid).update({name:profile.name,dept:profile.dept||'',title:profile.title||'',email:profile.email||''});
       editingUsers.delete(uid);await loadUsers();

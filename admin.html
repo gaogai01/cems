@@ -1,229 +1,196 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20261117">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>後台管理系統</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-    <style>
-        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333; --border-color: #ddd; }
-        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --border-color: #333; }
-        
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; transition: background 0.3s; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gap: 20px; }
-        
-        h2 { border-left: 5px solid #dc3545; padding-left: 10px; margin-bottom: 15px; }
-
-        .card { background: var(--bg-card); padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-
-        /* 表格樣式 */
-        .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .admin-table th, .admin-table td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
-        .admin-table th { background: rgba(0,0,0,0.05); font-weight: bold; }
-        
-        /* 狀態標籤 */
-        .tag { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
-        .tag-online { background: #d4edda; color: #155724; }
-        .tag-offline { background: #f8d7da; color: #721c24; }
-        .tag-pending { background: #fff3cd; color: #856404; }
-        
-        /* 按鈕 */
-        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-size: 0.9rem; }
-        .btn-approve { background: #28a745; color: white; }
-        .btn-update { background: #007bff; color: white; }
-        .btn-del { background: #dc3545; color: white; }
-        
-        select { padding: 5px; border-radius: 4px; }
-
-        @media (max-width: 768px) {
-            .admin-table th:nth-child(3), .admin-table td:nth-child(3) { display: none; } /* 手機隱藏 Email */
-        }
-    </style>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20261117">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f3f6fb">
+  <title>後台管理｜尖山發電廠</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root{--bg:#f3f6fb;--card:#fff;--ink:#172b43;--muted:#64748b;--line:#dce4ef;--blue:#1769d2;--blue-soft:#eaf2ff;--green:#12805c;--green-soft:#e7f7ef;--amber:#a65d00;--amber-soft:#fff4dc;--red:#b42335;--red-soft:#fff0f1;--shadow:0 8px 24px rgba(23,43,67,.07)}
+    [data-theme="dark"]{--bg:#101722;--card:#182231;--ink:#edf4ff;--muted:#a4b1c2;--line:#344255;--blue:#66a8ff;--blue-soft:#203550;--green:#51d29b;--green-soft:#173a31;--amber:#f4bc58;--amber-soft:#44351d;--red:#ff8792;--red-soft:#42252b;--shadow:0 8px 24px rgba(0,0,0,.2)}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft JhengHei",system-ui,sans-serif}
+    .page{max-width:1440px;margin:0 auto;padding:24px clamp(14px,3vw,36px) 48px}
+    .hero{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:25px 28px;border-radius:20px;background:linear-gradient(120deg,#103c76,#1769d2 66%,#3493ed);color:#fff;box-shadow:var(--shadow)}
+    .hero h1{font-size:clamp(1.5rem,3vw,2rem);margin:0 0 6px;letter-spacing:.02em}
+    .hero p{margin:0;color:#e2efff}
+    .hero-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{border:0;border-radius:10px;padding:10px 15px;font:inherit;font-weight:700;cursor:pointer;transition:transform .15s,filter .15s}
+    .btn:hover{filter:brightness(1.04);transform:translateY(-1px)}
+    .btn-light{background:#fff;color:#17477d}.btn-primary{background:var(--blue);color:#fff}.btn-green{background:var(--green);color:#fff}.btn-outline{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+    .statusline{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.9rem;margin:14px 2px 18px}
+    .dot{width:9px;height:9px;background:#19a873;border-radius:50%;display:inline-block}
+    .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+    .metric,.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+    .metric{padding:17px 19px;display:flex;align-items:center;gap:14px}
+    .metric-icon{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:1.35rem;background:var(--blue-soft)}
+    .metric:nth-child(2) .metric-icon{background:var(--green-soft)}.metric:nth-child(3) .metric-icon{background:var(--amber-soft)}.metric:nth-child(4) .metric-icon{background:var(--red-soft)}
+    .metric-label{font-size:.88rem;color:var(--muted);margin-bottom:3px}.metric-value{font-size:1.55rem;font-weight:800;line-height:1.15}
+    .panel{padding:20px;margin:16px 0}
+    .panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:15px}
+    .panel-title{margin:0;font-size:1.2rem}.panel-desc{color:var(--muted);font-size:.9rem;margin:5px 0 0}
+    .notice{display:flex;gap:10px;align-items:flex-start;background:var(--amber-soft);border:1px solid color-mix(in srgb,var(--amber) 25%,transparent);color:var(--ink);padding:13px 15px;border-radius:12px;margin:12px 0 16px;line-height:1.55}
+    .notice strong{color:var(--amber)}
+    .online-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+    .online-card{padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+    .online-name{font-weight:800}.online-meta{font-size:.85rem;color:var(--muted);margin-top:4px}
+    .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:14px 0}
+    .search{width:min(380px,100%);padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit}
+    .filters{display:flex;gap:7px;flex-wrap:wrap}
+    .filter{border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);padding:8px 12px;font:inherit;cursor:pointer}
+    .filter.active{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:800}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+    table{width:100%;border-collapse:collapse;min-width:900px}
+    th,td{padding:12px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+    th{background:var(--bg);font-size:.84rem;color:var(--muted);font-weight:800;white-space:nowrap}
+    tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:color-mix(in srgb,var(--blue-soft) 45%,transparent)}
+    .person{font-weight:800}.sub{font-size:.8rem;color:var(--muted);margin-top:3px}
+    .email{font-weight:600;overflow-wrap:anywhere}
+    .uid{font: .76rem ui-monospace,SFMono-Regular,monospace;color:var(--muted);white-space:nowrap}
+    .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:.76rem;font-weight:800;white-space:nowrap}
+    .b-green{background:var(--green-soft);color:var(--green)}.b-amber{background:var(--amber-soft);color:var(--amber)}.b-red{background:var(--red-soft);color:var(--red)}.b-blue{background:var(--blue-soft);color:var(--blue)}.b-gray{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+    select{max-width:170px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit}
+    .action-cell{white-space:nowrap}.small-btn{padding:8px 11px;margin:2px}
+    .empty,.error{padding:24px;text-align:center;color:var(--muted)}
+    .error{color:var(--red)}
+    .section-label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+    @media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:600px){.page{padding:14px 12px 32px}.hero{padding:20px;align-items:flex-start;flex-direction:column}.hero-actions{width:100%}.hero-actions .btn{flex:1}.metrics{gap:9px}.metric{padding:13px 12px;gap:9px}.metric-icon{width:36px;height:36px;font-size:1.1rem}.metric-value{font-size:1.3rem}.panel{padding:15px;margin:12px 0}.panel-head{flex-direction:column}.toolbar{align-items:stretch}.filters{overflow:auto;flex-wrap:nowrap;padding-bottom:4px}.filter{white-space:nowrap}.search{width:100%}}
+    @media print{.hero-actions,.toolbar,.action-cell,.filters{display:none!important}.page{max-width:none;padding:0}.panel,.metric{box-shadow:none}}
+  </style>
 </head>
 <body>
-
 <div id="navbar-placeholder"></div>
-
-<div class="container">
-    
-    <div class="card">
-        <h2>🟢 目前線上人員</h2>
-        <p style="color:#666; font-size:0.9rem;">* 顯示最近 5 分鐘內有活動的使用者</p>
-        <table class="admin-table">
-            <thead><tr><th>姓名</th><th>部門/職稱</th><th>最後活動時間</th><th>狀態</th></tr></thead>
-            <tbody id="online-list"></tbody>
-        </table>
+<main class="page">
+  <header class="hero">
+    <div><div class="section-label" style="color:#c5ddff">尖山發電廠｜管理工具</div><h1>人員與權限管理</h1><p>檢視申請、管理頁面權限，並辨識重複的 Email 資料。</p></div>
+    <div class="hero-actions"><button class="btn btn-light" id="refreshBtn">↻ 重新載入</button><button class="btn btn-light" onclick="window.print()">⎙ 列印清單</button></div>
+  </header>
+  <div class="statusline"><span class="dot"></span><span id="load-status" role="status">準備載入資料</span></div>
+  <section class="metrics" aria-label="帳號摘要">
+    <div class="metric"><div class="metric-icon">👥</div><div><div class="metric-label">人員資料</div><div class="metric-value" id="metric-total">—</div></div></div>
+    <div class="metric"><div class="metric-icon">🟢</div><div><div class="metric-label">目前線上</div><div class="metric-value" id="metric-online">—</div></div></div>
+    <div class="metric"><div class="metric-icon">⏳</div><div><div class="metric-label">待審核</div><div class="metric-value" id="metric-pending">—</div></div></div>
+    <div class="metric"><div class="metric-icon">⚠️</div><div><div class="metric-label">重複 Email 群組</div><div class="metric-value" id="metric-duplicate">—</div></div></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><h2 class="panel-title">🟢 目前線上人員</h2><p class="panel-desc">最近 5 分鐘內有回報活動的使用者</p></div><span class="badge b-green">每分鐘更新顯示</span></div>
+    <div id="online-list" class="online-list"><div class="empty">載入中…</div></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><h2 class="panel-title">👤 帳號與權限</h2><p class="panel-desc">核准或停用帳號，並依需要設定可使用的分頁。</p></div></div>
+    <div class="notice"><span>ℹ️</span><div><strong>重複 Email 如何判讀：</strong>網站以 Firebase UID 作為 Firestore 文件編號。相同 Email 出現兩列，表示 users 集合內有不同 UID 的資料文件共用這個 Email；可能是不同 Firebase 帳號，也可能是舊的個人資料文件。此頁無法查驗 Firebase Authentication 的帳號清單，請先比對 UID 與登入紀錄，勿直接刪除其中一筆。</div></div>
+    <div class="toolbar">
+      <input class="search" id="searchBox" type="search" placeholder="搜尋姓名、Email、部門或 UID…" aria-label="搜尋人員">
+      <div class="filters" role="group" aria-label="人員篩選">
+        <button class="filter active" data-filter="all">全部</button><button class="filter" data-filter="pending">待審核</button><button class="filter" data-filter="approved">已核准</button><button class="filter" data-filter="disabled">已停用</button><button class="filter" data-filter="duplicate">重複 Email</button>
+      </div>
     </div>
-
-    <div class="card">
-        <h2>⏳ 待審核申請</h2>
-        <table class="admin-table">
-            <thead><tr><th>姓名</th><th>部門/職稱</th><th>Email</th><th>權限設定</th><th>操作</th></tr></thead>
-            <tbody id="pending-list"></tbody>
-        </table>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>人員</th><th>Email / UID</th><th>部門與職稱</th><th>帳號狀態</th><th>分頁權限</th><th>建立時間</th><th>最後活動</th><th>操作</th></tr></thead>
+        <tbody id="all-users-list"><tr><td colspan="8" class="empty">載入中…</td></tr></tbody>
+      </table>
     </div>
-
-    <div class="card">
-        <h2>👥 人員權限管理</h2>
-        <input type="text" id="searchBox" placeholder="搜尋姓名..." onkeyup="filterUsers()" style="padding:5px; width:200px; margin-bottom:10px;">
-        <table class="admin-table">
-            <thead><tr><th>姓名</th><th>部門/職稱</th><th>Email</th><th>目前權限</th><th>操作</th></tr></thead>
-            <tbody id="all-users-list"></tbody>
-        </table>
-    </div>
-
-</div>
-
+    <div id="result-count" class="sub" style="margin-top:10px"></div>
+  </section>
+</main>
 <script src="common.js"></script>
-
 <script>
-    // ============================================================
-    // 3. 主程式邏輯 (startApp) - 由 common.js 呼叫
-    // ============================================================
-    function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, char => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        })[char]);
-    }
-
-    function startApp() {
-        // 載入主題
-        if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
-        
-        // 載入資料
-        loadOnlineUsers();
-        loadAllUsers();
-    }
-
-    // 1. 載入線上人員
-    async function loadOnlineUsers() {
-        const list = document.getElementById('online-list');
-        list.innerHTML = '<tr><td colspan="4">載入中...</td></tr>';
-        
-        // 抓取所有使用者，然後在前端過濾 (因為 Firestore 查詢限制)
-        const snap = await db.collection('users').get();
-        let html = '';
-        let count = 0;
-        const now = new Date();
-
-        snap.forEach(doc => {
-            const u = doc.data();
-            if (u.lastSeen) {
-                const lastSeenDate = u.lastSeen.toDate();
-                const diffMins = (now - lastSeenDate) / 1000 / 60;
-                
-                // 5 分鐘內算線上
-                if (diffMins <= 5) {
-                    count++;
-                    html += `<tr>
-                        <td>${escapeHtml(u.name)}</td>
-                        <td>${escapeHtml(u.dept)} ${escapeHtml(u.title || '')}</td>
-                        <td>${lastSeenDate.toLocaleTimeString()}</td>
-                        <td><span class="tag tag-online">Online</span></td>
-                    </tr>`;
-                }
-            }
-        });
-
-        if(count === 0) html = '<tr><td colspan="4">目前無人線上</td></tr>';
-        list.innerHTML = html;
-    }
-
-    // 2. 載入所有使用者 (包含待審核)
-    async function loadAllUsers() {
-        const pendingList = document.getElementById('pending-list');
-        const allList = document.getElementById('all-users-list');
-        
-        const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
-        
-        let pendingHtml = '';
-        let allHtml = '';
-        let pendingCount = 0;
-
-        snap.forEach(doc => {
-            const u = doc.data();
-            const roleOptions = `
-                <option value="guest" ${u.role==='guest'?'selected':''}>停用</option>
-                <option value="env" ${u.role==='env'?'selected':''}>全開</option>
-                <option value="mech" ${u.role==='mech'?'selected':''}>僅滑油</option>
-                <option value="ops" ${u.role==='ops'?'selected':''}>CEMS＋滑油</option>
-                <option value="admin" ${u.role==='admin'?'selected':''}>全開+後台</option>
-            `;
-            
-            // 待審核區
-            if (!u.isApproved) {
-                pendingCount++;
-                pendingHtml += `<tr>
-                    <td>${escapeHtml(u.name)}</td>
-                    <td>${escapeHtml(u.dept)} ${escapeHtml(u.title || '')}</td>
-                    <td>${escapeHtml(u.email)}</td>
-                    <td><select id="role-p-${doc.id}">${roleOptions}</select></td>
-                    <td><button class="btn-approve" onclick="approveUser('${doc.id}')">核准</button></td>
-                </tr>`;
-            }
-
-            // 所有人員區
-            allHtml += `<tr class="user-row">
-                <td class="u-name">${escapeHtml(u.name)}</td>
-                <td>${escapeHtml(u.dept)} ${escapeHtml(u.title || '')}</td>
-                <td>${escapeHtml(u.email)}</td>
-                <td><select id="role-a-${doc.id}">${roleOptions}</select></td>
-                <td><button class="btn-update" onclick="updateUser('${doc.id}')">更新</button></td>
-            </tr>`;
-        });
-
-        if(pendingCount === 0) pendingHtml = '<tr><td colspan="5">無待審核申請</td></tr>';
-        
-        pendingList.innerHTML = pendingHtml;
-        allList.innerHTML = allHtml;
-    }
-
-    // 核准用戶
-    function approveUser(uid) {
-        const role = document.getElementById(`role-p-${uid}`).value;
-        db.collection('users').doc(uid).update({
-            isApproved: true,
-            role: role,
-            isAdmin: (role === 'admin')
-        }).then(() => {
-            alert("已核准！");
-            loadAllUsers(); // 重新整理列表
-        });
-    }
-
-    // 更新用戶權限
-    function updateUser(uid) {
-        const role = document.getElementById(`role-a-${uid}`).value;
-        const isApproved = (role !== 'guest'); // 如果設為訪客，視為停用
-        
-        db.collection('users').doc(uid).update({
-            isApproved: isApproved,
-            role: role,
-            isAdmin: (role === 'admin')
-        }).then(() => {
-            alert("權限已更新！");
-            loadAllUsers();
-        });
-    }
-
-    // 簡單搜尋功能
-    function filterUsers() {
-        const input = document.getElementById('searchBox').value.toUpperCase();
-        const rows = document.querySelectorAll('.user-row');
-        rows.forEach(row => {
-            const name = row.querySelector('.u-name').innerText.toUpperCase();
-            row.style.display = name.includes(input) ? '' : 'none';
-        });
-    }
-
-    // 每分鐘自動刷新線上狀態
-    setInterval(loadOnlineUsers, 60000);
-
+  const ROLE_LABELS={guest:'停用',env:'全部分頁',mech:'滑油報告',ops:'CEMS＋滑油',admin:'全部分頁＋後台'};
+  let usersCache=[];
+  let activeFilter='all';
+  function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function asDate(value){if(!value)return null;if(typeof value.toDate==='function')return value.toDate();const d=new Date(value);return Number.isNaN(d.getTime())?null:d}
+  function fmtDate(value){const d=asDate(value);return d?d.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}
+  function emailKey(email){return String(email||'').trim().toLowerCase()}
+  function duplicateCounts(){const counts={};usersCache.forEach(function(u){const k=emailKey(u.email);if(k)counts[k]=(counts[k]||0)+1});return counts}
+  function isOnline(u){const d=asDate(u.lastSeen);return d&&((Date.now()-d.getTime())<=5*60*1000)}
+  function startApp(){
+    if(localStorage.getItem('theme')==='dark')document.body.setAttribute('data-theme','dark');
+    document.getElementById('refreshBtn').addEventListener('click',loadUsers);
+    document.getElementById('searchBox').addEventListener('input',renderUsers);
+    document.querySelectorAll('.filter').forEach(function(btn){btn.addEventListener('click',function(){activeFilter=btn.dataset.filter;document.querySelectorAll('.filter').forEach(function(b){b.classList.toggle('active',b===btn)});renderUsers()})});
+    document.getElementById('all-users-list').addEventListener('change',function(event){if(event.target.matches('select[data-role-id]'))event.target.dataset.changed='1'});
+    document.getElementById('all-users-list').addEventListener('click',function(event){const btn=event.target.closest('button[data-action]');if(!btn)return;const uid=btn.dataset.uid;if(btn.dataset.action==='approve')approveUser(uid);if(btn.dataset.action==='save')updateUser(uid)});
+    loadUsers();
+    setInterval(renderOnline,60000);
+  }
+  async function loadUsers(){
+    const status=document.getElementById('load-status');status.textContent='正在載入人員資料…';
+    document.getElementById('all-users-list').innerHTML='<tr><td colspan="8" class="empty">正在讀取資料…</td></tr>';
+    document.getElementById('refreshBtn').disabled=true;
+    try{
+      const snap=await db.collection('users').get();
+      usersCache=snap.docs.map(function(doc){return Object.assign({uid:doc.id},doc.data())});
+      usersCache.sort(function(a,b){const da=asDate(a.createdAt),dbb=asDate(b.createdAt);return (dbb?dbb.getTime():0)-(da?da.getTime():0)});
+      status.textContent='資料已更新 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+      renderOnline();renderMetrics();renderUsers();
+    }catch(error){
+      console.error('User list load failed:',error);
+      status.textContent='載入失敗：'+(error.code||error.message||'請確認資料庫權限');
+      document.getElementById('all-users-list').innerHTML='<tr><td colspan="8" class="error">無法讀取人員資料。請確認網路連線與 Firestore 權限後重新載入。</td></tr>';
+    }finally{document.getElementById('refreshBtn').disabled=false}
+  }
+  function renderMetrics(){
+    const counts=duplicateCounts();let duplicateGroups=0,pending=0;
+    Object.keys(counts).forEach(function(k){if(counts[k]>1)duplicateGroups++});
+    usersCache.forEach(function(u){if(!u.isApproved)pending++});
+    document.getElementById('metric-total').textContent=usersCache.length;
+    document.getElementById('metric-online').textContent=usersCache.filter(isOnline).length;
+    document.getElementById('metric-pending').textContent=pending;
+    document.getElementById('metric-duplicate').textContent=duplicateGroups;
+  }
+  function renderOnline(){
+    const list=document.getElementById('online-list');const online=usersCache.filter(isOnline).sort(function(a,b){return (asDate(b.lastSeen)||0)-(asDate(a.lastSeen)||0)});
+    document.getElementById('metric-online').textContent=online.length;
+    list.innerHTML=online.length?online.map(function(u){return '<article class="online-card"><div class="online-name"><span class="dot"></span> '+escapeHtml(u.name||'未填姓名')+'</div><div class="online-meta">'+escapeHtml([u.dept,u.title].filter(Boolean).join('・')||'未填部門/職稱')+'<br>最後活動 '+fmtDate(u.lastSeen)+'</div></article>'}).join(''):'<div class="empty">目前沒有 5 分鐘內活動的使用者</div>';
+  }
+  function statusBadge(u){
+    if(u.isApproved)return '<span class="badge b-green">已核准</span>';
+    if(u.role==='guest')return '<span class="badge b-red">已停用</span>';
+    return '<span class="badge b-amber">待審核</span>';
+  }
+  function roleOptions(current){return Object.keys(ROLE_LABELS).map(function(role){return '<option value="'+role+'" '+(current===role?'selected':'')+'>'+ROLE_LABELS[role]+'</option>'}).join('')}
+  function renderUsers(){
+    const body=document.getElementById('all-users-list');const q=document.getElementById('searchBox').value.trim().toLowerCase();const counts=duplicateCounts();
+    const filtered=usersCache.filter(function(u){
+      const key=emailKey(u.email),dup=key&&counts[key]>1;
+      const text=[u.name,u.email,u.dept,u.title,u.uid].join(' ').toLowerCase();
+      const matchesQuery=!q||text.includes(q);
+      const matchesFilter=activeFilter==='all'||(activeFilter==='pending'&&!u.isApproved&&u.role!=='guest')||(activeFilter==='approved'&&!!u.isApproved)||(activeFilter==='disabled'&&(!u.isApproved||u.role==='guest'))||(activeFilter==='duplicate'&&dup);
+      return matchesQuery&&matchesFilter
+    });
+    document.getElementById('result-count').textContent='顯示 '+filtered.length+' / '+usersCache.length+' 筆人員資料';
+    if(!filtered.length){body.innerHTML='<tr><td colspan="8" class="empty">沒有符合條件的資料</td></tr>';return}
+    body.innerHTML=filtered.map(function(u){
+      const key=emailKey(u.email),dupCount=counts[key]||0;
+      const duplicateBadge=dupCount>1?'<span class="badge b-red" title="相同 Email 共 '+dupCount+' 筆文件">重複 '+dupCount+' 筆</span>':'';
+      const uidDisplay=escapeHtml(u.uid||'—');
+      const roleId='role-'+u.uid;
+      const approveBtn=!u.isApproved?'<button class="btn btn-green small-btn" data-action="approve" data-uid="'+escapeHtml(u.uid)+'">核准</button>':'';
+      return '<tr><td><div class="person">'+escapeHtml(u.name||'未填姓名')+'</div><div class="sub">'+escapeHtml(u.title||'')+'</div></td><td><div class="email">'+escapeHtml(u.email||'未提供 Email')+' '+duplicateBadge+'</div><div class="uid" title="'+uidDisplay+'">UID '+uidDisplay+'</div></td><td>'+escapeHtml(u.dept||'未填部門')+'</td><td>'+statusBadge(u)+'</td><td><select id="'+escapeHtml(roleId)+'" data-role-id="'+escapeHtml(u.uid)+'">'+roleOptions(u.role||'guest')+'</select><div class="sub">'+escapeHtml(ROLE_LABELS[u.role]||'未設定')+'</div></td><td>'+fmtDate(u.createdAt)+'</td><td>'+fmtDate(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存</button></td></tr>'
+    }).join('');
+  }
+  async function approveUser(uid){
+    const select=document.getElementById('role-'+uid);if(!select)return;
+    const role=select.value;if(role==='guest'&&!confirm('此權限會停用帳號，仍要核准為停用嗎？'))return;
+    await saveUser(uid,role,true);
+  }
+  async function updateUser(uid){
+    const select=document.getElementById('role-'+uid);if(!select)return;
+    const role=select.value;await saveUser(uid,role,role!=='guest');
+  }
+  async function saveUser(uid,role,isApproved){
+    try{
+      await db.collection('users').doc(uid).update({isApproved:isApproved,role:role,isAdmin:role==='admin'});
+      await loadUsers();
+    }catch(error){alert('更新失敗：'+(error.message||'請檢查權限'));console.error(error)}
+  }
 </script>
-
 </body>
 </html>

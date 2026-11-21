@@ -3,6 +3,35 @@
 
 let lastSuccessfulUpdateText = null;
 
+const DATA_UPLOAD_STALE_MS = 15 * 60 * 1000;
+
+function updateDataUploadReminder(timestamp, fromCache) {
+    const reminder = document.getElementById("dataUploadReminder");
+    if (!reminder) return;
+
+    const rawTimestamp = String(timestamp || "").trim();
+    const normalizedTimestamp = rawTimestamp.replace(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+/, "$1-$2-$3T").replace(" ", "T");
+    const timestampMs = Date.parse(normalizedTimestamp);
+    if (!rawTimestamp || !Number.isFinite(timestampMs)) {
+        reminder.style.display = "block";
+        reminder.textContent = "⚠️ 目前無法確認廢水來源資料的更新時間。請環化課確認廢水主機上的 push_to_google.py 已開啟執行；停電復電後請重新啟動。";
+        return;
+    }
+
+    const ageMs = Date.now() - timestampMs;
+    if (ageMs <= DATA_UPLOAD_STALE_MS && ageMs >= -5 * 60 * 1000) {
+        reminder.style.display = "none";
+        reminder.textContent = "";
+        return;
+    }
+
+    const elapsedMinutes = Math.max(0, Math.floor(ageMs / 60000));
+    const cacheNote = fromCache ? "（目前畫面顯示快取資料）" : "";
+    reminder.style.display = "block";
+    reminder.textContent = "⚠️ 廢水來源資料已 " + elapsedMinutes + " 分鐘未更新，資料時間：" + rawTimestamp + "。" +
+        cacheNote + "請環化課確認廢水主機上的 push_to_google.py 已開啟並持續執行；停電復電後請重新啟動。若程式已執行仍未更新，請檢查主機與試算表連線。";
+}
+
 const ALARM_SETTINGS_STORAGE_KEY = "wastewaterAlarmSettingsV1";
 
 function readAlarmSettings() {
@@ -208,6 +237,7 @@ async function fetchData() {
 
 function renderDashboard(data, fromCache) {
     window.currentDashboardData = data;
+    updateDataUploadReminder(data && data.timestamp, fromCache);
     if (data.timestamp) {
         const timestampText = String(data.timestamp).trim();
         const timeMatch = timestampText.match(/(?:T|\s)(\d{2}:\d{2}(?::\d{2})?)/);

@@ -52,6 +52,7 @@
     .email{font-weight:600;overflow-wrap:anywhere}
     .uid{font: .76rem ui-monospace,SFMono-Regular,monospace;color:var(--muted);white-space:nowrap}
     .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:.76rem;font-weight:800;white-space:nowrap}
+    .login-age{margin-top:5px}.login-age-recent{background:var(--green-soft);color:var(--green)}.login-age-warn{background:var(--amber-soft);color:var(--amber)}.login-age-stale{background:var(--red-soft);color:var(--red)}.login-age-never{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
     .b-green{background:var(--green-soft);color:var(--green)}.b-amber{background:var(--amber-soft);color:var(--amber)}.b-red{background:var(--red-soft);color:var(--red)}.b-blue{background:var(--blue-soft);color:var(--blue)}.b-gray{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
     select{max-width:170px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit}
     .action-cell{white-space:nowrap}.small-btn{padding:8px 11px;margin:2px}
@@ -138,6 +139,15 @@
   function asDate(value){if(!value)return null;if(typeof value.toDate==='function')return value.toDate();const d=new Date(value);return Number.isNaN(d.getTime())?null:d}
   function fmtDateOnly(value){const d=asDate(value);return d?d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0'):'—'}
   function fmtDateTime(value){const d=asDate(value);return d?fmtDateOnly(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'—'}
+  function loginAgeBadge(value){
+    const d=asDate(value);
+    if(!d)return '<span class="badge login-age login-age-never">從未登入</span>';
+    const today=new Date();today.setHours(0,0,0,0);
+    const lastLogin=new Date(d);lastLogin.setHours(0,0,0,0);
+    const days=Math.max(0,Math.floor((today-lastLogin)/86400000));
+    const tone=days<=1?'login-age-recent':(days<=7?'login-age-warn':'login-age-stale');
+    return '<span class="badge login-age '+tone+'">未登入 '+days+' 天</span>';
+  }
   function emailKey(email){return String(email||'').trim().toLowerCase()}
   function duplicateCounts(){const counts={};usersCache.forEach(function(u){const k=emailKey(u.email);if(k)counts[k]=(counts[k]||0)+1});return counts}
   function isOnline(u){const d=asDate(u.lastSeen);return d&&((Date.now()-d.getTime())<=5*60*1000)}
@@ -236,7 +246,7 @@
       const profileActions=editing
         ? '<div class="profile-actions"><button class="btn btn-green small-btn" data-action="profile-save" data-uid="'+escapeHtml(u.uid)+'">儲存</button><button class="btn btn-outline small-btn" data-action="profile-cancel" data-uid="'+escapeHtml(u.uid)+'">取消</button></div>'
         : '<button class="btn btn-outline small-btn" data-action="profile-edit" data-uid="'+escapeHtml(u.uid)+'">修改資料</button>';
-      return '<tr><td class="person-cell">'+personCell+'</td><td class="email-cell">'+emailCell+'</td><td>'+deptTitleCell+'</td><td>'+statusBadge(u)+'</td><td class="permission-cell">'+permissionEditor(u)+'</td><td>'+fmtDateOnly(u.createdAt)+'</td><td>'+fmtDateTime(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存權限</button>'+profileActions+'</td></tr>'
+      return '<tr><td class="person-cell">'+personCell+'</td><td class="email-cell">'+emailCell+'</td><td>'+deptTitleCell+'</td><td>'+statusBadge(u)+'</td><td class="permission-cell">'+permissionEditor(u)+'</td><td>'+fmtDateOnly(u.createdAt)+'</td><td><div>'+fmtDateTime(u.lastSeen)+'</div>'+loginAgeBadge(u.lastSeen)+'</td><td class="action-cell">'+approveBtn+statusBtn+'<button class="btn btn-primary small-btn" data-action="save" data-uid="'+escapeHtml(u.uid)+'">儲存權限</button>'+profileActions+'</td></tr>'
     }).join('');
   }
   function findUser(uid){return usersCache.find(function(u){return u.uid===uid})}

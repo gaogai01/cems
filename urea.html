@@ -130,7 +130,7 @@
         <h2>濃度/比重 換算</h2>
         <div class="calc-container">
             <div class="calc-inputs">
-                <div class="calc-group"><label>比重 (SG)</label><input type="number" id="sgInput" placeholder="1.11" step="0.01" oninput="calcConc()"><div class="calc-result" id="concResult">-- %</div></div>
+                <div class="calc-group"><label>比重 (SG)</label><input type="number" id="sgInput" placeholder="1.075" step="0.001" oninput="calcConc()"><div class="calc-result" id="concResult">-- %</div><div id="sgMeta" style="font-size:0.75rem;color:#666;text-align:right;margin-top:3px;">載入每日紀錄最新尿素比重…</div></div>
                 <div class="calc-group"><label>濃度 (%)</label><input type="number" id="concInput" placeholder="40" step="0.1" oninput="calcSg()"><div class="calc-result" id="sgResult">--</div></div>
             </div>
             <div class="calc-chart"><canvas id="concChart"></canvas></div>
@@ -397,6 +397,17 @@
             }
             document.getElementById('currentStock').value = stock;
             document.getElementById('dailyUsage').value = average.toFixed(2);
+            const latestSG = payload.latestUreaSG;
+            const sgMeta = document.getElementById('sgMeta');
+            if (latestSG && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(latestSG.date || '')) &&
+                Number.isFinite(Number(latestSG.value)) && Number(latestSG.value) > 1) {
+                const sg = Number(latestSG.value);
+                document.getElementById('sgInput').value = sg.toFixed(3);
+                calcConc();
+                if (sgMeta) sgMeta.textContent = '每日紀錄最新值：' + latestSG.date + '｜比重 ' + sg.toFixed(3);
+            } else if (sgMeta) {
+                sgMeta.textContent = '每日紀錄尚無有效尿素比重';
+            }
             const latest = payload.latestUreaPrice;
             const priceMeta = document.getElementById('ureaPriceMeta');
             if (latest && /^\d{4}-\d{2}-\d{2}$/.test(String(latest.date || '')) &&

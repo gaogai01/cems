@@ -55,6 +55,21 @@ const ALL_PAGES = {
 };
 const OTHER_PAGES = ['meet.html', 'plan.html', 'bigtime.html', 'newyear.html', 'mv.html'];
 
+// 新權限欄位 permissions 優先；沒有此欄位的舊帳號仍以原角色權限過渡。
+const USER_PERMISSION_PAGES = ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html', 'monthly.html'];
+function resolveAllowedPages(userData) {
+    const hasCustomPermissions = Array.isArray(userData.permissions);
+    const legacyRole = userData.role || 'guest';
+    const sourcePages = hasCustomPermissions
+        ? userData.permissions
+        : (ROLE_ACCESS[legacyRole] || []);
+    const pages = USER_PERMISSION_PAGES.filter(page => sourcePages.includes(page));
+    if (userData.isApproved) pages.push(...OTHER_PAGES);
+    const isAdmin = userData.isAdmin === true || (!hasCustomPermissions && legacyRole === 'admin');
+    if (isAdmin) pages.push('admin.html', 'try.html');
+    return [...new Set(pages)];
+}
+
 const PAGE_SHEETS = {
     'index.html':   { title: '廢水處理室資料庫', url: 'https://docs.google.com/spreadsheets/d/1Zbpcze9d3FD1fhIFXSAx44Qc9wQXLzpJxRiBwO5vVz0/edit?usp=sharing' },
     'cems.html':    { title: 'CEMS數據', url: 'https://docs.google.com/spreadsheets/d/1TX_B1yOiqN-f2ofCAiOHp2uc1sqXhZU50j_LtHprGzM/edit?usp=sharing' },
@@ -88,7 +103,7 @@ auth.onAuthStateChanged(async (user) => {
 
         const userData = doc.data();
         const userRole = userData.role || 'guest';
-        const allowedPages = ROLE_ACCESS[userRole] || [];
+        const allowedPages = resolveAllowedPages(userData);
         
         // 1. 檢查當前頁面是否有權限
         const path = window.location.pathname;
@@ -106,7 +121,7 @@ auth.onAuthStateChanged(async (user) => {
         }
 
         // 2. 權限通過，渲染導航列
-        renderNavbar(userData.name, userRole, allowedPages);
+        renderNavbar(userData.name, userData.isAdmin === true || (!Array.isArray(userData.permissions) && userRole === 'admin'), allowedPages);
         
         // 3. 啟動心跳 (回報線上狀態)
         updateHeartbeat(user.uid);
@@ -129,7 +144,7 @@ function updateHeartbeat(uid) {
     }).catch(err => console.log("Heartbeat fail", err));
 }
 
-function renderNavbar(userName, role, allowedPages) {
+function renderNavbar(userName, isAdmin, allowedPages) {
     const navPlaceholder = document.getElementById("navbar-placeholder");
     if (!navPlaceholder) return;
 
@@ -157,7 +172,7 @@ function renderNavbar(userName, role, allowedPages) {
         : "";
 
     let adminBtnHtml = "";
-    if (role === 'admin') {
+    if (isAdmin === true || allowedPages.includes('admin.html')) {
         const isActive = currentPage === 'admin.html' ? "active" : "";
         adminBtnHtml = `<a href="admin.html" class="nav-link admin-nav-link ${isActive}" ${isActive ? 'aria-current="page"' : ''}>⚙️ 後台管理</a>`;
     }

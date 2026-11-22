@@ -100,7 +100,7 @@ function closeCardSettings() {
 function handleCardSettingsKeydown(event, card) {
     if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        openCardSettings(card);
+        openCardDetail(card);
     }
 }
 
@@ -136,6 +136,10 @@ function saveCardSettings(event) {
 
     closeCardSettings();
     if (window.currentDashboardData) renderDashboard(window.currentDashboardData, false);
+    if (document.getElementById("cardDetailModal")?.style.display === "block") {
+        refreshCardDetailSummary();
+        renderCardDetailChart();
+    }
 }
 
 
@@ -293,21 +297,24 @@ function renderDashboard(data, fromCache) {
                 }
                 const statusClass = checkAlarm(item.col, rawVal);
                 const gaugeHTML = getGaugeHTML(item.col, rawVal);
-                htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML, item.col);
+                htmlContent += generateCardHTML(statusClass, item.name, item.tag, displayVal, item.unit, gaugeHTML, item.col, item.tag);
             }
         });
         htmlContent += `</div></div>`;
     });
 
     document.getElementById('app').innerHTML = htmlContent;
+    if (document.getElementById("cardDetailModal")?.style.display === "block") {
+        refreshCardDetailSummary();
+    }
 }
 
 /**
  * 產生單張卡片的 HTML 結構
  */
-function generateCardHTML(statusClass, name, tag, valueDisplay, unit, gaugeHTML, colName) {
+function generateCardHTML(statusClass, name, tag, valueDisplay, unit, gaugeHTML, colName, tagId) {
     return `
-    <div class="card ${statusClass} card-configurable" data-settings-col="${escapeHtml(colName)}" data-settings-name="${escapeHtml(name)}" data-settings-unit="${escapeHtml(unit)}" role="button" tabindex="0" title="點擊修改監測設定" onclick="openCardSettings(this)" onkeydown="handleCardSettingsKeydown(event, this)">
+    <div class="card ${statusClass} card-configurable" data-settings-col="${escapeHtml(colName)}" data-settings-name="${escapeHtml(name)}" data-settings-unit="${escapeHtml(unit)}" data-settings-tag="${escapeHtml(tagId || tag)}" role="button" tabindex="0" title="點擊查看歷史曲線與警報門檻" onclick="openCardDetail(this)" onkeydown="handleCardSettingsKeydown(event, this)">
         <div class="card-header">
             <span class="tag-name">${name}</span>
             <span class="tag-id">${tag}</span>

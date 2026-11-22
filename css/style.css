@@ -399,3 +399,24 @@ select, input[type="month"] {
     .modal-content { margin: 5% auto; width: 98%; padding: 10px; } 
     .chart-controls { flex-direction: column; } 
 }
+
+
+/* 卡片點擊後的歷史曲線明細 */
+.card-detail-modal { z-index: 1000; }
+#cardSettingsModal { z-index: 1010; }
+.card-detail-content { max-width: 980px; }
+.card-detail-content .modal-header h3 { margin: 0 0 4px; }
+.card-detail-summary { color: var(--text-sub); font-size: .95rem; }
+.card-detail-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin: 8px 0 12px; }
+.card-detail-toolbar label { font-weight:700; }
+.card-detail-toolbar select { min-height:40px; padding:7px 10px; border:1px solid var(--border-color); border-radius:7px; background:var(--bg-card); color:var(--text-main); }
+.card-detail-status { min-height:1.5em; margin:0 0 8px; color:var(--text-sub); }
+.card-detail-chart-wrap { position:relative; height:min(55vh,460px); min-height:280px; padding:10px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-card); }
+.card-detail-chart-wrap canvas { width:100% !important; height:100% !important; }
+@media(max-width:600px) {
+  .card-detail-content { width:96%; max-height:92vh; margin:4vh auto; padding:12px; }
+  .card-detail-toolbar { display:grid; grid-template-columns:1fr 1fr; }
+  .card-detail-toolbar label { grid-column:1 / -1; }
+  .card-detail-toolbar select,.card-detail-toolbar button { width:100%; min-height:42px; box-sizing:border-box; }
+  .card-detail-chart-wrap { height:48vh; min-height:260px; padding:5px; }
+}

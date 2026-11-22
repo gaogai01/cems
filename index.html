@@ -37,6 +37,29 @@
             <div class="loading">正在驗證權限並載入數據...</div>
         </div>
     </div>
+    <div id="cardDetailModal" class="modal card-detail-modal" role="dialog" aria-modal="true" aria-labelledby="cardDetailTitle" onclick="if(event.target === this) closeCardDetail()">
+        <div class="modal-content card-detail-content">
+            <div class="modal-header">
+                <div>
+                    <h3 id="cardDetailTitle">監測項目曲線</h3>
+                    <div id="cardDetailSummary" class="card-detail-summary"></div>
+                </div>
+                <button type="button" class="close-btn" aria-label="關閉曲線圖" onclick="closeCardDetail()">&times;</button>
+            </div>
+            <div class="card-detail-toolbar">
+                <label for="cardDetailRange">時間範圍</label>
+                <select id="cardDetailRange" onchange="renderCardDetailChart()">
+                    <option value="24h">近 24 小時</option>
+                    <option value="7d">近 7 天</option>
+                    <option value="30d">近 30 天</option>
+                </select>
+                <button type="button" class="btn-ctrl btn-report" onclick="editCardDetailSettings()">⚙️ 設定門檻</button>
+            </div>
+            <div id="cardDetailStatus" class="card-detail-status" role="status"></div>
+            <div class="card-detail-chart-wrap"><canvas id="cardDetailChart"></canvas></div>
+        </div>
+    </div>
+
     <div id="cardSettingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="cardSettingsTitle" onclick="if(event.target === this) closeCardSettings()">
         <div class="modal-content card-settings-content">
             <div class="modal-header">
@@ -151,8 +174,8 @@
 
     <script src="js/common.js?v=20261117-2"></script>  
     <script src="js/config.js"></script>    
-    <script src="js/dashboard.js?v=20261121-1"></script> 
-    <script src="js/charts.js"></script>    
+    <script src="js/dashboard.js?v=20261122-2"></script> 
+    <script src="js/charts.js?v=20261122-2"></script>    
     <script src="js/reports.js"></script>   
     <script src="js/operation_report.js"></script> 
     <script>

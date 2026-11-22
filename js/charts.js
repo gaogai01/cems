@@ -163,15 +163,23 @@ function fetchHistory() {
                 renderCheckboxes(); 
                 autoSelectDefault();
                 updateChart();
+                if (document.getElementById("cardDetailModal")?.style.display === "block") {
+                    renderCardDetailChart();
+                }
             }, 100);
         })
         .catch(error => {
             console.error('Fetch Error:', error);
-            if(loading) {
+            if (loading) {
                 loading.innerHTML = `<div style="color:red; padding:20px;">
                     載入失敗<br><small>${error.message}</small><br>
                     <button onclick="fetchHistory()" style="margin-top:10px;">重試</button>
                 </div>`;
+            }
+            const detailModal = document.getElementById("cardDetailModal");
+            const detailStatus = document.getElementById("cardDetailStatus");
+            if (detailModal?.style.display === "block" && detailStatus) {
+                detailStatus.textContent = "歷史資料載入失敗，請稍後再試；目前值與歷史曲線分開顯示。";
             }
         });
 }
@@ -528,4 +536,210 @@ window.addEventListener('resize', function() {
     if (window.myChart) {
         updateChart();
     }
+});
+
+
+// 卡片點擊後的單項歷史曲線明細。來源沿用廢水歷史 API，不以目前值補造歷史資料。
+let cardDetailChartInstance = null;
+window.activeCardDetail = null;
+
+function openCardDetail(card) {
+    if (!card) return;
+    window.activeCardDetail = {
+        col: card.dataset.settingsCol || "",
+        name: card.dataset.settingsName || "監測項目",
+        tag: card.dataset.settingsTag || "",
+        unit: card.dataset.settingsUnit || ""
+    };
+    const modal = document.getElementById("cardDetailModal");
+    const range = document.getElementById("cardDetailRange");
+    if (!modal) return;
+    if (range) range.value = "24h";
+    modal.style.display = "block";
+    refreshCardDetailSummary();
+    const status = document.getElementById("cardDetailStatus");
+    if (status) status.textContent = "正在載入歷史資料…";
+    if (!getHistoryData()) {
+        fetchHistory();
+    } else {
+        renderCardDetailChart();
+    }
+}
+
+function closeCardDetail() {
+    const modal = document.getElementById("cardDetailModal");
+    if (modal) modal.style.display = "none";
+    if (cardDetailChartInstance) {
+        cardDetailChartInstance.destroy();
+        cardDetailChartInstance = null;
+    }
+}
+
+function refreshCardDetailSummary() {
+    const active = window.activeCardDetail;
+    if (!active) return;
+    const summary = document.getElementById("cardDetailSummary");
+    const title = document.getElementById("cardDetailTitle");
+    const raw = window.currentDashboardData && window.currentDashboardData[active.col];
+    const value = raw === null || raw === undefined || String(raw).trim() === "" ? null : Number(raw);
+    const displayValue = value !== null && Number.isFinite(value) ? value.toLocaleString("zh-TW", { maximumFractionDigits: 2 }) : "—";
+    if (title) title.textContent = active.name + (active.tag ? "｜" + active.tag : "") + " 歷史曲線";
+    if (summary) {
+        const updateTime = document.getElementById("last-update");
+        summary.textContent = "目前值：" + displayValue + (active.unit ? " " + active.unit : "") +
+            (updateTime && updateTime.textContent ? "　資料更新：" + updateTime.textContent : "");
+    }
+}
+
+function editCardDetailSettings() {
+    const active = window.activeCardDetail;
+    if (!active) return;
+    const card = Array.from(document.querySelectorAll(".card-configurable"))
+        .find(item => item.dataset.settingsCol === active.col);
+    if (card) openCardSettings(card);
+}
+
+function renderCardDetailChart() {
+    const active = window.activeCardDetail;
+    const canvas = document.getElementById("cardDetailChart");
+    const status = document.getElementById("cardDetailStatus");
+    if (!active || !canvas || !status) return;
+    if (cardDetailChartInstance) {
+        cardDetailChartInstance.destroy();
+        cardDetailChartInstance = null;
+    }
+    const dataObj = getHistoryData();
+    if (!dataObj || !Array.isArray(dataObj.data) || dataObj.data.length === 0) {
+        status.textContent = "歷史資料尚未載入；請稍後再開啟曲線。";
+        return;
+    }
+
+    const headers = Array.isArray(dataObj.headers) ? dataObj.headers : [];
+    const candidates = [active.col, active.col.replace(/_VAL0$/, "_Q_VAL0"), active.tag]
+        .filter(Boolean);
+    const columnIndex = candidates.map(key => headers.indexOf(key)).find(index => index >= 0);
+    if (columnIndex === undefined) {
+        status.textContent = "此測項尚未寫入廢水歷史資料，暫無曲線可顯示。";
+        return;
+    }
+
+    const rangeValue = document.getElementById("cardDetailRange")?.value || "24h";
+    const endTime = new Date();
+    const startTime = new Date(endTime);
+    if (rangeValue === "7d") startTime.setDate(startTime.getDate() - 7);
+    else if (rangeValue === "30d") startTime.setDate(startTime.getDate() - 30);
+    else startTime.setHours(startTime.getHours() - 24);
+
+    const points = [];
+    dataObj.data.forEach(row => {
+        if (!Array.isArray(row) || !row[0]) return;
+        const time = new Date(row[0]);
+        if (!Number.isFinite(time.getTime()) || time < startTime || time > endTime) return;
+        const raw = row[columnIndex];
+        if (raw === null || raw === undefined || String(raw).trim() === "") return;
+        const number = Number(raw);
+        if (Number.isFinite(number)) points.push({ x: time, y: number });
+    });
+    points.sort((a, b) => a.x - b.x);
+    if (points.length === 0) {
+        status.textContent = "所選時間範圍內沒有歷史資料；不會以零值代替缺值。";
+        return;
+    }
+
+    const isDark = document.body.getAttribute("data-theme") === "dark";
+    const textColor = isDark ? "#e0e0e0" : "#475569";
+    const gridColor = isDark ? "#444" : "#e2e8f0";
+    const color = "#2563eb";
+    const datasets = [{
+        label: active.name,
+        data: points,
+        borderColor: color,
+        backgroundColor: color,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.2,
+        spanGaps: false,
+        fill: false
+    }];
+
+    let rule = typeof getAlarmRule === "function" ? getAlarmRule(active.col) : (ALARMS && ALARMS[active.col]);
+    const isPh = active.col.indexOf("PHI") === 0;
+    if (isPh && !hasCustomAlarmRule(active.col)) {
+        rule = { min: 0, max: 14, warnLow: 6.5, critLow: 6, warnHigh: 8.5, critHigh: 9 };
+    }
+    const addThreshold = (label, value, lineColor, dash) => {
+        if (value === null || value === undefined || !Number.isFinite(Number(value))) return;
+        datasets.push({
+            label: label + " " + value,
+            data: [{ x: startTime, y: Number(value) }, { x: endTime, y: Number(value) }],
+            borderColor: lineColor,
+            backgroundColor: lineColor,
+            borderDash: dash,
+            borderWidth: 1.8,
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            pointHitRadius: 0,
+            tension: 0,
+            fill: false
+        });
+    };
+
+    if (rule) {
+        if (rule.warnLow !== undefined) {
+            addThreshold("低警報", rule.warnLow, "#f59e0b", [7, 5]);
+            addThreshold("低超限", rule.critLow, "#ef4444", [3, 4]);
+            addThreshold("高警報", rule.warnHigh, "#f59e0b", [7, 5]);
+            addThreshold("高超限", rule.critHigh, "#ef4444", [3, 4]);
+        } else {
+            addThreshold("警報值", rule.warn, "#f59e0b", [7, 5]);
+            addThreshold("超限值", rule.crit, "#ef4444", [3, 4]);
+        }
+    }
+
+    status.textContent = "近 " + (rangeValue === "24h" ? "24 小時" : rangeValue === "7d" ? "7 天" : "30 天") +
+        "共 " + points.length + " 筆資料。" + (datasets.length > 1 ? "虛線代表已設定的警報與超限門檻。" : "此測項尚未設定警報門檻。");
+
+    cardDetailChartInstance = new Chart(canvas.getContext("2d"), {
+        type: "line",
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            scales: {
+                x: {
+                    type: "time",
+                    min: startTime,
+                    max: endTime,
+                    time: { unit: rangeValue === "30d" ? "day" : "hour", tooltipFormat: "yyyy-MM-dd HH:mm" },
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, maxTicksLimit: window.innerWidth < 600 ? 6 : 12 }
+                },
+                y: {
+                    beginAtZero: false,
+                    grid: { color: gridColor },
+                    ticks: { color: textColor },
+                    title: { display: !!active.unit, text: active.unit || active.name, color: textColor }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: textColor, boxWidth: 18, padding: 10, font: { size: window.innerWidth < 600 ? 10 : 12 } }
+                },
+                tooltip: {
+                    backgroundColor: isDark ? "#222" : "#fff",
+                    titleColor: isDark ? "#fff" : "#111",
+                    bodyColor: isDark ? "#fff" : "#111",
+                    borderColor: gridColor,
+                    borderWidth: 1
+                }
+            }
+        }
+    });
+}
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeCardDetail();
 });

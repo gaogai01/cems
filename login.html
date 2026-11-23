@@ -1,120 +1,128 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20261117">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20261123-login">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登入系統 - 尖山發電廠</title>
+    <meta name="theme-color" content="#f4f7fb">
+    <title>登入｜尖山發電廠環保監控與管理平台</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
-        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
-        h1 { color: #2c3e50; margin-bottom: 1.5rem; font-size: 1.5rem; }
-        h3 { margin: 10px 0; color: #555; }
-        input, select { width: 90%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; }
-        button { width: 100%; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px; transition: 0.3s; }
-        .btn-google { background: #db4437; color: white; } .btn-google:hover { background: #c53929; }
-        .btn-submit { background: #007bff; color: white; } .btn-submit:hover { background: #0056b3; }
-        .btn-logout { background: #6c757d; color: white; margin-top: 20px; }
-        .hidden { display: none; }
-        .status-msg { margin: 20px 0; padding: 10px; background: #fff3cd; color: #856404; border-radius: 5px; }
-        
-        /* 管理員列表優化 */
-        #admin-panel { text-align: left; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; max-height: 400px; overflow-y: auto; }
-        .user-item { background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #eee; }
-        .user-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-        .user-role-row { display: flex; gap: 5px; align-items: center; margin-top: 5px; }
-        .role-select { padding: 5px; font-size: 0.85rem; width: auto; flex: 1; }
-        .approve-btn { width: auto; padding: 5px 15px; background: #28a745; color: white; font-size: 0.85rem; margin: 0; }
-        .approve-btn:hover { background: #218838; }
-        .del-btn { width: auto; padding: 5px 10px; background: #dc3545; color: white; font-size: 0.85rem; margin-left: 5px; }
-        
-        .tag { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: #e9ecef; color: #555; }
-        .tag-admin { background: #cce5ff; color: #004085; }
+        :root { color-scheme: light; --ink:#18324b; --muted:#5c6f82; --blue:#1769d2; --line:#dce5ef; }
+        * { box-sizing:border-box; }
+        body { font-family:"Microsoft JhengHei",Arial,sans-serif; background:radial-gradient(ellipse at 18% 10%,#e3f1ff 0,transparent 42%),linear-gradient(145deg,#f4f7fb,#edf3f8); color:var(--ink); display:flex; justify-content:center; align-items:center; min-height:100vh; min-height:100dvh; margin:0; padding:24px; }
+        .card { background:rgba(255,255,255,.97); padding:clamp(28px,5vw,48px); border:1px solid #e3eaf2; border-radius:24px; box-shadow:0 22px 65px rgba(32,61,91,.12); width:min(100%,520px); text-align:center; }
+        .brand-icon { width:66px;height:66px;object-fit:contain;margin:0 auto 16px;display:block; }
+        .eyebrow { color:#24734a;font-size:.82rem;font-weight:800;letter-spacing:.14em;margin:0 0 10px; }
+        h1 { color:var(--ink); margin:0; font-size:clamp(1.5rem,5vw,2rem); line-height:1.4; letter-spacing:.02em; }
+        .subtitle { color:var(--muted);font-size:1rem;line-height:1.8;margin:12px auto 26px;max-width:390px; }
+        .feature-list { display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:0 0 24px;padding:0;list-style:none; }
+        .feature-list li { background:#f1f6fb;border:1px solid #e2eaf2;border-radius:999px;padding:7px 12px;color:#38536e;font-size:.88rem;font-weight:650; }
+        button { width:100%; min-height:54px; padding:12px 16px; border:0; border-radius:12px; cursor:pointer; font-size:1rem; font-weight:750; transition:background .2s,transform .2s,box-shadow .2s; }
+        button:focus-visible,input:focus-visible { outline:3px solid #8bbcff;outline-offset:2px; }
+        .btn-google { background:#fff;color:#263746;border:1px solid #cbd5df;box-shadow:0 2px 5px rgba(20,42,64,.08);display:flex;align-items:center;justify-content:center;gap:12px; }
+        .btn-google:hover { background:#f8fbff;box-shadow:0 5px 14px rgba(20,42,64,.13);transform:translateY(-1px); }
+        .google-mark { width:22px;height:22px;flex:none; }
+        .access-note { margin:16px 0 0;color:#65788b;font-size:.88rem;line-height:1.7; }
+        .support-note { margin:10px 0 0;color:#8291a1;font-size:.82rem;line-height:1.6; }
+        .form-title { margin:0 0 16px;color:var(--ink);font-size:1.15rem; }
+        input,select { width:100%;padding:13px 14px;margin:6px 0;border:1px solid #ccd7e2;border-radius:10px;font-size:1rem;background:#fff;color:var(--ink); }
+        .btn-submit { background:var(--blue);color:#fff;margin-top:12px; }
+        .btn-submit:hover { background:#1058b7; }
+        .btn-logout { background:#eef2f6;color:#41566b;margin-top:16px; }
+        .hidden { display:none !important; }
+        .status-msg { margin:18px 0;padding:16px;background:#fff7df;color:#765716;border:1px solid #f1dfad;border-radius:12px;line-height:1.7; }
+        .uid-note { font-size:.86rem;color:#66788a;overflow-wrap:anywhere; }
+        #admin-panel { text-align:left;margin-top:20px;border-top:1px solid #eee;padding-top:20px;max-height:400px;overflow-y:auto; }
+        .user-item { background:#f9f9f9;padding:10px;border-radius:5px;margin-bottom:10px;border:1px solid #eee; }
+        .user-info-row { display:flex;justify-content:space-between;align-items:center;margin-bottom:5px; }
+        .user-role-row { display:flex;gap:5px;align-items:center;margin-top:5px; }
+        .role-select { padding:5px;font-size:.85rem;width:auto;flex:1; }
+        .approve-btn { width:auto;padding:5px 15px;background:#28a745;color:#fff;font-size:.85rem;margin:0; }
+        .del-btn { width:auto;padding:5px 10px;background:#dc3545;color:#fff;font-size:.85rem;margin-left:5px; }
+        .tag { font-size:.75rem;padding:2px 6px;border-radius:4px;background:#e9ecef;color:#555; }
+        .tag-admin { background:#cce5ff;color:#004085; }
+        @media(max-width:480px) { body{padding:16px}.card{padding:30px 22px;border-radius:20px}.brand-icon{width:58px;height:58px}.subtitle{font-size:.94rem;margin-bottom:20px}.feature-list{gap:6px}.feature-list li{font-size:.82rem;padding:6px 10px} }
     </style>
 </head>
 <body>
-
 <div class="card">
-    <h1>尖山發電廠監控系統</h1>
-    
+    <img class="brand-icon" src="favicon.svg?v=20261123-login" alt="尖山發電廠平台圖示">
+    <p class="eyebrow">尖山發電廠｜環化課</p>
+    <h1>環保監控與管理平台</h1>
+    <p class="subtitle">整合廢水處理、CEMS、尿素與滑油資料，提供監測資訊查詢及紀錄管理。</p>
+    <ul class="feature-list" aria-label="平台功能">
+        <li>廢水監測</li><li>CEMS監測</li><li>尿素分析</li><li>滑油報告</li><li>每日／每月紀錄</li>
+    </ul>
     <div id="login-view">
-        <button class="btn-google" onclick="loginWithGoogle()">使用 Google 帳號登入</button>
+        <button class="btn-google" onclick="loginWithGoogle()">
+            <svg class="google-mark" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.61l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.25 5.48-4.73 7.18l7.65 5.94c4.47-4.13 7.12-10.2 7.12-17.59Z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.81l-7.65-5.94c-2.13 1.43-4.86 2.27-8.26 2.27-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
+            使用 Google 帳號登入
+        </button>
+        <p class="access-note">僅限已核准帳號使用。首次登入請填寫基本資料，經管理員核准後即可進入。</p>
+        <p class="support-note">若帳號已核准仍無法登入，請洽系統管理員確認帳號與分頁權限。</p>
     </div>
-
     <div id="register-view" class="hidden">
-        <h3>初次登入請填寫資料</h3>
-        <input type="text" id="reg-dept" placeholder="部門 (例如：環保課)">
-        <input type="text" id="reg-title" placeholder="職稱 (例如：課長)">
-        <input type="text" id="reg-name" placeholder="姓名 (例如：王大明)">
+        <h2 class="form-title">首次登入｜填寫基本資料</h2>
+        <input type="text" id="reg-name" placeholder="姓名" autocomplete="name">
+        <input type="text" id="reg-dept" placeholder="部門（例如：環化課）" autocomplete="organization">
+        <input type="text" id="reg-title" placeholder="職稱（例如：課長）">
         <button class="btn-submit" onclick="submitReg()">送出審核</button>
     </div>
-
     <div id="pending-view" class="hidden">
-        <div class="status-msg">⏳ 帳號審核中...<br>請通知管理員開通權限</div>
-        <div style="font-size:0.9rem; color:#666;">您的 ID: <span id="my-uid">...</span></div>
+        <div class="status-msg">⏳ 帳號審核中<br>請通知系統管理員核准帳號並設定分頁權限。</div>
+        <div class="uid-note">帳號識別碼：<span id="my-uid">...</span></div>
         <button class="btn-logout" onclick="logout()">登出</button>
     </div>
-
     <div id="admin-view" class="hidden">
-        <h3>管理員後台</h3>
-        <p>您已登入管理員帳號。</p>
+        <h2 class="form-title">管理員入口</h2>
+        <p class="subtitle">您已使用管理員帳號登入。</p>
         <button class="btn-submit" onclick="location.href='admin.html'">開啟人員與分頁權限管理</button>
         <button class="btn-logout" onclick="logout()">登出</button>
     </div>
 </div>
-
 <script>
-    // ============================================================
-    // 1. Firebase 設定 (請務必填入)
-    // ============================================================
     const firebaseConfig = {
-  apiKey: "AIzaSyA58DOYplXhmo7HDYN_2Hgu-wo4ceYmINA",
-  authDomain: "tpc-monitor.firebaseapp.com",
-  projectId: "tpc-monitor",
-  storageBucket: "tpc-monitor.firebasestorage.app",
-  messagingSenderId: "1066125366380",
-  appId: "1:1066125366380:web:836d5898c051226669f449"
+      apiKey: "AIzaSyA58DOYplXhmo7HDYN_2Hgu-wo4ceYmINA",
+      authDomain: "tpc-monitor.firebaseapp.com",
+      projectId: "tpc-monitor",
+      storageBucket: "tpc-monitor.firebasestorage.app",
+      messagingSenderId: "1066125366380",
+      appId: "1:1066125366380:web:836d5898c051226669f449"
     };
-    
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // ============================================================
-    // 2. 權限邏輯
-    // ============================================================
     auth.onAuthStateChanged(async (user) => {
         document.querySelectorAll('.card > div').forEach(el => el.classList.add('hidden'));
-        
         if (user) {
-            const doc = await db.collection('users').doc(user.uid).get();
-            if (!doc.exists) {
-                document.getElementById('register-view').classList.remove('hidden');
-            } else {
-                const data = doc.data();
-                
-                // 超級管理員 (直接在資料庫把 isAdmin 設為 true 的人)
-                if (data.isAdmin) {
-                    document.getElementById('admin-view').classList.remove('hidden');
-                } 
-                // 一般已核准用戶
-                else if (data.isApproved) {
-                    // 新帳號依勾選權限導向；舊帳號維持原角色預設。
-                    if (Array.isArray(data.permissions)) {
-                        const preferredPages = ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html', 'monthly.html'];
-                        location.href = preferredPages.find(page => data.permissions.includes(page)) || 'meet.html';
-                    } else if(data.role === 'mech') location.href = 'oil.html';
-                    else if(data.role === 'ops') location.href = 'cems.html';
-                    else location.href = 'index.html';
-                } 
-                // 未核准
-                else {
-                    document.getElementById('pending-view').classList.remove('hidden');
-                    document.getElementById('my-uid').innerText = user.uid.substring(0,6)+"...";
+            try {
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (!doc.exists) {
+                    document.getElementById('register-view').classList.remove('hidden');
+                } else {
+                    const data = doc.data();
+                    if (data.isAdmin) {
+                        document.getElementById('admin-view').classList.remove('hidden');
+                    } else if (data.isApproved) {
+                        if (Array.isArray(data.permissions)) {
+                            const preferredPages = ['index.html', 'cems.html', 'urea.html', 'oil.html', 'daily.html', 'monthly.html'];
+                            location.href = preferredPages.find(page => data.permissions.includes(page)) || 'meet.html';
+                        } else if(data.role === 'mech') location.href = 'oil.html';
+                        else if(data.role === 'ops') location.href = 'cems.html';
+                        else location.href = 'index.html';
+                    } else {
+                        document.getElementById('pending-view').classList.remove('hidden');
+                        document.getElementById('my-uid').innerText = user.uid.substring(0,6)+"...";
+                    }
                 }
+            } catch (e) {
+                console.error("Auth Error:", e);
+                document.getElementById('pending-view').classList.remove('hidden');
+                document.getElementById('pending-view').querySelector('.status-msg').textContent = "無法確認帳號權限，請檢查網路連線後重試，或洽系統管理員。";
             }
         } else {
             document.getElementById('login-view').classList.remove('hidden');
@@ -123,8 +131,19 @@
 
     function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(e => alert(e.message));
+        auth.signInWithPopup(provider).catch(e => {
+            if (e.code === 'auth/popup-blocked') {
+                auth.signInWithRedirect(provider).catch(err => alert("Google 登入未完成：" + err.message));
+            } else {
+                alert("Google 登入未完成：" + e.message);
+            }
+        });
     }
+
+    auth.getRedirectResult().catch(e => {
+        console.error("Google redirect login error:", e);
+        alert("Google 登入未完成，請再試一次：" + e.message);
+    });
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -134,25 +153,22 @@
 
     function submitReg() {
         const user = auth.currentUser;
-        const name = document.getElementById('reg-name').value;
-        const dept = document.getElementById('reg-dept').value;
-        const title = document.getElementById('reg-title').value; // 新增職稱
-        
+        const name = document.getElementById('reg-name').value.trim();
+        const dept = document.getElementById('reg-dept').value.trim();
+        const title = document.getElementById('reg-title').value.trim();
+        if(!user) return alert("請先使用 Google 帳號登入。");
         if(!name || !dept || !title) return alert("請填寫完整資料");
-        
         db.collection('users').doc(user.uid).set({
-            name, dept, title, email: user.email, 
-            isApproved: false, 
-            accountStatus: 'pending',
-            permissions: [],
-            isAdmin: false, 
-            role: 'guest', // 預設權限
-            createdAt: new Date()
-        }).then(() => location.reload());
+            name, dept, title, email: user.email,
+            isApproved: false, accountStatus: 'pending', permissions: [],
+            isAdmin: false, role: 'guest', createdAt: new Date()
+        }).then(() => location.reload()).catch(e => {
+            console.error("Registration failed:", e);
+            alert("送出審核失敗：" + e.message);
+        });
     }
 
     function logout() { auth.signOut(); }
-
 </script>
 </body>
 </html>

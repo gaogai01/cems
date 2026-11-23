@@ -233,7 +233,7 @@
                 : new Date(timestamp).getTime();
             if (!Number.isFinite(timestampMs)) {
                 reminder.style.display = "block";
-                reminder.textContent = "⚠️ 目前無法確認 CEMS 資料更新時間，請確認 CEMS 主機的資料上傳 Python 程式已開啟；若主機曾關機或重新啟動，請重新執行上傳程式。";
+                reminder.textContent = "⚠️ 目前無法確認 CEMS 資料更新時間，請確認 CEMS 主機桌面「新增資料夾\\upload_cems.py」已執行；在 Python IDLE 編輯器按 F5 啟動，並確認 Shell 持續顯示上傳成功。若主機曾關機或重新啟動，請重新執行。";
                 return;
             }
             const ageMs = Date.now() - timestampMs;
@@ -245,7 +245,7 @@
             const elapsedMinutes = Math.max(0, Math.floor(ageMs / 60000));
             const sourceTime = new Date(timestampMs).toLocaleString("zh-TW", { hour12: false });
             reminder.style.display = "block";
-            reminder.textContent = "⚠️ CEMS 來源資料已 " + elapsedMinutes + " 分鐘未更新（最後資料時間：" + sourceTime + "）。請確認 CEMS 主機的資料上傳 Python 程式仍在執行；若主機曾關機或重新啟動，請重新開啟上傳程式。";
+            reminder.textContent = "⚠️ CEMS 來源資料已 " + elapsedMinutes + " 分鐘未更新（最後資料時間：" + sourceTime + "）。請確認 CEMS 主機桌面「新增資料夾\\upload_cems.py」仍在執行；在 Python IDLE 編輯器按 F5 啟動，並確認 Shell 持續顯示上傳成功。若主機曾關機或重新啟動，請重新執行。";
         }
         const THRESHOLDS = {
             so2: { good: 50, warn: 120, limit: 133, max: 200 }, nox: { good: 247, warn: 327, limit: 363, max: 400 }, opac: { good: 4, warn: 8, limit: 40, max: 50 }, load: { warn: 8000, limit: 9000, max: 11000 }, urea: { warn: 200, limit: 360, max: 400 },

@@ -132,6 +132,7 @@
   ];
   const LEGACY_ACCESS={admin:['index.html','cems.html','urea.html','oil.html','daily.html','monthly.html'],env:['index.html','cems.html','urea.html','oil.html','daily.html','monthly.html'],mech:['oil.html'],ops:['cems.html','oil.html'],guest:[]};
   const OTHER_PAGE_LABELS='廠務會議、採購發包、機組時數、公益活動、影片企劃';
+  const ACCOUNT_NOTIFY_URL='https://script.google.com/macros/s/AKfycbwPLWcCJhnE_ZnnIbCgk9hNcjo6ikLDR_rzFGCiBFPamXapAj3e-fg1YiJo1THW08T4/exec';
   let usersCache=[];
   let editingUsers=new Set();
   let activeFilter='all';
@@ -170,6 +171,16 @@
     loadUsers();
     setInterval(renderOnline,60000);
   }
+  async function syncAdminRecipients(){
+    const user=auth.currentUser;
+    if(!user)return;
+    const idToken=await user.getIdToken();
+    fetch(ACCOUNT_NOTIFY_URL,{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'admin_recipient_sync',uid:user.uid,idToken:idToken})
+    }).catch(function(error){console.warn('管理員通知收件人同步失敗',error)});
+  }
   async function loadUsers(){
     const status=document.getElementById('load-status');status.textContent='正在載入人員資料…';
     document.getElementById('all-users-list').innerHTML='<tr><td colspan="8" class="empty">正在讀取資料…</td></tr>';
@@ -178,6 +189,7 @@
       const snap=await db.collection('users').get();
       usersCache=snap.docs.map(function(doc){return Object.assign({uid:doc.id},doc.data())});
       usersCache.sort(function(a,b){const da=asDate(a.createdAt),dbb=asDate(b.createdAt);return (dbb?dbb.getTime():0)-(da?da.getTime():0)});
+      syncAdminRecipients();
       status.textContent='資料已更新 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
       renderOnline();renderMetrics();renderUsers();
     }catch(error){

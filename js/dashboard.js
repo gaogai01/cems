@@ -16,7 +16,7 @@ function updateDataUploadReminder(timestamp, fromCache) {
         : Date.parse(rawTimestamp);
     if (!rawTimestamp || !Number.isFinite(timestampMs)) {
         reminder.style.display = "block";
-        reminder.textContent = "⚠️ 目前無法確認廢水來源資料的更新時間。請環化課確認監控主機桌面「新增資料夾\\upload_cems.py」已執行；在 IDLE 編輯器按 F5 啟動，並確認 Shell 持續顯示上傳成功。停電或重開機後需重新啟動。";
+        reminder.textContent = "⚠️ 目前無法確認廢水來源資料的更新時間。請環化課確認D 槽根目錄的「push_to_google.py」已執行；在 Python IDLE 編輯器按 F5 啟動，並確認 Shell 持續顯示推送成功。停電或重開機後需重新啟動。";
         return;
     }
 
@@ -31,7 +31,7 @@ function updateDataUploadReminder(timestamp, fromCache) {
     const cacheNote = fromCache ? "（目前畫面顯示快取資料）" : "";
     reminder.style.display = "block";
     reminder.textContent = "⚠️ 廢水來源資料已 " + elapsedMinutes + " 分鐘未更新，資料時間：" + rawTimestamp + "。" +
-        cacheNote + "請環化課確認監控主機桌面「新增資料夾\\upload_cems.py」已執行；在 IDLE 編輯器按 F5 啟動，並確認 Shell 持續顯示上傳成功。停電或重開機後需重新啟動。若程式已執行仍未更新，請檢查主機與試算表連線。";
+        cacheNote + "請環化課確認D 槽根目錄的「push_to_google.py」已執行；在 Python IDLE 編輯器按 F5 啟動，並確認 Shell 持續顯示推送成功。停電或重開機後需重新啟動。若程式已執行仍未更新，請檢查主機與試算表連線。";
 }
 
 const ALARM_SETTINGS_STORAGE_KEY = "wastewaterAlarmSettingsV1";

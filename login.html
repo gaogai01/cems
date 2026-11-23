@@ -151,21 +151,39 @@
         })[char]);
     }
 
-    function submitReg() {
+    async function submitReg() {
         const user = auth.currentUser;
         const name = document.getElementById('reg-name').value.trim();
         const dept = document.getElementById('reg-dept').value.trim();
         const title = document.getElementById('reg-title').value.trim();
         if(!user) return alert("請先使用 Google 帳號登入。");
         if(!name || !dept || !title) return alert("請填寫完整資料");
-        db.collection('users').doc(user.uid).set({
-            name, dept, title, email: user.email,
-            isApproved: false, accountStatus: 'pending', permissions: [],
-            isAdmin: false, role: 'guest', createdAt: new Date()
-        }).then(() => location.reload()).catch(e => {
+        try {
+            await db.collection('users').doc(user.uid).set({
+                name, dept, title, email: user.email,
+                isApproved: false, accountStatus: 'pending', permissions: [],
+                isAdmin: false, role: 'guest', createdAt: new Date()
+            });
+            const idToken = await user.getIdToken();
+            try {
+                await fetch('https://script.google.com/macros/s/AKfycbwPLWcCJhnE_ZnnIbCgk9hNcjo6ikLDR_rzFGCiBFPamXapAj3e-fg1YiJo1THW08T4/exec', {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+                    body: JSON.stringify({
+                        action: 'account_application',
+                        uid: user.uid,
+                        idToken
+                    })
+                });
+            } catch (notificationError) {
+                console.warn('Account application notification request could not be confirmed.');
+            }
+            location.reload();
+        } catch (e) {
             console.error("Registration failed:", e);
             alert("送出審核失敗：" + e.message);
-        });
+        }
     }
 
     function logout() { auth.signOut(); }

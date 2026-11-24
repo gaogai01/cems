@@ -54,7 +54,7 @@
     </div>
 
     <div class="chart-card">
-        <div class="chart-header">歷史趨勢分析</div>
+        <div class="chart-header">歷史趨勢分析 <span class="chart-hint">點選上方卡片查看近一季曲線</span></div>
         <div class="chart-controls">
             <label style="color:var(--text-main)">項目：</label>
             <select id="chartParam" onchange="updateLineChart()"></select>
@@ -267,8 +267,12 @@
 
                 const card = document.createElement('div');
                 card.className = `card ${config.class}`;
+                card.tabIndex = 0;
+                card.setAttribute('role', 'button');
+                card.setAttribute('aria-label', `查看${field}近一季曲線圖`);
+                card.title = `點選查看${field}近一季曲線圖`;
                 card.innerHTML = `
-                    <h3>${field}</h3>
+                    <h3>${field}<span class="card-chart-hint">查看趨勢 ↗</span></h3>
                     <div class="data-row">
                         <span class="value">${displayVal}</span>
                         <span class="unit">${unit}</span>
@@ -278,6 +282,23 @@
                     </div>
                     <div class="info-text">${extraInfo}</div>
                 `;
+                const showCardTrend = () => {
+                    const chartParam = document.getElementById('chartParam');
+                    chartParam.value = String(idx);
+                    document.getElementById('timeRange').value = '2160';
+                    updateLineChart();
+                    const chartSection = document.querySelector('.chart-card');
+                    chartSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.querySelectorAll('.card.is-chart-selected').forEach(item => item.classList.remove('is-chart-selected'));
+                    card.classList.add('is-chart-selected');
+                };
+                card.addEventListener('click', showCardTrend);
+                card.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        showCardTrend();
+                    }
+                });
                 container.appendChild(card);
             });
         }

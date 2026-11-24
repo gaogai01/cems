@@ -102,7 +102,6 @@
         .card { cursor: pointer; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
         .card:hover, .card:focus-visible { transform: translateY(-2px); border-color: #22a447; box-shadow: 0 5px 14px rgba(34,164,71,0.18); outline: none; }
         .card.is-chart-selected { box-shadow: 0 0 0 2px rgba(34,164,71,0.26); }
-        .card-chart-hint { color: #16803a; font-size: 0.68rem; font-weight: 700; opacity: 0.88; }
         .chart-hint { margin-left: 8px; color: var(--text-sub); font-size: 0.78rem; font-weight: 500; }
 
         /* 圖表 */

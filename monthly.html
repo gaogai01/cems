@@ -59,7 +59,8 @@
         .group-other .card { border-top-color: #6c757d; }
 
         .card-header { margin-bottom: 4px; display: flex; justify-content: space-between; align-items: start; }
-        .tag-name { font-size: 0.8rem; color: var(--text-sub); font-weight: bold; line-height: 1.2; }
+        .tag-name { font-size: 0.8rem; color: var(--text-sub); font-weight: bold; line-height: 1.2; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+        .stale-note { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 10px; background: #fff1d6; color: #8a4b08; font-size: 0.62rem; font-weight: 700; white-space: nowrap; }
         .limit-badge { font-size: 0.65rem; background: rgba(0,0,0,0.05); color: #999; padding: 1px 4px; border-radius: 3px; }
         .data-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
         .value { font-size: 1.3rem; font-weight: 800; color: var(--text-value); font-family: 'Arial', sans-serif; line-height: 1; }
@@ -67,6 +68,8 @@
         .gauge-container { height: 4px; width: 100%; background: var(--gauge-bg); border-radius: 2px; position: relative; overflow: hidden; margin-bottom: 5px; }
         .gauge-bar { height: 100%; width: 0%; background: var(--gauge-grad); border-radius: 2px; transition: width 0.5s ease-out; }
         .compare-text { font-size: 0.7rem; color: var(--text-sub); text-align: right; background: rgba(0,0,0,0.03); padding: 2px 5px; border-radius: 3px; }
+        .compare-text:has(> :only-child) { color: var(--text-sub); }
+        .card:has(.stale-note) .compare-text { color: #8a4b08; font-weight: 700; background: #fff7e8; }
         .trend-up { color: var(--trend-up); font-weight: bold; } .trend-down { color: var(--trend-down); font-weight: bold; }
 
         .chart-section { background: var(--bg-card); padding: 15px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-top: 20px; }
@@ -164,6 +167,47 @@
     
     let apiData = null; 
     let chartInstance = null;
+
+    function parseMonthlyNumber(value) {
+        if (value === null || value === undefined || String(value).trim() === "") return NaN;
+        const number = Number(String(value).replace(/,/g, "").trim());
+        return Number.isFinite(number) ? number : NaN;
+    }
+
+    function normalizeMonthlyYear(value) {
+        const year = Number.parseInt(value, 10);
+        return Number.isFinite(year) && year < 1911 ? year + 1911 : year;
+    }
+
+    function getMonthSerial(year, month) {
+        return normalizeMonthlyYear(year) * 12 + Number.parseInt(month, 10);
+    }
+
+    function formatRecordMonth(record) {
+        if (!record) return "";
+        return `${record["年度"]}年${Number.parseInt(record["月份"], 10)}月`;
+    }
+
+    function getCardValueSource(targetRecord, key, targetYear, targetMonth) {
+        const currentValue = targetRecord ? parseMonthlyNumber(targetRecord[key]) : NaN;
+        if (Number.isFinite(currentValue)) {
+            return { record: targetRecord, value: currentValue, stale: false };
+        }
+
+        const targetSerial = getMonthSerial(targetYear, targetMonth);
+        let latest = null;
+        apiData.data.forEach(record => {
+            const recordSerial = getMonthSerial(record["年度"], record["月份"]);
+            const value = parseMonthlyNumber(record[key]);
+            if (Number.isFinite(recordSerial) && recordSerial <= targetSerial && Number.isFinite(value) &&
+                (!latest || recordSerial > latest.serial)) {
+                latest = { record, value, serial: recordSerial };
+            }
+        });
+        return latest
+            ? { record: latest.record, value: latest.value, stale: true }
+            : { record: null, value: NaN, stale: false };
+    }
 
     function startApp() {
         fetchData();
@@ -397,6 +441,7 @@
             if (headerName === "年度" || headerName === "月份") return;
             let cat = categories[index] ? categories[index].trim() : "其他";
             if (cat === "") cat = "其他";
+            if (cat === "其他") return;
             if (!groups[cat]) groups[cat] = [];
             
             const key = headerName.replace(/\n/g, "").trim();
@@ -410,11 +455,6 @@
 
         const container = document.getElementById('groupContainer');
         container.innerHTML = "";
-
-        if (!targetRecord) {
-            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px; color:#888;">${targetYear}年${targetMonth}月 無資料</div>`;
-            return;
-        }
 
         // 定義群組樣式
         const groupClassMap = {
@@ -440,21 +480,23 @@
                 const unit = field.unit;
                 const limit = parseFloat(field.limit);
                 
-                const valNow = parseFloat(targetRecord[key]);
+                const valueSource = getCardValueSource(targetRecord, key, targetYear, targetMonth);
+                const valNow = valueSource.value;
                 
-                // 修正重點：直接顯示數值，不除以1000
-                const displayNow = !isNaN(valNow) ? valNow.toLocaleString(undefined, {maximumFractionDigits: 2}) : "--";
+                const displayNow = Number.isFinite(valNow) ? valNow.toLocaleString(undefined, {maximumFractionDigits: 2}) : "--";
                 
-                const valPrev = prevYearRecord ? parseFloat(prevYearRecord[key]) : NaN;
+                const valPrev = prevYearRecord ? parseMonthlyNumber(prevYearRecord[key]) : NaN;
                 
                 let subText = "";
-                if (!isNaN(valNow) && !isNaN(valPrev) && valPrev !== 0) {
+                if (valueSource.stale) {
+                    subText = "請承辦更新資料";
+                } else if (Number.isFinite(valNow) && Number.isFinite(valPrev) && valPrev !== 0) {
                     let diffPct = ((valNow - valPrev) / valPrev) * 100;
                     let trendClass = diffPct > 0 ? "trend-up" : (diffPct < 0 ? "trend-down" : "");
                     let trendIcon = diffPct > 0 ? "▲" : (diffPct < 0 ? "▼" : "");
                     subText = `去年 ${valPrev.toLocaleString()} <span class="${trendClass}">${trendIcon} ${Math.abs(diffPct).toFixed(1)}%</span>`;
                 } else if (prevYearRecord) {
-                    subText = `去年 ${isNaN(valPrev) ? "-" : valPrev.toLocaleString()}`;
+                    subText = `去年 ${Number.isFinite(valPrev) ? valPrev.toLocaleString() : "-"}`;
                 } else {
                     subText = "無去年資料";
                 }
@@ -472,7 +514,7 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <div class="card-header"><span class="tag-name">${name}</span>${limitBadge}</div>
+                    <div class="card-header"><span class="tag-name">${name}${valueSource.stale ? `<span class="stale-note">資料至 ${formatRecordMonth(valueSource.record)}</span>` : ""}</span>${limitBadge}</div>
                     <div class="data-row"><span class="value">${displayNow}</span><span class="unit">${unit}</span></div>
                     ${gaugeHtml}
                     <div class="compare-text">${subText}</div>
@@ -505,7 +547,7 @@
 
         records.forEach(r => {
             const m = parseInt(r['月份']) - 1; 
-            const val = parseFloat(r[fieldKey]);
+            const val = parseMonthlyNumber(r[fieldKey]);
             // 修正：圖表數據也不再除以 1000
             if (r['年度'] == year1) data1[m] = isNaN(val) ? null : val;
             if (r['年度'] == year2) data2[m] = isNaN(val) ? null : val;
@@ -552,7 +594,7 @@
         const lastYear = apiData.data.find(r => r['年度'] == (parseInt(targetYear)-1) && parseInt(r['月份']) == targetMonth);
 
         // 修正：報表數值也不再除以 1000
-        const v = (record, key) => record ? (parseFloat(record[key])||0) : 0;
+        const v = (record, key) => record ? (parseMonthlyNumber(record[key]) || 0) : 0;
         const fmt = (val) => val.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 1});
 
         let summaryHtml = "<ul>";

@@ -226,10 +226,10 @@
         rawData.headers.forEach((h, i) => { if(h) headerMap[h.trim()] = i; });
 
         const groups = {
-            "gridRecycle": { class: "recycle", items: ["回收水量"] },
-            "gridDesalt":  { class: "desalt",  items: ["1號機造水量", "2號機造水量", "1號機海水壓力", "2號機海水壓力"] },
-            "gridStorage": { class: "storage", items: ["15000公秉儲水位", "用水量"] },
-            "gridUrea":    { class: "urea",    items: ["尿素比重", "尿素用量", "尿素庫存"] }
+            "gridRecycle": { class: "recycle", color: "#1683e8", items: ["回收水量"] },
+            "gridDesalt":  { class: "desalt",  color: "#159caf", items: ["1號機造水量", "2號機造水量", "1號機海水壓力", "2號機海水壓力"] },
+            "gridStorage": { class: "storage", color: "#229447", items: ["15000公秉儲水位", "用水量"] },
+            "gridUrea":    { class: "urea",    color: "#7041bd", items: ["尿素比重", "尿素用量", "尿素庫存"] }
         };
 
         for (const [gridId, config] of Object.entries(groups)) {
@@ -278,7 +278,7 @@
                         <span class="unit">${unit}</span>
                     </div>
                     <div class="gauge-container">
-                        <div class="gauge-bar" style="width: ${pct}%"></div>
+                        <div class="gauge-bar" style="width: ${pct}%; --gauge-color: ${config.color}"></div>
                     </div>
                     <div class="info-text">${extraInfo}</div>
                 `;
@@ -591,7 +591,7 @@
 
         lineChart = new Chart(ctx, {
             type: 'line', data: { labels: labels, datasets: datasets },
-            options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { beginAtZero: true, title: {display: true, text: unit} } } }
+            options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { beginAtZero: labelName.trim() !== "尿素比重", min: labelName.trim() === "尿素比重" ? 1 : undefined, title: {display: true, text: unit} } } }
         });
     }
 </script>
